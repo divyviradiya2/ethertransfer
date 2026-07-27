@@ -24,11 +24,13 @@ public class DiscoveryService : IDisposable
     private MulticastService? _mdns;
     private ServiceDiscovery? _sd;
     private ServiceProfile? _profile;
+    private CancellationTokenSource? _cts;
     
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
 
     public void Start(string computerName, int tcpPort)
     {
+        _cts = new CancellationTokenSource();
         _mdns = new MulticastService();
         _sd = new ServiceDiscovery(_mdns);
 
@@ -42,8 +44,19 @@ public class DiscoveryService : IDisposable
 
         _mdns.Start();
         
-        // Initial query to find existing peers
-        _sd.QueryServiceInstances("_ethtransfer._tcp");
+        // Periodically query to find existing/new peers (fixes late IP assignment on direct Ethernet)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (_cts != null && !_cts.IsCancellationRequested)
+                {
+                    _sd.QueryServiceInstances("_ethtransfer._tcp");
+                    await Task.Delay(3000, _cts.Token);
+                }
+            }
+            catch { }
+        });
     }
 
     private void OnServiceInstanceDiscovered(object? sender, ServiceInstanceDiscoveryEventArgs e)
@@ -98,6 +111,7 @@ public class DiscoveryService : IDisposable
 
     public void Stop()
     {
+        _cts?.Cancel();
         _sd?.Unadvertise(_profile);
         _mdns?.Stop();
     }

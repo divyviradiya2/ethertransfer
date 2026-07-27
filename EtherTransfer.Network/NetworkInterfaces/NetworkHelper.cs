@@ -50,6 +50,7 @@ public static class NetworkHelper
                          ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
                          ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
 
+        bool hasEthernet = false;
         foreach (var ni in ethernetInterfaces)
         {
             var name = ni.Name.ToLowerInvariant();
@@ -58,11 +59,13 @@ public static class NetworkHelper
             {
                 continue;
             }
+            
+            hasEthernet = true;
 
             var ipProps = ni.GetIPProperties();
             foreach (var ip in ipProps.UnicastAddresses)
             {
-                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null && remoteIp.AddressFamily == AddressFamily.InterNetwork)
                 {
                     if (IsInSameSubnet(ip.Address, remoteIp, ip.IPv4Mask))
                     {
@@ -71,6 +74,26 @@ public static class NetworkHelper
                 }
             }
         }
+        
+        // Fallback for direct Ethernet cables without a DHCP router:
+        // Allow APIPA (169.254.x.x) and IPv6 Link-Local (fe80::) if an Ethernet cable is plugged in.
+        if (hasEthernet)
+        {
+            if (remoteIp.AddressFamily == AddressFamily.InterNetworkV6 && remoteIp.IsIPv6LinkLocal)
+            {
+                return true;
+            }
+                
+            if (remoteIp.AddressFamily == AddressFamily.InterNetwork)
+            {
+                var bytes = remoteIp.GetAddressBytes();
+                if (bytes[0] == 169 && bytes[1] == 254)
+                {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 

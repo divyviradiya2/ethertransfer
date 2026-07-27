@@ -8,7 +8,8 @@
         x:Class="EtherTransfer.UI.MainWindow"
         x:DataType="ui:MainWindow"
         Title="EtherTransfer"
-        Background="#ECE9D8">
+        Background="#ECE9D8"
+        Foreground="Black">
     <Grid Margin="10" RowDefinitions="Auto,*,Auto">
         <TextBlock Text="Nearby Devices" FontWeight="Bold" FontSize="16" Margin="0,0,0,10" Grid.Row="0"/>
         
