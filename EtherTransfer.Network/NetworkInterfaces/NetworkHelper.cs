@@ -61,4 +61,54 @@ public static class NetworkHelper
             }
         }
     }
+
+    public static bool IsOnEthernetSubnet(IPAddress remoteIp)
+    {
+        var interfaces = GetEthernetInterfaces();
+        bool hasEthernet = false;
+        
+        foreach (var netIf in interfaces)
+        {
+            hasEthernet = true;
+            
+            // Check if remote IP is in the same IPv4 subnet
+            if (remoteIp.AddressFamily == AddressFamily.InterNetwork)
+            {
+                var localBytes = netIf.LocalAddress.GetAddressBytes();
+                var remoteBytes = remoteIp.GetAddressBytes();
+                var broadcastBytes = netIf.BroadcastAddress.GetAddressBytes();
+                
+                // We can derive the mask from the broadcast and local address
+                var maskBytes = new byte[4];
+                for (int i = 0; i < 4; i++)
+                {
+                    maskBytes[i] = (byte)~(localBytes[i] ^ broadcastBytes[i]);
+                }
+                
+                bool match = true;
+                for (int i = 0; i < 4; i++)
+                {
+                    if ((localBytes[i] & maskBytes[i]) != (remoteBytes[i] & maskBytes[i]))
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+                
+                if (match) return true;
+            }
+        }
+        
+        // Fallback for direct cables
+        if (hasEthernet && remoteIp.AddressFamily == AddressFamily.InterNetwork)
+        {
+            var bytes = remoteIp.GetAddressBytes();
+            if (bytes[0] == 169 && bytes[1] == 254) // APIPA
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
