@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using EtherTransfer.Core.Models;
@@ -15,21 +16,39 @@ public class DeviceService : IDisposable
     private readonly DiscoveryService _discoveryService;
     private readonly ConcurrentDictionary<string, DiscoveredDevice> _devices = new();
     private CancellationTokenSource? _cts;
+    private string _computerName = string.Empty;
+    
+    // Our own local IPs so we can filter ourselves out
+    private HashSet<string> _localIps = new();
     
     public event EventHandler? DevicesChanged;
+    public event EventHandler<string>? DebugLog;
 
     public DeviceService()
     {
         _discoveryService = new DiscoveryService();
         _discoveryService.PeerDiscovered += OnPeerDiscovered;
+        _discoveryService.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
     }
-
-    private string _computerName = string.Empty;
 
     public void Start(string computerName, int tcpPort)
     {
         _computerName = computerName;
         _cts = new CancellationTokenSource();
+        
+        // Collect our own local IPs to filter self-discovery
+        _localIps = new HashSet<string>();
+        foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+        {
+            foreach (var addr in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    _localIps.Add(addr.Address.ToString());
+                }
+            }
+        }
+        
         _discoveryService.Start(computerName, tcpPort);
         
         // Start cleanup task for stale devices
@@ -49,30 +68,30 @@ public class DeviceService : IDisposable
 
     private void OnPeerDiscovered(object? sender, PeerDiscoveredEventArgs e)
     {
-        var addressStr = e.SourceAddress.ToString();
+        var sourceIp = e.SourceAddress.ToString();
         
-        // Ignore our own broadcasts
-        if (e.Message.ComputerName == _computerName)
+        // Ignore our own broadcasts by checking if source IP is one of ours
+        if (_localIps.Contains(sourceIp))
         {
             return;
         }
 
         var updated = false;
-        _devices.AddOrUpdate(addressStr, 
+        _devices.AddOrUpdate(sourceIp, 
             _ => 
             {
                 updated = true;
+                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] NEW DEVICE: {e.Message.ComputerName} at {sourceIp}");
                 return new DiscoveredDevice 
                 { 
                     Name = e.Message.ComputerName, 
-                    Address = addressStr, 
+                    Address = sourceIp, 
                     LastSeen = DateTime.UtcNow 
                 };
             }, 
             (_, existing) => 
             {
                 existing.LastSeen = DateTime.UtcNow;
-                // If name changed for some reason
                 if (existing.Name != e.Message.ComputerName)
                 {
                     existing.Name = e.Message.ComputerName;
@@ -100,8 +119,9 @@ public class DeviceService : IDisposable
                 var keysToRemove = _devices.Where(kvp => now - kvp.Value.LastSeen > staleThreshold).Select(kvp => kvp.Key).ToList();
                 foreach (var key in keysToRemove)
                 {
-                    if (_devices.TryRemove(key, out _))
+                    if (_devices.TryRemove(key, out var removed))
                     {
+                        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] REMOVED stale: {removed.Name} at {key}");
                         removedAny = true;
                     }
                 }
@@ -114,10 +134,7 @@ public class DeviceService : IDisposable
                 await Task.Delay(2000, cancellationToken);
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Expected
-        }
+        catch (OperationCanceledException) { }
     }
 
     public void Dispose()

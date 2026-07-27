@@ -13,6 +13,7 @@ namespace EtherTransfer.UI;
 public partial class MainWindow : Window
 {
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
+    public ObservableCollection<string> DebugMessages { get; } = new();
     private readonly DeviceService _deviceService;
 
     public MainWindow()
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
 
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
+        _deviceService.DebugLog += OnDebugLog;
 
         // Use the machine name as the default computer name, and 55000 as TCP port
         _deviceService.Start(Environment.MachineName, 55000);
@@ -36,6 +38,24 @@ public partial class MainWindow : Window
             foreach (var device in activeDevices)
             {
                 DiscoveredDevices.Add(device);
+            }
+        });
+    }
+    
+    private void OnDebugLog(object? sender, string message)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            DebugMessages.Add(message);
+            // Keep only last 50 messages to avoid memory bloat
+            while (DebugMessages.Count > 50)
+            {
+                DebugMessages.RemoveAt(0);
+            }
+            // Auto-scroll to bottom
+            if (DebugLogList != null && DebugMessages.Count > 0)
+            {
+                DebugLogList.ScrollIntoView(DebugMessages[DebugMessages.Count - 1]);
             }
         });
     }

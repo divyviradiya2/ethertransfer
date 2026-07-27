@@ -31,30 +31,39 @@ public class DiscoveryService : IDisposable
     private const string AppId = "EtherTransferApp-V1";
     
     private CancellationTokenSource? _cts;
-    
     private UdpClient? _globalListener;
     
-    // Track active UDP clients (used only for sending) by their local bound IP
-    private readonly ConcurrentDictionary<string, UdpClient> _senders = new();
-    
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
+    
+    // Debug log for the UI
+    public event EventHandler<string>? DebugLog;
+
+    private void Log(string msg)
+    {
+        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {msg}");
+    }
 
     public void Start(string computerName, int tcpPort)
     {
         _cts = new CancellationTokenSource();
         
+        Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
+        
+        // Global listener on 0.0.0.0:50000 to receive ALL broadcast packets
         try
         {
-            // 1. Global listener to receive broadcast packets
             _globalListener = new UdpClient();
             _globalListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _globalListener.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
-            
+            Log("Listener bound to 0.0.0.0:" + DiscoveryPort);
             _ = Task.Run(() => ListenAsync(_globalListener, _cts.Token));
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log($"FAILED to bind listener: {ex.Message}");
+        }
         
-        // 2. Start the master network loop for broadcasting
+        // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(computerName, tcpPort, _cts.Token));
     }
 
@@ -63,7 +72,7 @@ public class DiscoveryService : IDisposable
         _cts?.Cancel();
     }
 
-    private async Task BroadcastLoopAsync(string computerName, int tcpPort, CancellationToken cancellationToken)
+    private async Task BroadcastLoopAsync(string computerName, int tcpPort, CancellationToken ct)
     {
         var message = new DiscoveryMessage
         {
@@ -72,93 +81,107 @@ public class DiscoveryService : IDisposable
             TcpPort = tcpPort,
             Id = AppId
         };
-        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+
+        // One persistent sender for the global 255.255.255.255 broadcast
+        UdpClient? globalSender = null;
+        try
+        {
+            globalSender = new UdpClient();
+            globalSender.EnableBroadcast = true;
+            Log("Global broadcast sender created");
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to create global sender: {ex.Message}");
+        }
 
         try
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
-                var currentInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
-                var currentIps = currentInterfaces.Select(i => i.LocalAddress.ToString()).ToHashSet();
-
-                // 1. Clean up stale senders
-                var toRemove = _senders.Keys.Where(ip => !currentIps.Contains(ip)).ToList();
-                foreach (var ip in toRemove)
+                // Get all Ethernet interface broadcast addresses
+                var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+                
+                if (ethInterfaces.Count == 0)
                 {
-                    if (_senders.TryRemove(ip, out var oldSender))
+                    Log("No Ethernet interfaces found. Waiting...");
+                }
+
+                // Strategy 1: Send to each Ethernet interface's subnet broadcast
+                foreach (var netIf in ethInterfaces)
+                {
+                    try
                     {
-                        oldSender.Dispose();
+                        using var sender = new UdpClient();
+                        sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                        sender.EnableBroadcast = true;
+                        var target = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
+                        await sender.SendAsync(payload, payload.Length, target);
+                        Log($"Sent to {netIf.BroadcastAddress}:{DiscoveryPort} via {netIf.LocalAddress}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Send failed on {netIf.LocalAddress}: {ex.Message}");
+                    }
+                }
+                
+                // Strategy 2: Also send global 255.255.255.255 broadcast as fallback
+                if (globalSender != null)
+                {
+                    try
+                    {
+                        var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
+                        await globalSender.SendAsync(payload, payload.Length, globalTarget);
+                        Log($"Sent global broadcast to 255.255.255.255:{DiscoveryPort}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Global broadcast failed: {ex.Message}");
                     }
                 }
 
-                // 2. Start senders for new Ethernet interfaces
-                foreach (var netIf in currentInterfaces)
-                {
-                    var ipStr = netIf.LocalAddress.ToString();
-                    if (!_senders.ContainsKey(ipStr))
-                    {
-                        try
-                        {
-                            var sender = new UdpClient();
-                            // Bind explicitly so packets originate from this exact Ethernet interface
-                            sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                            sender.EnableBroadcast = true;
-                            _senders.TryAdd(ipStr, sender);
-                        }
-                        catch { }
-                    }
-                }
-
-                // 3. Broadcast out of all active Ethernet sockets
-                foreach (var netIf in currentInterfaces)
-                {
-                    var ipStr = netIf.LocalAddress.ToString();
-                    if (_senders.TryGetValue(ipStr, out var sender))
-                    {
-                        try
-                        {
-                            // Send explicitly to this interface's broadcast address (e.g. 169.254.255.255)
-                            var broadcastEndpoint = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
-                            await sender.SendAsync(bytes, bytes.Length, broadcastEndpoint);
-                        }
-                        catch { }
-                    }
-                }
-
-                await Task.Delay(2000, cancellationToken);
+                await Task.Delay(2000, ct);
             }
         }
         catch (OperationCanceledException) { }
+        finally
+        {
+            globalSender?.Dispose();
+        }
     }
 
-    private async Task ListenAsync(UdpClient listener, CancellationToken cancellationToken)
+    private async Task ListenAsync(UdpClient listener, CancellationToken ct)
     {
         try
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
-                var result = await listener.ReceiveAsync(cancellationToken);
+                var result = await listener.ReceiveAsync(ct);
                 var json = Encoding.UTF8.GetString(result.Buffer);
                 
                 try
                 {
                     var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
                     
-                    // Validate App ID to ignore random noise on Port 50000
                     if (message != null && message.Type == "HELLO" && message.Id == AppId)
                     {
-                        if (NetworkHelper.IsOnEthernetSubnet(result.RemoteEndPoint.Address))
-                        {
-                            PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
-                        }
+                        Log($"Received HELLO from '{message.ComputerName}' at {result.RemoteEndPoint.Address}");
+                        PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
+                    }
+                    else
+                    {
+                        Log($"Ignored packet from {result.RemoteEndPoint}: wrong type/id");
                     }
                 }
                 catch (JsonException)
-                { }
+                {
+                    Log($"Ignored non-JSON packet from {result.RemoteEndPoint}");
+                }
             }
         }
         catch (OperationCanceledException) { }
-        catch (SocketException) { }
+        catch (SocketException ex) { Log($"Socket error: {ex.Message}"); }
         catch (ObjectDisposedException) { }
     }
 
@@ -166,10 +189,5 @@ public class DiscoveryService : IDisposable
     {
         Stop();
         _globalListener?.Dispose();
-        foreach (var sender in _senders.Values)
-        {
-            sender.Dispose();
-        }
-        _senders.Clear();
     }
 }
