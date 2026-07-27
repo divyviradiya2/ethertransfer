@@ -26,30 +26,43 @@ public class PeerDiscoveredEventArgs : EventArgs
 public class DiscoveryService : IDisposable
 {
     private const int DiscoveryPort = 55001;
-    private readonly UdpClient _udpListener;
-    private readonly UdpClient _udpBroadcaster;
+    private readonly UdpClient _udpListenerV4;
+    private readonly UdpClient _udpListenerV6;
+    private readonly UdpClient _udpBroadcasterV4;
+    private readonly UdpClient _udpBroadcasterV6;
     private CancellationTokenSource? _cts;
     
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
 
     public DiscoveryService()
     {
-        _udpListener = new UdpClient();
-        _udpListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        _udpListener.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
+        // IPv4 Listener
+        _udpListenerV4 = new UdpClient(AddressFamily.InterNetwork);
+        _udpListenerV4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        _udpListenerV4.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
 
-        _udpBroadcaster = new UdpClient();
-        _udpBroadcaster.EnableBroadcast = true;
+        // IPv6 Listener
+        _udpListenerV6 = new UdpClient(AddressFamily.InterNetworkV6);
+        _udpListenerV6.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, true);
+        _udpListenerV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        _udpListenerV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, DiscoveryPort));
+
+        // Broadcasters
+        _udpBroadcasterV4 = new UdpClient(AddressFamily.InterNetwork);
+        _udpBroadcasterV4.EnableBroadcast = true;
+        
+        _udpBroadcasterV6 = new UdpClient(AddressFamily.InterNetworkV6);
     }
 
     public void Start(string computerName, int tcpPort)
     {
         _cts = new CancellationTokenSource();
         
-        // Start listening
-        _ = Task.Run(() => ListenAsync(_cts.Token));
+        // Start listening on both IPv4 and IPv6
+        _ = Task.Run(() => ListenAsync(_udpListenerV4, _cts.Token));
+        _ = Task.Run(() => ListenAsync(_udpListenerV6, _cts.Token));
         
-        // Start broadcasting
+        // Start dual-stack broadcasting
         _ = Task.Run(() => BroadcastLoopAsync(computerName, tcpPort, _cts.Token));
     }
 
@@ -58,13 +71,13 @@ public class DiscoveryService : IDisposable
         _cts?.Cancel();
     }
 
-    private async Task ListenAsync(CancellationToken cancellationToken)
+    private async Task ListenAsync(UdpClient listener, CancellationToken cancellationToken)
     {
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var result = await _udpListener.ReceiveAsync(cancellationToken);
+                var result = await listener.ReceiveAsync(cancellationToken);
                 var json = Encoding.UTF8.GetString(result.Buffer);
                 
                 try
@@ -81,14 +94,9 @@ public class DiscoveryService : IDisposable
                 }
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Expected during shutdown
-        }
-        catch (SocketException)
-        {
-            // Socket closed
-        }
+        catch (OperationCanceledException) { }
+        catch (SocketException) { }
+        catch (ObjectDisposedException) { }
     }
 
     private async Task BroadcastLoopAsync(string computerName, int tcpPort, CancellationToken cancellationToken)
@@ -99,38 +107,40 @@ public class DiscoveryService : IDisposable
             ComputerName = computerName,
             TcpPort = tcpPort
         };
-        var json = JsonSerializer.Serialize(message);
-        var bytes = Encoding.UTF8.GetBytes(json);
+        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        var ipv6Multicast = new IPEndPoint(IPAddress.Parse("FF02::1"), DiscoveryPort);
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                // 1. IPv4 Broadcasts (targets Wi-Fi and resolved APIPA networks)
                 var broadcastAddresses = NetworkHelper.GetBroadcastAddresses().Distinct().ToList();
-
                 foreach (var address in broadcastAddresses)
                 {
                     try
                     {
                         var endpoint = new IPEndPoint(address, DiscoveryPort);
-                        await _udpBroadcaster.SendAsync(bytes, bytes.Length, endpoint);
+                        await _udpBroadcasterV4.SendAsync(bytes, bytes.Length, endpoint);
                     }
-                    catch
-                    {
-                        // Ignore individual endpoint broadcast failures
-                    }
+                    catch { }
                 }
 
-                await Task.Delay(2000, cancellationToken); // Broadcast every 2 seconds
+                // 2. IPv6 Multicast (instant link-local connection over raw Ethernet cables)
+                try
+                {
+                    // "FF02::1" is the all-nodes link-local multicast group for IPv6.
+                    // This bypasses DHCP and APIPA delays entirely.
+                    await _udpBroadcasterV6.SendAsync(bytes, bytes.Length, ipv6Multicast);
+                }
+                catch { }
+
+                await Task.Delay(2000, cancellationToken);
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Expected during shutdown
-        }
+        catch (OperationCanceledException) { }
         catch (Exception)
         {
-            // Network interface might be down, ignore and retry later
             await Task.Delay(2000, cancellationToken);
         }
     }
@@ -138,7 +148,9 @@ public class DiscoveryService : IDisposable
     public void Dispose()
     {
         Stop();
-        _udpListener.Dispose();
-        _udpBroadcaster.Dispose();
+        _udpListenerV4.Dispose();
+        _udpListenerV6.Dispose();
+        _udpBroadcasterV4.Dispose();
+        _udpBroadcasterV6.Dispose();
     }
 }

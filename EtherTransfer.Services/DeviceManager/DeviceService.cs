@@ -24,8 +24,11 @@ public class DeviceService : IDisposable
         _discoveryService.PeerDiscovered += OnPeerDiscovered;
     }
 
+    private string _computerName = string.Empty;
+
     public void Start(string computerName, int tcpPort)
     {
+        _computerName = computerName;
         _cts = new CancellationTokenSource();
         _discoveryService.Start(computerName, tcpPort);
         
@@ -49,7 +52,7 @@ public class DeviceService : IDisposable
         var addressStr = e.SourceAddress.ToString();
         
         // Ignore our own broadcasts
-        if (NetworkHelper.GetLocalIPAddresses().Contains(addressStr))
+        if (e.Message.ComputerName == _computerName)
         {
             return;
         }
