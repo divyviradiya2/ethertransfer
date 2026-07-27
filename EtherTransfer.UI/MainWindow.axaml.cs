@@ -173,31 +173,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void AcceptTransfer_Click(object? sender, RoutedEventArgs e)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
-
-        // Pick save folder
-        var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        try
         {
-            Title = "Choose save location"
-        });
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null) return;
 
-        HasIncomingRequest = false;
+            // Pick save folder
+            var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Choose save location"
+            });
 
-        if (folder.Count > 0 && _incomingRequestTcs != null)
-        {
-            _incomingRequestTcs.SetResult((true, folder[0].Path.LocalPath));
+            HasIncomingRequest = false;
+
+            if (folder.Count > 0 && _incomingRequestTcs != null)
+            {
+                _incomingRequestTcs.TrySetResult((true, folder[0].Path.LocalPath));
+            }
+            else if (_incomingRequestTcs != null)
+            {
+                _incomingRequestTcs.TrySetResult((false, ""));
+            }
         }
-        else if (_incomingRequestTcs != null)
+        catch (Exception ex)
         {
-            _incomingRequestTcs.SetResult((false, ""));
+            HasIncomingRequest = false;
+            _incomingRequestTcs?.TrySetResult((false, ""));
+            // Log to our UI debugger
+            OnDebugLog(this, $"Error opening folder picker: {ex.Message}");
         }
     }
 
     private void DeclineTransfer_Click(object? sender, RoutedEventArgs e)
     {
         HasIncomingRequest = false;
-        _incomingRequestTcs?.SetResult((false, ""));
+        _incomingRequestTcs?.TrySetResult((false, ""));
     }
 
     protected override void OnClosed(EventArgs e)

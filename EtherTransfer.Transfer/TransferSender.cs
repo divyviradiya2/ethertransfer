@@ -119,6 +119,15 @@ public class TransferSender
             int read;
             long fileSent = 0;
             
+            // Fire progress immediately so UI shows 0% for this file
+            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+            {
+                CurrentFile = fileInfo.Name,
+                BytesSent = totalSent,
+                TotalBytes = totalSize,
+                SpeedMbPerSec = 0
+            });
+            
             while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
             {
                 await stream.WriteAsync(buffer, 0, read, ct);

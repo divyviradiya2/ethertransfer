@@ -105,6 +105,16 @@ public class TransferReceiver
                         using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, useAsync: true);
                         
                         long fileReceived = 0;
+                        
+                        // Fire progress immediately so UI shows 0% for this file
+                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        {
+                            CurrentFile = fileMeta.RelativePath,
+                            BytesSent = totalReceived,
+                            TotalBytes = request.TotalSize,
+                            SpeedMbPerSec = 0
+                        });
+                        
                         while (fileReceived < fileMeta.Size)
                         {
                             int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
