@@ -164,6 +164,8 @@ public class TransferSender
                 SpeedMbPerSec = 0
             });
             
+            var lastUpdate = watch.ElapsedMilliseconds;
+
             while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
             {
                 await stream.WriteAsync(buffer, 0, read, ct);
@@ -171,17 +173,22 @@ public class TransferSender
                 fileSent += read;
                 totalSent += read;
                 
-                // Update progress every chunk
-                var elapsedSec = watch.Elapsed.TotalSeconds;
-                var speed = elapsedSec > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSec : 0;
-                
-                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                // Throttle UI updates to max ~20 FPS (every 50ms) to prevent UI flooding and OOM crashes
+                var currentElapsed = watch.ElapsedMilliseconds;
+                if (currentElapsed - lastUpdate >= 50 || totalSent == totalSize)
                 {
-                    CurrentFile = item.RelativePath,
-                    BytesSent = totalSent,
-                    TotalBytes = totalSize,
-                    SpeedMbPerSec = speed
-                });
+                    lastUpdate = currentElapsed;
+                    var elapsedSec = watch.Elapsed.TotalSeconds;
+                    var speed = elapsedSec > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSec : 0;
+                    
+                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                    {
+                        CurrentFile = item.RelativePath,
+                        BytesSent = totalSent,
+                        TotalBytes = totalSize,
+                        SpeedMbPerSec = speed
+                    });
+                }
             }
             await stream.FlushAsync(ct);
         }

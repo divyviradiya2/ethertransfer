@@ -127,6 +127,8 @@ public class TransferReceiver
                             SpeedMbPerSec = 0
                         });
                         
+                        var lastUpdate = watch.ElapsedMilliseconds;
+
                         while (fileReceived < fileMeta.Size)
                         {
                             int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
@@ -138,16 +140,22 @@ public class TransferReceiver
                             fileReceived += toRead;
                             totalReceived += toRead;
                             
-                            var elapsedSec = watch.Elapsed.TotalSeconds;
-                            var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
-                            
-                            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                            // Throttle UI updates to max ~20 FPS (every 50ms)
+                            var currentElapsed = watch.ElapsedMilliseconds;
+                            if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
                             {
-                                CurrentFile = fileMeta.RelativePath,
-                                BytesSent = totalReceived,
-                                TotalBytes = request.TotalSize,
-                                SpeedMbPerSec = speed
-                            });
+                                lastUpdate = currentElapsed;
+                                var elapsedSec = watch.Elapsed.TotalSeconds;
+                                var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
+                                
+                                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                                {
+                                    CurrentFile = fileMeta.RelativePath,
+                                    BytesSent = totalReceived,
+                                    TotalBytes = request.TotalSize,
+                                    SpeedMbPerSec = speed
+                                });
+                            }
                         }
                     }
                 }
