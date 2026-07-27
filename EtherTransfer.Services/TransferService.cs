@@ -64,7 +64,7 @@ public class TransferService : IDisposable
         {
             try
             {
-                await sender.SendFilesAsync(targetIp, targetPort, _computerName, filePaths, _cts.Token);
+                await sender.SendItemsAsync(targetIp, targetPort, _computerName, filePaths, _cts.Token);
             }
             catch (Exception ex)
             {

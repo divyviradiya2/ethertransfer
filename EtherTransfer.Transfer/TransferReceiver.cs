@@ -99,7 +99,19 @@ public class TransferReceiver
                         var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, ct);
                         if (fileMeta == null) break;
 
-                        var safePath = Path.Combine(savePath, Path.GetFileName(fileMeta.RelativePath));
+                        // Securely combine paths to prevent directory traversal
+                        var normalizedRelPath = fileMeta.RelativePath.Replace('\\', '/').TrimStart('/');
+                        if (normalizedRelPath.Contains("../") || normalizedRelPath.Contains("..\\"))
+                            throw new Exception($"Security violation: Directory traversal attempt blocked ({normalizedRelPath})");
+                            
+                        // Use Path.GetFullPath to ensure it stays within the saveDirectory
+                        var safePath = Path.GetFullPath(Path.Combine(savePath, normalizedRelPath));
+                        if (!safePath.StartsWith(Path.GetFullPath(savePath)))
+                            throw new Exception($"Security violation: Path escaped save directory ({safePath})");
+
+                        var dirPath = Path.GetDirectoryName(safePath);
+                        if (dirPath != null) Directory.CreateDirectory(dirPath);
+
                         Log($"Receiving file: {safePath} ({fileMeta.Size} bytes)");
 
                         using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, useAsync: true);

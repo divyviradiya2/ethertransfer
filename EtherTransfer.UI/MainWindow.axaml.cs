@@ -157,6 +157,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
+    private async void SendFolderButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (SelectedDevice == null) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null) return;
+
+        var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select folder to send"
+        });
+
+        if (folder.Count > 0)
+        {
+            var paths = new List<string> { folder[0].Path.LocalPath };
+            var targetIp = SelectedDevice.Address;
+            var targetPort = 55000;
+            
+            // Fire and forget send
+            _ = _transferService.SendFilesAsync(targetIp, targetPort, paths);
+        }
+    }
+
     private Task<(bool accept, string savePath)> HandleIncomingTransferAsync(TransferRequestMessage request)
     {
         var tcs = new TaskCompletionSource<(bool, string)>();

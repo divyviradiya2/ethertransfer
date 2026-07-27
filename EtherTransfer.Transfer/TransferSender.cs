@@ -24,9 +24,9 @@ public class TransferSender
     private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Sender] {msg}");
 
     /// <summary>
-    /// Connects to a receiver, performs the handshake, and sends the files if accepted.
+    /// Connects to a receiver, performs the handshake, and sends the items (files/folders) if accepted.
     /// </summary>
-    public async Task SendFilesAsync(string targetIp, int targetPort, string senderName, List<string> filePaths, CancellationToken ct)
+    public async Task SendItemsAsync(string targetIp, int targetPort, string senderName, List<string> itemPaths, CancellationToken ct)
     {
         Log($"Connecting to {targetIp}:{targetPort}...");
         using var client = new TcpClient();
@@ -53,22 +53,60 @@ public class TransferSender
             throw;
         }
 
+        // Build flat list of files to send
+        var filesToSend = new List<(string AbsolutePath, string RelativePath, long Size)>();
+        long totalSize = 0;
+        bool containsFolders = false;
+
+        foreach (var path in itemPaths)
+        {
+            if (File.Exists(path))
+            {
+                var fi = new FileInfo(path);
+                filesToSend.Add((path, fi.Name, fi.Length));
+                totalSize += fi.Length;
+            }
+            else if (Directory.Exists(path))
+            {
+                containsFolders = true;
+                var baseDir = new DirectoryInfo(path);
+                var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
+
+                foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    var fi = new FileInfo(file);
+                    // Create relative path like "FolderName/SubFolder/file.txt"
+                    // Handle trailing slashes cleanly
+                    string relPath = file.Substring(parentDir.Length);
+                    if (relPath.StartsWith(Path.DirectorySeparatorChar) || relPath.StartsWith(Path.AltDirectorySeparatorChar))
+                    {
+                        relPath = relPath.Substring(1);
+                    }
+                    
+                    // Normalize to forward slashes for cross-platform compatibility
+                    relPath = relPath.Replace('\\', '/');
+
+                    filesToSend.Add((file, relPath, fi.Length));
+                    totalSize += fi.Length;
+                }
+            }
+        }
+
+        if (filesToSend.Count == 0)
+        {
+            Log("No valid files found to send.");
+            return;
+        }
+
         Log("Connected. Sending TransferRequest...");
         var stream = client.GetStream();
         
-        // Calculate totals
-        long totalSize = 0;
-        foreach (var path in filePaths)
-        {
-            totalSize += new FileInfo(path).Length;
-        }
-
         var request = new TransferRequestMessage
         {
             SenderName = senderName,
-            TotalFiles = filePaths.Count,
+            TotalFiles = filesToSend.Count,
             TotalSize = totalSize,
-            ContainsFolders = false // Simplified for v1, full folder logic comes later
+            ContainsFolders = containsFolders
         };
 
         // 1. Send Request
@@ -96,25 +134,23 @@ public class TransferSender
         // 1MB buffer for fast chunked streaming
         var buffer = new byte[1024 * 1024];
 
-        foreach (var path in filePaths)
+        foreach (var item in filesToSend)
         {
-            var fileInfo = new FileInfo(path);
-            
             // A. Send FileBegin metadata
             var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
             await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct); // Marker
             
             var meta = new FileItemMetadata
             {
-                RelativePath = fileInfo.Name, // flat for now
-                Size = fileInfo.Length
+                RelativePath = item.RelativePath,
+                Size = item.Size
             };
             await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
-            Log($"Streaming file: {fileInfo.Name} ({fileInfo.Length / 1024 / 1024} MB)");
+            Log($"Streaming file: {item.RelativePath} ({item.Size / 1024 / 1024} MB)");
 
             // B. Send Raw Binary Data
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, useAsync: true);
+            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, useAsync: true);
             
             int read;
             long fileSent = 0;
@@ -122,7 +158,7 @@ public class TransferSender
             // Fire progress immediately so UI shows 0% for this file
             ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
             {
-                CurrentFile = fileInfo.Name,
+                CurrentFile = item.RelativePath,
                 BytesSent = totalSent,
                 TotalBytes = totalSize,
                 SpeedMbPerSec = 0
@@ -141,7 +177,7 @@ public class TransferSender
                 
                 ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                 {
-                    CurrentFile = fileInfo.Name,
+                    CurrentFile = item.RelativePath,
                     BytesSent = totalSent,
                     TotalBytes = totalSize,
                     SpeedMbPerSec = speed

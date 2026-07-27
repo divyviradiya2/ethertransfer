@@ -32,7 +32,7 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,10" Spacing="10">
             <!-- Ensure button is only enabled when a device is selected -->
             <Button Content="Send Files..." x:Name="SendFilesButton" Click="SendFilesButton_Click" Background="#45475A" Foreground="#CDD6F4" BorderBrush="#585B70" BorderThickness="1" Padding="15,5" IsEnabled="{Binding HasSelection}"/>
-            <!-- <Button Content="Send Folder..." x:Name="SendFolderButton" Click="SendFolderButton_Click" Background="#45475A" Foreground="#CDD6F4" BorderBrush="#585B70" BorderThickness="1" Padding="15,5" IsEnabled="{Binding HasSelection}"/> -->
+            <Button Content="Send Folder..." x:Name="SendFolderButton" Click="SendFolderButton_Click" Background="#45475A" Foreground="#CDD6F4" BorderBrush="#585B70" BorderThickness="1" Padding="15,5" IsEnabled="{Binding HasSelection}"/>
         </StackPanel>
         
         <!-- Progress Bar Overlay (Visible during transfer) -->
