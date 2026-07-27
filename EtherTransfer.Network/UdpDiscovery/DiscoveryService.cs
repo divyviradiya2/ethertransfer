@@ -1,9 +1,15 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Network.NetworkInterfaces;
-using Makaretu.Dns;
 
 namespace EtherTransfer.Network.UdpDiscovery;
 
@@ -21,105 +27,144 @@ public class PeerDiscoveredEventArgs : EventArgs
 
 public class DiscoveryService : IDisposable
 {
-    private MulticastService? _mdns;
-    private ServiceDiscovery? _sd;
-    private ServiceProfile? _profile;
+    private const int DiscoveryPort = 50000;
+    private const string AppId = "EtherTransferApp-V1";
+    
     private CancellationTokenSource? _cts;
+    
+    // Track active UDP clients by their local bound IP
+    private readonly ConcurrentDictionary<string, UdpClient> _listeners = new();
     
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
 
     public void Start(string computerName, int tcpPort)
     {
         _cts = new CancellationTokenSource();
-        _mdns = new MulticastService();
-        _sd = new ServiceDiscovery(_mdns);
-
-        // 1. Announce our presence via mDNS
-        _profile = new ServiceProfile(computerName, "_ethtransfer._tcp", (ushort)tcpPort);
-        _sd.Advertise(_profile);
-
-        // 2. Listen for others
-        _sd.ServiceInstanceDiscovered += OnServiceInstanceDiscovered;
-        _mdns.AnswerReceived += OnAnswerReceived;
-
-        _mdns.Start();
         
-        // Periodically query to find existing/new peers (fixes late IP assignment on direct Ethernet)
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                while (_cts != null && !_cts.IsCancellationRequested)
-                {
-                    _sd.QueryServiceInstances("_ethtransfer._tcp");
-                    await Task.Delay(3000, _cts.Token);
-                }
-            }
-            catch { }
-        });
-    }
-
-    private void OnServiceInstanceDiscovered(object? sender, ServiceInstanceDiscoveryEventArgs e)
-    {
-        // When a service instance is discovered, we need its IP, so we query for its A record
-        _mdns?.SendQuery(e.ServiceInstanceName, DnsClass.IN, DnsType.A);
-    }
-
-    private void OnAnswerReceived(object? sender, MessageEventArgs e)
-    {
-        var response = e.Message;
-        
-        // Find the SRV record to get the port and target name
-        var srvRecord = response.Answers.OfType<SRVRecord>().FirstOrDefault(r => r.Name.ToString().Contains("_ethtransfer._tcp"));
-        if (srvRecord == null)
-        {
-            srvRecord = response.AdditionalRecords.OfType<SRVRecord>().FirstOrDefault(r => r.Name.ToString().Contains("_ethtransfer._tcp"));
-        }
-
-        // Find the A record to get the IP address
-        var aRecord = response.Answers.OfType<ARecord>().FirstOrDefault();
-        if (aRecord == null)
-        {
-            aRecord = response.AdditionalRecords.OfType<ARecord>().FirstOrDefault();
-        }
-
-        if (srvRecord != null && aRecord != null)
-        {
-            var ip = aRecord.Address;
-            
-            // STRICT ETHERNET FILTERING
-            // Only accept devices that are on the same subnet as one of our Ethernet adapters!
-            if (!NetworkHelper.IsOnEthernetSubnet(ip))
-            {
-                return; // Ignore Wi-Fi or unroutable devices completely
-            }
-
-            // Extract the computer name from the SRV record name (e.g., "Divy-PC._ethtransfer._tcp.local")
-            var nameParts = srvRecord.Name.ToString().Split('.');
-            var computerName = nameParts[0];
-
-            var message = new DiscoveryMessage
-            {
-                Type = "HELLO",
-                ComputerName = computerName,
-                TcpPort = srvRecord.Port
-            };
-
-            PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, ip));
-        }
+        // Start the master network loop
+        _ = Task.Run(() => NetworkLoopAsync(computerName, tcpPort, _cts.Token));
     }
 
     public void Stop()
     {
         _cts?.Cancel();
-        _sd?.Unadvertise(_profile);
-        _mdns?.Stop();
+    }
+
+    private async Task NetworkLoopAsync(string computerName, int tcpPort, CancellationToken cancellationToken)
+    {
+        var message = new DiscoveryMessage
+        {
+            Type = "HELLO",
+            ComputerName = computerName,
+            TcpPort = tcpPort,
+            Id = AppId
+        };
+        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var currentInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+                var currentIps = currentInterfaces.Select(i => i.LocalAddress.ToString()).ToHashSet();
+
+                // 1. Clean up stale listeners (if cable was unplugged or IP changed)
+                var toRemove = _listeners.Keys.Where(ip => !currentIps.Contains(ip)).ToList();
+                foreach (var ip in toRemove)
+                {
+                    if (_listeners.TryRemove(ip, out var oldClient))
+                    {
+                        oldClient.Dispose();
+                    }
+                }
+
+                // 2. Start listeners for new Ethernet interfaces
+                foreach (var netIf in currentInterfaces)
+                {
+                    var ipStr = netIf.LocalAddress.ToString();
+                    if (!_listeners.ContainsKey(ipStr))
+                    {
+                        try
+                        {
+                            var client = new UdpClient();
+                            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                            
+                            // Bind strictly to this specific Ethernet adapter's IP. 
+                            // This guarantees traffic only comes from and goes to the Ethernet cable!
+                            client.Client.Bind(new IPEndPoint(netIf.LocalAddress, DiscoveryPort));
+                            
+                            client.EnableBroadcast = true;
+                            _listeners.TryAdd(ipStr, client);
+                            
+                            // Start listening on this specific socket
+                            _ = Task.Run(() => ListenAsync(client, cancellationToken));
+                        }
+                        catch
+                        {
+                            // Port might be exclusively locked or IP invalid, ignore
+                        }
+                    }
+                }
+
+                // 3. Broadcast out of all active Ethernet sockets
+                foreach (var netIf in currentInterfaces)
+                {
+                    var ipStr = netIf.LocalAddress.ToString();
+                    if (_listeners.TryGetValue(ipStr, out var client))
+                    {
+                        try
+                        {
+                            // Send explicitly to this interface's broadcast address (e.g. 169.254.255.255)
+                            var broadcastEndpoint = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
+                            await client.SendAsync(bytes, bytes.Length, broadcastEndpoint);
+                        }
+                        catch
+                        { }
+                    }
+                }
+
+                // Broadcast every 2 seconds as recommended
+                await Task.Delay(2000, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private async Task ListenAsync(UdpClient listener, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var result = await listener.ReceiveAsync(cancellationToken);
+                var json = Encoding.UTF8.GetString(result.Buffer);
+                
+                try
+                {
+                    var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
+                    
+                    // Validate App ID to ignore random noise on Port 50000
+                    if (message != null && message.Type == "HELLO" && message.Id == AppId)
+                    {
+                        PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
+                    }
+                }
+                catch (JsonException)
+                { }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (SocketException) { }
+        catch (ObjectDisposedException) { }
     }
 
     public void Dispose()
     {
         Stop();
-        _sd?.Dispose();
-        _mdns?.Dispose();
+        foreach (var client in _listeners.Values)
+        {
+            client.Dispose();
+        }
+        _listeners.Clear();
     }
 }
