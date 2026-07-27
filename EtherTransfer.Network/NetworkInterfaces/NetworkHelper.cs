@@ -8,60 +8,87 @@ namespace EtherTransfer.Network.NetworkInterfaces;
 
 public static class NetworkHelper
 {
-    public static IEnumerable<string> GetLocalIPAddresses()
+    /// <summary>
+    /// Gets a list of IPv4 addresses assigned ONLY to physical/wired Ethernet adapters.
+    /// Excludes Wi-Fi, Loopback, and virtual adapters where possible.
+    /// </summary>
+    public static IEnumerable<IPAddress> GetEthernetIPAddresses()
     {
-        var activeInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+        var ethernetInterfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up && 
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
 
-        foreach (var ni in activeInterfaces)
+        foreach (var ni in ethernetInterfaces)
         {
+            // Extra safety to ignore explicitly named Wi-Fi adapters on Linux/Windows
+            var name = ni.Name.ToLowerInvariant();
+            var desc = ni.Description.ToLowerInvariant();
+            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+            {
+                continue;
+            }
+
             var ipProps = ni.GetIPProperties();
             foreach (var ip in ipProps.UnicastAddresses)
             {
-                if (ip.Address.AddressFamily == AddressFamily.InterNetwork) // IPv4 only for now
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork) // IPv4
                 {
-                    yield return ip.Address.ToString();
+                    yield return ip.Address;
                 }
             }
         }
     }
 
-    public static IEnumerable<IPAddress> GetBroadcastAddresses()
+    /// <summary>
+    /// Determines if a given IP address is reachable on the same subnet as one of our Ethernet adapters.
+    /// </summary>
+    public static bool IsOnEthernetSubnet(IPAddress remoteIp)
     {
-        var activeInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+        var ethernetInterfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up && 
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
 
-        foreach (var ni in activeInterfaces)
+        foreach (var ni in ethernetInterfaces)
         {
+            var name = ni.Name.ToLowerInvariant();
+            var desc = ni.Description.ToLowerInvariant();
+            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+            {
+                continue;
+            }
+
             var ipProps = ni.GetIPProperties();
             foreach (var ip in ipProps.UnicastAddresses)
             {
                 if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
                 {
-                    var ipBytes = ip.Address.GetAddressBytes();
-                    var maskBytes = ip.IPv4Mask.GetAddressBytes();
-                    
-                    if (maskBytes.Length == 4 && ipBytes.Length == 4)
+                    if (IsInSameSubnet(ip.Address, remoteIp, ip.IPv4Mask))
                     {
-                        var broadcastBytes = new byte[4];
-                        for (int i = 0; i < 4; i++)
-                        {
-                            broadcastBytes[i] = (byte)(ipBytes[i] | ~maskBytes[i]);
-                        }
-                        
-                        // Ignore 0.0.0.0 masks which can happen on some disconnected interfaces
-                        if (!maskBytes.All(b => b == 0))
-                        {
-                            yield return new IPAddress(broadcastBytes);
-                        }
+                        return true;
                     }
                 }
             }
         }
-        
-        // Always include the global broadcast address as a fallback
-        yield return IPAddress.Broadcast;
+        return false;
+    }
+
+    private static bool IsInSameSubnet(IPAddress address1, IPAddress address2, IPAddress subnetMask)
+    {
+        var ip1Bytes = address1.GetAddressBytes();
+        var ip2Bytes = address2.GetAddressBytes();
+        var maskBytes = subnetMask.GetAddressBytes();
+
+        if (ip1Bytes.Length != ip2Bytes.Length || ip1Bytes.Length != maskBytes.Length)
+            return false;
+
+        for (int i = 0; i < ip1Bytes.Length; i++)
+        {
+            if ((ip1Bytes[i] & maskBytes[i]) != (ip2Bytes[i] & maskBytes[i]))
+                return false;
+        }
+
+        return true;
     }
 }

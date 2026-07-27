@@ -1,13 +1,9 @@
 using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Net;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Network.NetworkInterfaces;
+using Makaretu.Dns;
 
 namespace EtherTransfer.Network.UdpDiscovery;
 
@@ -25,132 +21,91 @@ public class PeerDiscoveredEventArgs : EventArgs
 
 public class DiscoveryService : IDisposable
 {
-    private const int DiscoveryPort = 55001;
-    private readonly UdpClient _udpListenerV4;
-    private readonly UdpClient _udpListenerV6;
-    private readonly UdpClient _udpBroadcasterV4;
-    private readonly UdpClient _udpBroadcasterV6;
-    private CancellationTokenSource? _cts;
+    private MulticastService? _mdns;
+    private ServiceDiscovery? _sd;
+    private ServiceProfile? _profile;
     
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
 
-    public DiscoveryService()
-    {
-        // IPv4 Listener
-        _udpListenerV4 = new UdpClient(AddressFamily.InterNetwork);
-        _udpListenerV4.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        _udpListenerV4.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
-
-        // IPv6 Listener
-        _udpListenerV6 = new UdpClient(AddressFamily.InterNetworkV6);
-        _udpListenerV6.Client.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.IPv6Only, true);
-        _udpListenerV6.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        _udpListenerV6.Client.Bind(new IPEndPoint(IPAddress.IPv6Any, DiscoveryPort));
-
-        // Broadcasters
-        _udpBroadcasterV4 = new UdpClient(AddressFamily.InterNetwork);
-        _udpBroadcasterV4.EnableBroadcast = true;
-        
-        _udpBroadcasterV6 = new UdpClient(AddressFamily.InterNetworkV6);
-    }
-
     public void Start(string computerName, int tcpPort)
     {
-        _cts = new CancellationTokenSource();
+        _mdns = new MulticastService();
+        _sd = new ServiceDiscovery(_mdns);
+
+        // 1. Announce our presence via mDNS
+        _profile = new ServiceProfile(computerName, "_ethtransfer._tcp", (ushort)tcpPort);
+        _sd.Advertise(_profile);
+
+        // 2. Listen for others
+        _sd.ServiceInstanceDiscovered += OnServiceInstanceDiscovered;
+        _mdns.AnswerReceived += OnAnswerReceived;
+
+        _mdns.Start();
         
-        // Start listening on both IPv4 and IPv6
-        _ = Task.Run(() => ListenAsync(_udpListenerV4, _cts.Token));
-        _ = Task.Run(() => ListenAsync(_udpListenerV6, _cts.Token));
+        // Initial query to find existing peers
+        _sd.QueryServiceInstances("_ethtransfer._tcp");
+    }
+
+    private void OnServiceInstanceDiscovered(object? sender, ServiceInstanceDiscoveryEventArgs e)
+    {
+        // When a service instance is discovered, we need its IP, so we query for its A record
+        _mdns?.SendQuery(e.ServiceInstanceName, DnsClass.IN, DnsType.A);
+    }
+
+    private void OnAnswerReceived(object? sender, MessageEventArgs e)
+    {
+        var response = e.Message;
         
-        // Start dual-stack broadcasting
-        _ = Task.Run(() => BroadcastLoopAsync(computerName, tcpPort, _cts.Token));
+        // Find the SRV record to get the port and target name
+        var srvRecord = response.Answers.OfType<SRVRecord>().FirstOrDefault(r => r.Name.ToString().Contains("_ethtransfer._tcp"));
+        if (srvRecord == null)
+        {
+            srvRecord = response.AdditionalRecords.OfType<SRVRecord>().FirstOrDefault(r => r.Name.ToString().Contains("_ethtransfer._tcp"));
+        }
+
+        // Find the A record to get the IP address
+        var aRecord = response.Answers.OfType<ARecord>().FirstOrDefault();
+        if (aRecord == null)
+        {
+            aRecord = response.AdditionalRecords.OfType<ARecord>().FirstOrDefault();
+        }
+
+        if (srvRecord != null && aRecord != null)
+        {
+            var ip = aRecord.Address;
+            
+            // STRICT ETHERNET FILTERING
+            // Only accept devices that are on the same subnet as one of our Ethernet adapters!
+            if (!NetworkHelper.IsOnEthernetSubnet(ip))
+            {
+                return; // Ignore Wi-Fi or unroutable devices completely
+            }
+
+            // Extract the computer name from the SRV record name (e.g., "Divy-PC._ethtransfer._tcp.local")
+            var nameParts = srvRecord.Name.ToString().Split('.');
+            var computerName = nameParts[0];
+
+            var message = new DiscoveryMessage
+            {
+                Type = "HELLO",
+                ComputerName = computerName,
+                TcpPort = srvRecord.Port
+            };
+
+            PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, ip));
+        }
     }
 
     public void Stop()
     {
-        _cts?.Cancel();
-    }
-
-    private async Task ListenAsync(UdpClient listener, CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var result = await listener.ReceiveAsync(cancellationToken);
-                var json = Encoding.UTF8.GetString(result.Buffer);
-                
-                try
-                {
-                    var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
-                    if (message != null && message.Type == "HELLO")
-                    {
-                        PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
-                    }
-                }
-                catch (JsonException)
-                {
-                    // Ignore malformed packets
-                }
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch (SocketException) { }
-        catch (ObjectDisposedException) { }
-    }
-
-    private async Task BroadcastLoopAsync(string computerName, int tcpPort, CancellationToken cancellationToken)
-    {
-        var message = new DiscoveryMessage
-        {
-            Type = "HELLO",
-            ComputerName = computerName,
-            TcpPort = tcpPort
-        };
-        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
-        var ipv6Multicast = new IPEndPoint(IPAddress.Parse("FF02::1"), DiscoveryPort);
-
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                // 1. IPv4 Broadcasts (targets Wi-Fi and resolved APIPA networks)
-                var broadcastAddresses = NetworkHelper.GetBroadcastAddresses().Distinct().ToList();
-                foreach (var address in broadcastAddresses)
-                {
-                    try
-                    {
-                        var endpoint = new IPEndPoint(address, DiscoveryPort);
-                        await _udpBroadcasterV4.SendAsync(bytes, bytes.Length, endpoint);
-                    }
-                    catch { }
-                }
-
-                // 2. IPv6 Multicast (instant link-local connection over raw Ethernet cables)
-                try
-                {
-                    // "FF02::1" is the all-nodes link-local multicast group for IPv6.
-                    // This bypasses DHCP and APIPA delays entirely.
-                    await _udpBroadcasterV6.SendAsync(bytes, bytes.Length, ipv6Multicast);
-                }
-                catch { }
-
-                await Task.Delay(2000, cancellationToken);
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception)
-        {
-            await Task.Delay(2000, cancellationToken);
-        }
+        _sd?.Unadvertise(_profile);
+        _mdns?.Stop();
     }
 
     public void Dispose()
     {
         Stop();
-        _udpListenerV4.Dispose();
-        _udpListenerV6.Dispose();
-        _udpBroadcasterV4.Dispose();
-        _udpBroadcasterV6.Dispose();
+        _sd?.Dispose();
+        _mdns?.Dispose();
     }
 }
