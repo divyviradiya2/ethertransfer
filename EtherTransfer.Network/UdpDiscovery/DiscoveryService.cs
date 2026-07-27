@@ -49,6 +49,20 @@ public class DiscoveryService : IDisposable
         
         Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
         
+        // Auto-configure Ethernet on Linux (assign link-local IP if missing)
+        var configLog = EthernetConfigurator.EnsureEthernetReady();
+        foreach (var line in configLog)
+        {
+            Log(line);
+        }
+        
+        // Run diagnostics
+        var diag = NetworkHelper.DiagnoseInterfaces();
+        foreach (var line in diag)
+        {
+            Log(line);
+        }
+        
         // Global listener on 0.0.0.0:50000 to receive ALL broadcast packets
         try
         {

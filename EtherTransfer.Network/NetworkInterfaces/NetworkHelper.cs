@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace EtherTransfer.Network.NetworkInterfaces;
 
@@ -20,6 +21,9 @@ public class InterfaceAddressInfo
 
 public static class NetworkHelper
 {
+    /// <summary>
+    /// Returns all non-wireless, non-loopback interfaces that have a valid IPv4 address and subnet mask.
+    /// </summary>
     public static IEnumerable<InterfaceAddressInfo> GetEthernetInterfaces()
     {
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
@@ -62,53 +66,60 @@ public static class NetworkHelper
         }
     }
 
-    public static bool IsOnEthernetSubnet(IPAddress remoteIp)
+    /// <summary>
+    /// Diagnoses Ethernet interfaces and returns human-readable status messages.
+    /// Detects interfaces that are UP but have no IP (the Linux link-local problem).
+    /// </summary>
+    public static List<string> DiagnoseInterfaces()
     {
-        var interfaces = GetEthernetInterfaces();
-        bool hasEthernet = false;
+        var results = new List<string>();
         
-        foreach (var netIf in interfaces)
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
+
+        foreach (var ni in interfaces)
         {
-            hasEthernet = true;
+            var name = ni.Name.ToLowerInvariant();
+            var desc = ni.Description.ToLowerInvariant();
+            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+                continue;
             
-            // Check if remote IP is in the same IPv4 subnet
-            if (remoteIp.AddressFamily == AddressFamily.InterNetwork)
+            // Skip virtual/WAN miniport adapters on Windows
+            if (name.Contains("local area connection") || desc.Contains("wan miniport") || 
+                desc.Contains("filter") || desc.Contains("scheduler"))
+                continue;
+
+            if (ni.OperationalStatus == OperationalStatus.Up)
             {
-                var localBytes = netIf.LocalAddress.GetAddressBytes();
-                var remoteBytes = remoteIp.GetAddressBytes();
-                var broadcastBytes = netIf.BroadcastAddress.GetAddressBytes();
-                
-                // We can derive the mask from the broadcast and local address
-                var maskBytes = new byte[4];
-                for (int i = 0; i < 4; i++)
+                var ipv4Addrs = ni.GetIPProperties().UnicastAddresses
+                    .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                    .Select(a => a.Address.ToString())
+                    .ToList();
+
+                if (ipv4Addrs.Count > 0)
                 {
-                    maskBytes[i] = (byte)~(localBytes[i] ^ broadcastBytes[i]);
+                    results.Add($"✅ {ni.Name}: UP, IP = {string.Join(", ", ipv4Addrs)}");
                 }
-                
-                bool match = true;
-                for (int i = 0; i < 4; i++)
+                else
                 {
-                    if ((localBytes[i] & maskBytes[i]) != (remoteBytes[i] & maskBytes[i]))
+                    results.Add($"⚠️ {ni.Name}: UP but NO IPv4 address!");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                     {
-                        match = false;
-                        break;
+                        results.Add($"   FIX: Run './run-linux.sh' or manually: sudo nmcli connection modify \"Wired connection 1\" ipv4.method link-local && sudo nmcli connection up \"Wired connection 1\"");
                     }
                 }
-                
-                if (match) return true;
             }
-        }
-        
-        // Fallback for direct cables
-        if (hasEthernet && remoteIp.AddressFamily == AddressFamily.InterNetwork)
-        {
-            var bytes = remoteIp.GetAddressBytes();
-            if (bytes[0] == 169 && bytes[1] == 254) // APIPA
+            else if (ni.OperationalStatus == OperationalStatus.Down)
             {
-                return true;
+                // Only mention the main Ethernet adapter, not all the virtual stuff
+                if (name == "ethernet" || name.StartsWith("enp") || name.StartsWith("eth") || name.StartsWith("eno"))
+                {
+                    results.Add($"❌ {ni.Name}: Cable not connected");
+                }
             }
         }
 
-        return false;
+        return results;
     }
 }
