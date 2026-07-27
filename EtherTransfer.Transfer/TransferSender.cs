@@ -147,8 +147,6 @@ public class TransferSender
             };
             await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
-            Log($"Streaming file: {item.RelativePath} ({item.Size / 1024 / 1024} MB)");
-
             // B. Send Raw Binary Data
             using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, useAsync: true);
             

@@ -112,8 +112,6 @@ public class TransferReceiver
                         var dirPath = Path.GetDirectoryName(safePath);
                         if (dirPath != null) Directory.CreateDirectory(dirPath);
 
-                        Log($"Receiving file: {safePath} ({fileMeta.Size} bytes)");
-
                         using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, useAsync: true);
                         
                         long fileReceived = 0;

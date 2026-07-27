@@ -99,13 +99,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Dispatcher.UIThread.InvokeAsync(() =>
         {
             DebugMessages.Add(message);
-            while (DebugMessages.Count > 100)
+            
+            // Keep log size manageable by removing oldest
+            if (DebugMessages.Count > 100)
             {
                 DebugMessages.RemoveAt(0);
             }
-            if (DebugLogList != null && DebugMessages.Count > 0)
+            
+            // Auto-scroll to bottom AFTER modifying the collection
+            var count = DebugMessages.Count;
+            if (count > 0 && DebugLogList != null)
             {
-                DebugLogList.ScrollIntoView(DebugMessages[DebugMessages.Count - 1]);
+                DebugLogList.ScrollIntoView(DebugMessages[count - 1]);
             }
         });
     }
