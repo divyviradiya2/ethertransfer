@@ -98,11 +98,14 @@ public static class EthernetConfigurator
 
                     case "modified":
                         // We modified an existing connection — restore original method
+                        // NOTE: We only modify the setting, we do NOT call "connection up" because
+                        // switching to DHCP on a direct cable (no router) would block forever
+                        // waiting for a DHCP lease, freezing the system.
+                        // The setting will apply on next reboot or cable replug.
                         var method = change.OriginalMethod ?? "auto";
                         log.Add($"   Restoring '{change.ConnectionName}' to ipv4.method={method}...");
                         RunCommand("nmcli", $"connection modify \"{change.ConnectionName}\" ipv4.method {method}");
-                        RunCommand("nmcli", $"connection up \"{change.ConnectionName}\"");
-                        log.Add($"   ✅ Restored");
+                        log.Add($"   ✅ Restored (applies on next connection)");
                         break;
 
                     case "manual_ip":
