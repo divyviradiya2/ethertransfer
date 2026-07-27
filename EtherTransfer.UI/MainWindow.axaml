@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="clr-namespace:EtherTransfer.UI"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        Width="600" Height="400"
+        x:Class="EtherTransfer.UI.MainWindow"
+        x:DataType="ui:MainWindow"
+        Title="EtherTransfer"
+        Background="#ECE9D8">
+    <Grid Margin="10" RowDefinitions="Auto,*,Auto">
+        <TextBlock Text="Nearby Devices" FontWeight="Bold" FontSize="16" Margin="0,0,0,10" Grid.Row="0"/>
+        
+        <ListBox x:Name="DevicesList" Grid.Row="1" Background="White" BorderBrush="#828790" BorderThickness="1" ItemsSource="{Binding DiscoveredDevices}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="5">
+                        <TextBlock Text="🖥" Margin="0,0,10,0"/>
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Address}" Margin="10,0,0,0" Foreground="Gray"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0" Spacing="10">
+            <Button Content="Send Files..." x:Name="SendFilesButton" Click="SendFilesButton_Click" Background="#F0F0F0" BorderBrush="#707070" BorderThickness="1" Padding="15,5"/>
+            <Button Content="Send Folder..." x:Name="SendFolderButton" Click="SendFolderButton_Click" Background="#F0F0F0" BorderBrush="#707070" BorderThickness="1" Padding="15,5"/>
+        </StackPanel>
+    </Grid>
+</Window>

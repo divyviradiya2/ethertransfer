@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\EtherTransfer.Core\EtherTransfer.Core.csproj" />
+    <ProjectReference Include="..\EtherTransfer.Network\EtherTransfer.Network.csproj" />
+    <ProjectReference Include="..\EtherTransfer.Transfer\EtherTransfer.Transfer.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
