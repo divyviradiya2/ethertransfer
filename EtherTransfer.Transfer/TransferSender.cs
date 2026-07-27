@@ -71,8 +71,13 @@ public class TransferSender
                 containsFolders = true;
                 var baseDir = new DirectoryInfo(path);
                 var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
+                var options = new EnumerationOptions 
+                { 
+                    IgnoreInaccessible = true, 
+                    RecurseSubdirectories = true 
+                };
 
-                foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(path, "*", options))
                 {
                     var fi = new FileInfo(file);
                     // Create relative path like "FolderName/SubFolder/file.txt"

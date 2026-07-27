@@ -153,7 +153,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (files.Count > 0)
         {
-            var paths = files.Select(f => f.Path.LocalPath).ToList();
+            var paths = new List<string>();
+            foreach (var f in files)
+            {
+                if (f.TryGetLocalPath() is string localPath)
+                    paths.Add(localPath);
+            }
+            
+            if (paths.Count == 0)
+            {
+                OnDebugLog(this, "Failed to resolve local paths for selected files.");
+                return;
+            }
+
             var targetIp = SelectedDevice.Address;
             var targetPort = 55000;
             
@@ -176,7 +188,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (folder.Count > 0)
         {
-            var paths = new List<string> { folder[0].Path.LocalPath };
+            var localPath = folder[0].TryGetLocalPath();
+            if (string.IsNullOrEmpty(localPath))
+            {
+                OnDebugLog(this, "Failed to resolve local path for selected folder. Is this a network or virtual drive?");
+                return;
+            }
+
+            var paths = new List<string> { localPath };
             var targetIp = SelectedDevice.Address;
             var targetPort = 55000;
             
