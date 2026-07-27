@@ -18,9 +18,6 @@ public class DeviceService : IDisposable
     private CancellationTokenSource? _cts;
     private string _computerName = string.Empty;
     
-    // Our own local IPs so we can filter ourselves out
-    private HashSet<string> _localIps = new();
-    
     public event EventHandler? DevicesChanged;
     public event EventHandler<string>? DebugLog;
 
@@ -35,20 +32,6 @@ public class DeviceService : IDisposable
     {
         _computerName = computerName;
         _cts = new CancellationTokenSource();
-        
-        // Collect our own local IPs to filter self-discovery
-        _localIps = new HashSet<string>();
-        foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-        {
-            foreach (var addr in ni.GetIPProperties().UnicastAddresses)
-            {
-                if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                {
-                    _localIps.Add(addr.Address.ToString());
-                }
-            }
-        }
-        
         _discoveryService.Start(computerName, tcpPort);
         
         // Start cleanup task for stale devices
@@ -66,12 +49,29 @@ public class DeviceService : IDisposable
         return _devices.Values.ToList();
     }
 
+    private static HashSet<string> GetCurrentLocalIps()
+    {
+        var ips = new HashSet<string>();
+        foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+        {
+            foreach (var addr in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    ips.Add(addr.Address.ToString());
+                }
+            }
+        }
+        return ips;
+    }
+
     private void OnPeerDiscovered(object? sender, PeerDiscoveredEventArgs e)
     {
         var sourceIp = e.SourceAddress.ToString();
         
-        // Ignore our own broadcasts by checking if source IP is one of ours
-        if (_localIps.Contains(sourceIp))
+        // Dynamically check local IPs each time — critical on Linux where the
+        // link-local IP is assigned AFTER startup by EthernetConfigurator.
+        if (GetCurrentLocalIps().Contains(sourceIp))
         {
             return;
         }
