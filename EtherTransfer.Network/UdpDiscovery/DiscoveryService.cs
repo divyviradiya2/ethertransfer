@@ -5,7 +5,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using EtherTransfer.Core.Models;
+using EtherTransfer.Network.NetworkInterfaces;
 
 namespace EtherTransfer.Network.UdpDiscovery;
 
@@ -99,13 +101,26 @@ public class DiscoveryService : IDisposable
         };
         var json = JsonSerializer.Serialize(message);
         var bytes = Encoding.UTF8.GetBytes(json);
-        var endpoint = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await _udpBroadcaster.SendAsync(bytes, bytes.Length, endpoint);
+                var broadcastAddresses = NetworkHelper.GetBroadcastAddresses().Distinct().ToList();
+
+                foreach (var address in broadcastAddresses)
+                {
+                    try
+                    {
+                        var endpoint = new IPEndPoint(address, DiscoveryPort);
+                        await _udpBroadcaster.SendAsync(bytes, bytes.Length, endpoint);
+                    }
+                    catch
+                    {
+                        // Ignore individual endpoint broadcast failures
+                    }
+                }
+
                 await Task.Delay(2000, cancellationToken); // Broadcast every 2 seconds
             }
         }
@@ -113,7 +128,7 @@ public class DiscoveryService : IDisposable
         {
             // Expected during shutdown
         }
-        catch (SocketException)
+        catch (Exception)
         {
             // Network interface might be down, ignore and retry later
             await Task.Delay(2000, cancellationToken);
