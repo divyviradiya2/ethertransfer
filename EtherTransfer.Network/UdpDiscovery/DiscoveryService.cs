@@ -178,17 +178,16 @@ public class DiscoveryService : IDisposable
                     
                     if (message != null && message.Type == "HELLO" && message.Id == AppId)
                     {
-                        Log($"Received HELLO from '{message.ComputerName}' at {result.RemoteEndPoint.Address}");
                         PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
                     }
                     else
                     {
-                        Log($"Ignored packet from {result.RemoteEndPoint}: wrong type/id");
+                        // Ignore silently
                     }
                 }
                 catch (JsonException)
                 {
-                    Log($"Ignored non-JSON packet from {result.RemoteEndPoint}");
+                    // Ignore silently
                 }
             }
         }
