@@ -132,7 +132,6 @@ public class DiscoveryService : IDisposable
                         sender.EnableBroadcast = true;
                         var target = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
-                        Log($"Sent to {netIf.BroadcastAddress}:{DiscoveryPort} via {netIf.LocalAddress}");
                     }
                     catch (Exception ex)
                     {
@@ -147,7 +146,6 @@ public class DiscoveryService : IDisposable
                     {
                         var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
                         await globalSender.SendAsync(payload, payload.Length, globalTarget);
-                        Log($"Sent global broadcast to 255.255.255.255:{DiscoveryPort}");
                     }
                     catch (Exception ex)
                     {

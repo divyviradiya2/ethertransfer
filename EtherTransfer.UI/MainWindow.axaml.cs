@@ -176,31 +176,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void SendFolderButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (SelectedDevice == null) return;
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null) return;
-
-        var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        try
         {
-            Title = "Select folder to send"
-        });
+            if (SelectedDevice == null) return;
 
-        if (folder.Count > 0)
-        {
-            var localPath = folder[0].TryGetLocalPath();
-            if (string.IsNullOrEmpty(localPath))
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null) return;
+
+            var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                OnDebugLog(this, "Failed to resolve local path for selected folder. Is this a network or virtual drive?");
-                return;
-            }
+                Title = "Select folder to send"
+            });
 
-            var paths = new List<string> { localPath };
-            var targetIp = SelectedDevice.Address;
-            var targetPort = 55000;
-            
-            // Fire and forget send
-            _ = _transferService.SendFilesAsync(targetIp, targetPort, paths);
+            if (folder.Count > 0)
+            {
+                var localPath = folder[0].TryGetLocalPath() ?? folder[0].Path.LocalPath;
+                if (string.IsNullOrEmpty(localPath))
+                {
+                    OnDebugLog(this, "Failed to resolve local path for selected folder. Is this a network or virtual drive?");
+                    return;
+                }
+
+                OnDebugLog(this, $"Folder picked: {localPath}");
+                var paths = new List<string> { localPath };
+                var targetIp = SelectedDevice.Address;
+                var targetPort = 55000;
+                
+                // Fire and forget send
+                _ = _transferService.SendFilesAsync(targetIp, targetPort, paths);
+            }
+        }
+        catch (Exception ex)
+        {
+            OnDebugLog(this, $"Folder Picker Crash: {ex.Message}\n{ex.StackTrace}");
         }
     }
 

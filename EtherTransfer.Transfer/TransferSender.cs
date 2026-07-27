@@ -54,6 +54,7 @@ public class TransferSender
         }
 
         // Build flat list of files to send
+        Log("Scanning items...");
         var filesToSend = new List<(string AbsolutePath, string RelativePath, long Size)>();
         long totalSize = 0;
         bool containsFolders = false;
@@ -103,7 +104,8 @@ public class TransferSender
             return;
         }
 
-        Log("Connected. Sending TransferRequest...");
+        Log($"Found {filesToSend.Count} files ({totalSize / 1024 / 1024} MB). Connecting...");
+        
         var stream = client.GetStream();
         
         var request = new TransferRequestMessage
