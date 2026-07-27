@@ -10,15 +10,19 @@ namespace EtherTransfer.Network.NetworkInterfaces;
 
 /// <summary>
 /// Automatically configures Ethernet interfaces for link-local addressing on Linux.
-/// On Windows, APIPA does this automatically. On Linux, NetworkManager doesn't by default.
+/// Tracks all changes and restores the original configuration on cleanup.
 /// </summary>
 public static class EthernetConfigurator
 {
+    // Track what we changed so we can undo it
+    private static readonly List<ConfigChange> _changes = new();
+
+    private record ConfigChange(string Type, string ConnectionName, string InterfaceName, string? OriginalMethod);
+
     public static List<string> EnsureEthernetReady()
     {
         var log = new List<string>();
 
-        // Only needed on Linux
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             return log;
@@ -36,16 +40,12 @@ public static class EthernetConfigurator
             var name = ni.Name.ToLowerInvariant();
             var desc = ni.Description.ToLowerInvariant();
 
-            // Skip wireless
             if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
                 continue;
-
-            // Skip virtual/docker/bridge
             if (name.StartsWith("docker") || name.StartsWith("br-") || name.StartsWith("veth") ||
                 name.StartsWith("virbr") || name.StartsWith("tun") || name.StartsWith("tap"))
                 continue;
 
-            // Check if this interface has any IPv4 address
             var hasIpv4 = ni.GetIPProperties().UnicastAddresses
                 .Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork);
 
@@ -60,14 +60,66 @@ public static class EthernetConfigurator
 
             log.Add($"⚠️ {ni.Name}: UP but no IPv4 — configuring link-local...");
 
-            // Try nmcli
             if (TryConfigureWithNmcli(ni.Name, log))
                 continue;
 
-            // Fallback: assign a random 169.254.x.x directly
             TryConfigureManually(ni.Name, log);
         }
 
+        return log;
+    }
+
+    /// <summary>
+    /// Restores all Ethernet interfaces to their original configuration.
+    /// Call this when the app is shutting down.
+    /// </summary>
+    public static List<string> RestoreOriginalConfig()
+    {
+        var log = new List<string>();
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || _changes.Count == 0)
+            return log;
+
+        log.Add("Restoring original Ethernet configuration...");
+
+        foreach (var change in _changes)
+        {
+            try
+            {
+                switch (change.Type)
+                {
+                    case "created":
+                        // We created a new connection — delete it and bring back the original
+                        log.Add($"   Removing '{change.ConnectionName}'...");
+                        RunCommand("nmcli", $"connection down \"{change.ConnectionName}\"");
+                        RunCommand("nmcli", $"connection delete \"{change.ConnectionName}\"");
+                        log.Add($"   ✅ Removed");
+                        break;
+
+                    case "modified":
+                        // We modified an existing connection — restore original method
+                        var method = change.OriginalMethod ?? "auto";
+                        log.Add($"   Restoring '{change.ConnectionName}' to ipv4.method={method}...");
+                        RunCommand("nmcli", $"connection modify \"{change.ConnectionName}\" ipv4.method {method}");
+                        RunCommand("nmcli", $"connection up \"{change.ConnectionName}\"");
+                        log.Add($"   ✅ Restored");
+                        break;
+
+                    case "manual_ip":
+                        // We manually added an IP — remove it
+                        log.Add($"   Flushing manual IP from {change.InterfaceName}...");
+                        RunCommand("ip", $"addr flush dev {change.InterfaceName} scope link");
+                        log.Add($"   ✅ Flushed");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Add($"   ⚠️ Restore failed for {change.ConnectionName}: {ex.Message}");
+            }
+        }
+
+        _changes.Clear();
         return log;
     }
 
@@ -75,7 +127,6 @@ public static class EthernetConfigurator
     {
         try
         {
-            // Check if nmcli exists
             var whichResult = RunCommand("which", "nmcli");
             if (whichResult.exitCode != 0)
             {
@@ -84,7 +135,7 @@ public static class EthernetConfigurator
             }
 
             // Find existing connection for this interface
-            var listResult = RunCommand("nmcli", $"-t -f NAME,DEVICE connection show");
+            var listResult = RunCommand("nmcli", "-t -f NAME,DEVICE connection show");
             string? connName = null;
 
             if (listResult.exitCode == 0)
@@ -103,7 +154,7 @@ public static class EthernetConfigurator
 
             if (string.IsNullOrEmpty(connName))
             {
-                // Create a new connection
+                // Create a new connection — track for cleanup
                 connName = $"EtherTransfer-{ifaceName}";
                 log.Add($"   Creating connection '{connName}'...");
                 var addResult = RunCommand("nmcli", $"connection add type ethernet con-name \"{connName}\" ifname {ifaceName} ipv4.method link-local");
@@ -112,17 +163,36 @@ public static class EthernetConfigurator
                     log.Add($"   Failed to create connection: {addResult.output}");
                     return false;
                 }
+                _changes.Add(new ConfigChange("created", connName, ifaceName, null));
             }
             else
             {
-                // Modify existing connection
-                log.Add($"   Setting '{connName}' to link-local...");
+                // Read current method before modifying
+                var methodResult = RunCommand("nmcli", $"-t -f ipv4.method connection show \"{connName}\"");
+                var originalMethod = "auto"; // default
+                if (methodResult.exitCode == 0)
+                {
+                    var val = methodResult.output.Trim();
+                    if (val.Contains(':'))
+                        originalMethod = val.Split(':')[^1].Trim();
+                }
+
+                // If already link-local, nothing to do
+                if (originalMethod == "link-local")
+                {
+                    log.Add($"   '{connName}' is already link-local, bringing up...");
+                    RunCommand("nmcli", $"connection up \"{connName}\"");
+                    return true;
+                }
+
+                log.Add($"   Setting '{connName}' to link-local (was: {originalMethod})...");
                 var modResult = RunCommand("nmcli", $"connection modify \"{connName}\" ipv4.method link-local");
                 if (modResult.exitCode != 0)
                 {
                     log.Add($"   Failed to modify: {modResult.output}");
                     return false;
                 }
+                _changes.Add(new ConfigChange("modified", connName, ifaceName, originalMethod));
             }
 
             // Bring it up
@@ -157,18 +227,19 @@ public static class EthernetConfigurator
             if (result.exitCode == 0)
             {
                 log.Add($"   ✅ Manually assigned {ip}");
+                _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
             }
             else
             {
-                // Might need sudo
                 var sudoResult = RunCommand("sudo", $"-n ip addr add {ip}/16 dev {ifaceName}");
                 if (sudoResult.exitCode == 0)
                 {
                     log.Add($"   ✅ Assigned {ip} (via sudo)");
+                    _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
                 }
                 else
                 {
-                    log.Add($"   ❌ Could not assign IP. Run app with: sudo dotnet run --project EtherTransfer.UI");
+                    log.Add($"   ❌ Could not assign IP. Try running with sudo.");
                 }
             }
         }

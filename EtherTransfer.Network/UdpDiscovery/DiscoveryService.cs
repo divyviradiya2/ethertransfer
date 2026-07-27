@@ -203,5 +203,12 @@ public class DiscoveryService : IDisposable
     {
         Stop();
         _globalListener?.Dispose();
+        
+        // Restore original Ethernet config on Linux
+        var restoreLog = EthernetConfigurator.RestoreOriginalConfig();
+        foreach (var line in restoreLog)
+        {
+            Log(line);
+        }
     }
 }
