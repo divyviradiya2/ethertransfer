@@ -217,9 +217,19 @@ public class TransferSender
 
                 var lastUpdate = watch.ElapsedMilliseconds;
 
+                using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
                 while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
                 {
-                    await stream.WriteAsync(buffer, 0, read, ct);
+                    watchdogCts.CancelAfter(15000); // 15 seconds to write 1MB before considering connection dead
+                    try
+                    {
+                        await stream.WriteAsync(buffer, 0, read, watchdogCts.Token);
+                    }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                    {
+                        throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
+                    }
 
                     fileSent += read;
                     totalSent += read;

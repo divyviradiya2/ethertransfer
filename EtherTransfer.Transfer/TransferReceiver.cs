@@ -174,11 +174,23 @@ public class TransferReceiver
 
                         var lastUpdate = watch.ElapsedMilliseconds;
 
+                        using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(transferCt);
+
                         while (fileReceived < fileMeta.Size)
                         {
+                            watchdogCts.CancelAfter(15000); // 15 seconds to receive 1MB
+                            
                             int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-                            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, transferCt))
-                                throw new IOException("Connection lost while reading file data.");
+                            
+                            try
+                            {
+                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
+                                    throw new IOException("Connection lost while reading file data.");
+                            }
+                            catch (OperationCanceledException) when (!transferCt.IsCancellationRequested)
+                            {
+                                throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
+                            }
 
                             await fs.WriteAsync(buffer, 0, toRead, transferCt);
 
