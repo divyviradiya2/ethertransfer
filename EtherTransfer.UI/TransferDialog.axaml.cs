@@ -15,11 +15,39 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isSenderMode;
     public bool IsSenderMode 
     { 
-        get => _isSenderMode; 
+        get => _isSenderMode && !IsProgressMode; 
         set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); } 
     }
     
-    public bool IsReceiverMode => !IsSenderMode;
+    public bool IsReceiverMode => !_isSenderMode && !IsProgressMode;
+
+    private bool _isProgressMode;
+    public bool IsProgressMode
+    {
+        get => _isProgressMode;
+        set 
+        { 
+            _isProgressMode = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(IsSenderMode)); 
+            OnPropertyChanged(nameof(IsReceiverMode)); 
+        }
+    }
+
+    private string _transferFileName = "";
+    public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
+
+    private long _transferTotalBytes;
+    public long TransferTotalBytes { get => _transferTotalBytes; set { _transferTotalBytes = value; OnPropertyChanged(); } }
+
+    private long _transferSentBytes;
+    public long TransferSentBytes { get => _transferSentBytes; set { _transferSentBytes = value; OnPropertyChanged(); } }
+
+    private string _transferProgressText = "";
+    public string TransferProgressText { get => _transferProgressText; set { _transferProgressText = value; OnPropertyChanged(); } }
+
+    private string _transferSpeedText = "";
+    public string TransferSpeedText { get => _transferSpeedText; set { _transferSpeedText = value; OnPropertyChanged(); } }
 
     private string _waitingText = "";
     public string WaitingText { get => _waitingText; set { _waitingText = value; OnPropertyChanged(); } }
@@ -72,8 +100,32 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     private void Accept_Click(object? sender, RoutedEventArgs e)
     {
+        // Don't close! Just return the path so the transfer starts.
+        // We will switch to progress mode automatically when the first ProgressUpdated event fires.
         _receiverTcs?.TrySetResult((true, SavePath));
-        Close();
+    }
+
+    public void UpdateProgress(EtherTransfer.Transfer.TransferProgressEventArgs e)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (!IsProgressMode) IsProgressMode = true;
+
+            TransferFileName = e.CurrentFile;
+            TransferTotalBytes = e.TotalBytes;
+            TransferSentBytes = e.BytesSent;
+            
+            double mbSent = e.BytesSent / 1024.0 / 1024.0;
+            double mbTotal = e.TotalBytes / 1024.0 / 1024.0;
+            TransferProgressText = $"{mbSent:F1} MB / {mbTotal:F1} MB";
+            TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
+
+            if (e.BytesSent >= e.TotalBytes)
+            {
+                // Auto-close after completion
+                Task.Delay(1500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => Close()));
+            }
+        });
     }
 
     private void Decline_Click(object? sender, RoutedEventArgs e)

@@ -39,6 +39,21 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- Progress Mode: Transferring Data -->
+            <StackPanel IsVisible="{Binding IsProgressMode}" VerticalAlignment="Center" Spacing="10">
+                <TextBlock Text="Transferring..." FontWeight="Bold" Foreground="#F9E2AF" FontSize="16" TextAlignment="Center"/>
+                <TextBlock Text="{Binding TransferFileName}" Foreground="#CDD6F4" TextTrimming="CharacterEllipsis" TextAlignment="Center" Margin="0,0,0,10"/>
+                
+                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="15" Margin="20,0" Foreground="#A6E3A1" Background="#313244"/>
+                
+                <Grid ColumnDefinitions="*,*" Margin="20,5,20,0">
+                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TransferSpeedText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Right"/>
+                </Grid>
+                
+                <Button Content="Cancel" Click="Cancel_Click" Background="#F38BA8" Foreground="#11111B" FontWeight="Bold" HorizontalAlignment="Center" Padding="30,8" Margin="0,10,0,0"/>
+            </StackPanel>
+
         </Grid>
     </Border>
 </Window>

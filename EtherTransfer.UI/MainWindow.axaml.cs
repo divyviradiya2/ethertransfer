@@ -40,30 +40,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ? $"Total: {SelectedPayloads.Count} items ({SelectedPayloads.Sum(p => p.TotalSize) / 1024 / 1024} MB)" 
         : "";
         
-    public bool CanSend => HasSelection && HasSelectedFiles && !IsTransferring;
+    public bool CanSend => HasSelection && HasSelectedFiles;
 
-    // Transfer Progress State
-    private bool _isTransferring;
-    public bool IsTransferring 
-    { 
-        get => _isTransferring; 
-        set { _isTransferring = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanSend)); } 
-    }
-    
-    private string _transferFileName = "";
-    public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
-    
-    private long _transferTotalBytes;
-    public long TransferTotalBytes { get => _transferTotalBytes; set { _transferTotalBytes = value; OnPropertyChanged(); } }
-    
-    private long _transferSentBytes;
-    public long TransferSentBytes { get => _transferSentBytes; set { _transferSentBytes = value; OnPropertyChanged(); } }
-    
-    private string _transferProgressText = "";
-    public string TransferProgressText { get => _transferProgressText; set { _transferProgressText = value; OnPropertyChanged(); } }
-    
-    private string _transferSpeedText = "";
-    public string TransferSpeedText { get => _transferSpeedText; set { _transferSpeedText = value; OnPropertyChanged(); } }
+    // Current Dialog Reference
+    private TransferDialog? _activeDialog;
 
     // Incoming Request State
     
@@ -134,24 +114,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnProgressUpdated(object? sender, EtherTransfer.Transfer.TransferProgressEventArgs e)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            IsTransferring = true;
-            TransferFileName = e.CurrentFile;
-            TransferTotalBytes = e.TotalBytes;
-            TransferSentBytes = e.BytesSent;
-            
-            double mbSent = e.BytesSent / 1024.0 / 1024.0;
-            double mbTotal = e.TotalBytes / 1024.0 / 1024.0;
-            TransferProgressText = $"{mbSent:F1} MB / {mbTotal:F1} MB";
-            TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
-
-            if (e.BytesSent >= e.TotalBytes)
-            {
-                // Simple auto-hide after completion
-                Task.Delay(2000).ContinueWith(_ => Dispatcher.UIThread.InvokeAsync(() => IsTransferring = false));
-            }
-        });
+        _activeDialog?.UpdateProgress(e);
     }
 
     private void UpdateSelectionUI()
@@ -208,6 +171,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         
         var cts = new CancellationTokenSource();
         var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
+        _activeDialog = dialog;
         
         // Don't await the dialog, just show it. It will close itself on cancel, or we will close it when transfer finishes.
         _ = dialog.ShowDialog(this);
@@ -232,6 +196,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         finally
         {
             // Close the dialog when finished or if errored
+            _activeDialog = null;
             dialog.Close();
         }
     }
@@ -342,7 +307,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             var dialog = TransferDialog.CreateReceiver(text, tcs);
+            _activeDialog = dialog;
             await dialog.ShowDialog(this);
+            _activeDialog = null;
         });
 
         return tcs.Task;

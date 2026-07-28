@@ -71,19 +71,6 @@
         <!-- Row 6: Big SEND Button -->
         <Button Grid.Row="6" Content="SEND TO SELECTED DEVICE" x:Name="ExecuteSendButton" Click="ExecuteSendButton_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" FontSize="16" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,15" Padding="15,10" IsEnabled="{Binding CanSend}"/>
 
-        <!-- Row 7: Progress Bar Overlay (Visible during transfer) -->
-        <Border Grid.Row="7" Background="#313244" CornerRadius="5" Padding="15" Margin="0,0,0,10" IsVisible="{Binding IsTransferring}">
-            <StackPanel>
-                <TextBlock Text="Transferring..." FontWeight="Bold" Foreground="#F9E2AF" Margin="0,0,0,5"/>
-                <TextBlock Text="{Binding TransferFileName}" Foreground="#CDD6F4" TextTrimming="CharacterEllipsis"/>
-                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="15" Margin="0,10"/>
-                <Grid ColumnDefinitions="*,*">
-                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Left"/>
-                    <TextBlock Grid.Column="1" Text="{Binding TransferSpeedText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Right"/>
-                </Grid>
-            </StackPanel>
-        </Border>
-
         <!-- Row 9: Debug header -->
         <TextBlock Text="Debug Log" FontWeight="Bold" FontSize="14" Margin="0,5,0,5" Grid.Row="9" Foreground="#F9E2AF"/>
         
