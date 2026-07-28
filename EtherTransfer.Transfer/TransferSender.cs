@@ -19,6 +19,9 @@ public class TransferProgressEventArgs : EventArgs
 
 public class TransferSender
 {
+    // SHA-256 hash is always exactly 32 bytes
+    private const int Sha256ByteLength = 32;
+
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
 
@@ -147,10 +150,11 @@ public class TransferSender
             throw new Exception($"Receiver declined the transfer: {response.Reason}");
         }
 
-        Log("Transfer accepted! Starting streaming...");
+        Log($"Transfer accepted! Streaming {session.TotalFiles} files...");
 
         // 3. Stream Files with SHA-256 integrity hashing
         long totalSent = 0;
+        int filesSent = 0;
         int filesSkipped = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var buffer = new byte[1024 * 1024]; // 1 MB read buffer
@@ -181,7 +185,7 @@ public class TransferSender
             }
             catch (IOException ex)
             {
-                Log($"SKIP (locked): {item.RelativePath} — {ex.Message}");
+                Log($"SKIP (locked): {item.RelativePath}");
                 await SendFileSkip(stream, item.RelativePath, $"File locked: {ex.Message}", ct);
                 filesSkipped++;
                 continue;
@@ -202,7 +206,7 @@ public class TransferSender
                 };
                 await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
-                // Compute SHA-256 incrementally while streaming — zero extra memory or passes
+                // Compute SHA-256 incrementally while streaming — zero extra memory or disk passes
                 using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
                 int read;
@@ -223,7 +227,7 @@ public class TransferSender
 
                 while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
                 {
-                    // Feed bytes into SHA-256 hasher
+                    // Feed bytes into SHA-256 hasher (essentially free — CPU-bound, sub-microsecond)
                     sha256.AppendData(buffer, 0, read);
 
                     // Send bytes over the wire
@@ -250,14 +254,12 @@ public class TransferSender
                 }
                 await stream.FlushAsync(ct);
 
-                // Send checksum so receiver can verify integrity
+                // Send raw 32-byte SHA-256 hash directly on the wire — NO JSON, NO serialization overhead.
+                // The receiver knows to read exactly 32 bytes after the file data ends.
                 var hashBytes = sha256.GetHashAndReset();
-                var hashHex = Convert.ToHexString(hashBytes);
+                await stream.WriteAsync(hashBytes, 0, Sha256ByteLength, ct);
 
-                var checksumMsg = new FileChecksumMessage { Sha256 = hashHex };
-                await ProtocolHelper.SendMessageAsync(stream, checksumMsg, ct);
-
-                Log($"Sent: {item.RelativePath} ({actualSize / 1024 / 1024} MB) SHA256={hashHex[..16]}...");
+                filesSent++;
             }
         }
 
@@ -266,9 +268,9 @@ public class TransferSender
         await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
 
         watch.Stop();
-        var summary = $"Transfer complete! Sent {session.TotalSize / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.";
+        var summary = $"Transfer complete! Sent {totalSent / 1024 / 1024} MB ({filesSent} files) in {watch.Elapsed.TotalSeconds:F1}s.";
         if (filesSkipped > 0)
-            summary += $" ({filesSkipped} file(s) skipped due to access errors.)";
+            summary += $" ({filesSkipped} skipped)";
         Log(summary);
     }
 
