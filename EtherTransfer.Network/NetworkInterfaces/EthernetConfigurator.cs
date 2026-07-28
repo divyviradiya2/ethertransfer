@@ -20,7 +20,7 @@ public static class EthernetConfigurator
 
     private record ConfigChange(string Type, string ConnectionName, string InterfaceName, string? OriginalMethod);
 
-    public static async Task<List<string>> EnsureEthernetReadyAsync()
+    public static async Task<List<string>> EnsureEthernetReadyAsync(bool isRebind = false)
     {
         var log = new List<string>();
 
@@ -29,7 +29,10 @@ public static class EthernetConfigurator
             return log;
         }
 
-        log.Add("Linux detected — checking Ethernet interfaces...");
+        if (!isRebind)
+        {
+            log.Add("Linux detected — checking Ethernet interfaces...");
+        }
 
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
@@ -71,10 +74,13 @@ public static class EthernetConfigurator
 
             if (hasIpv4)
             {
-                var ip = currentNi.GetIPProperties().UnicastAddresses
-                    .First(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
-                    .Address.ToString();
-                log.Add($"[Ethernet] {currentNi.Name}: Already has IP {ip}");
+                if (!isRebind)
+                {
+                    var ip = currentNi.GetIPProperties().UnicastAddresses
+                        .First(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+                        .Address.ToString();
+                    log.Add($"[Ethernet] {currentNi.Name}: Already has IP {ip}");
+                }
                 continue;
             }
 

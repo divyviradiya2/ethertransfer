@@ -89,8 +89,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnNetworkChanged(object? sender, EventArgs e)
     {
-        OnDebugLog(this, "Network interfaces changed (Ethernet cable plugged/unplugged). Scanning for active devices...");
-
         // Enterprise Robustness: Instantly kill active transfers if the physical link drops
         Dispatcher.UIThread.InvokeAsync(() =>
         {

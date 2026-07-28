@@ -44,15 +44,18 @@ public class DiscoveryService : IDisposable
         DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {msg}");
     }
 
-    public async Task StartAsync(string computerName, int tcpPort)
+    public async Task StartAsync(string computerName, int tcpPort, bool isRebind = false)
     {
         _computerName = computerName;
         _cts = new CancellationTokenSource();
 
-        Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
+        if (!isRebind)
+        {
+            Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
+        }
 
         // Auto-configure Ethernet on Linux (assign link-local IP if missing)
-        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync();
+        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync(isRebind);
         foreach (var line in configLog)
         {
             Log(line);
@@ -64,7 +67,12 @@ public class DiscoveryService : IDisposable
             _globalListener = new UdpClient();
             _globalListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _globalListener.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
-            Log("Listener bound to 0.0.0.0:" + DiscoveryPort);
+            
+            if (!isRebind)
+            {
+                Log("Listener bound to 0.0.0.0:" + DiscoveryPort);
+            }
+            
             _ = Task.Run(() => ListenAsync(_globalListener, _cts.Token));
         }
         catch (Exception ex)
@@ -134,8 +142,6 @@ public class DiscoveryService : IDisposable
                 globalSender.Send(payload, payload.Length, globalTarget);
             }
             catch { }
-
-            Log("Broadcasted BYE message.");
         }
         catch { }
     }
@@ -148,14 +154,11 @@ public class DiscoveryService : IDisposable
         {
             globalSender = new UdpClient();
             globalSender.EnableBroadcast = true;
-            Log("Global broadcast sender created");
         }
         catch (Exception ex)
         {
             Log($"Failed to create global sender: {ex.Message}");
         }
-
-        bool wasEmpty = false;
 
         try
         {
@@ -163,19 +166,6 @@ public class DiscoveryService : IDisposable
             {
                 // Get all Ethernet interface broadcast addresses
                 var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
-
-                if (ethInterfaces.Count == 0)
-                {
-                    if (!wasEmpty)
-                    {
-                        Log("No Ethernet interfaces found. Waiting...");
-                        wasEmpty = true;
-                    }
-                }
-                else
-                {
-                    wasEmpty = false;
-                }
 
                 // Re-build message each loop to pick up any custom name changes
                 var message = new DiscoveryMessage

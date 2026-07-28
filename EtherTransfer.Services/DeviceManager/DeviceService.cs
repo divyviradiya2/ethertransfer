@@ -85,7 +85,7 @@ public class DeviceService : IDisposable
 
                 // Restart discovery to bind UDP sockets to new interfaces
                 _discoveryService.Stop();
-                await _discoveryService.StartAsync(_computerName, _tcpPort);
+                await _discoveryService.StartAsync(_computerName, _tcpPort, isRebind: true);
             }
             catch { }
         });
