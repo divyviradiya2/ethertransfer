@@ -11,6 +11,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Services.DeviceManager;
+using EtherTransfer.Core.Models;
 using EtherTransfer.Services;
 
 namespace EtherTransfer.UI;
@@ -19,6 +20,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
     public ObservableCollection<string> DebugMessages { get; } = new();
+    public ObservableCollection<FileSelectionItem> SelectedFiles { get; } = new();
+    
+    private TransferSession? _currentSession;
     
     private readonly DeviceService _deviceService;
     private readonly TransferService _transferService;
@@ -28,13 +32,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public DiscoveredDevice? SelectedDevice
     {
         get => _selectedDevice;
-        set { _selectedDevice = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSelection)); }
+        set { _selectedDevice = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSelection)); OnPropertyChanged(nameof(CanSend)); }
     }
     public bool HasSelection => SelectedDevice != null;
 
+    public bool HasSelectedFiles => SelectedFiles.Count > 0;
+    
+    public string SelectionSummaryText => HasSelectedFiles && _currentSession != null 
+        ? $"Total: {SelectedFiles.Count} files ({_currentSession.TotalSize / 1024 / 1024} MB)" 
+        : "";
+        
+    public bool CanSend => HasSelection && HasSelectedFiles && !IsTransferring;
+
     // Transfer Progress State
     private bool _isTransferring;
-    public bool IsTransferring { get => _isTransferring; set { _isTransferring = value; OnPropertyChanged(); } }
+    public bool IsTransferring 
+    { 
+        get => _isTransferring; 
+        set { _isTransferring = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanSend)); } 
+    }
     
     private string _transferFileName = "";
     public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
@@ -147,17 +163,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         });
     }
 
+    private void UpdateSelectionUI()
+    {
+        SelectedFiles.Clear();
+        if (_currentSession != null)
+        {
+            foreach (var f in _currentSession.Files)
+            {
+                SelectedFiles.Add(f);
+            }
+        }
+        
+        OnPropertyChanged(nameof(HasSelectedFiles));
+        OnPropertyChanged(nameof(SelectionSummaryText));
+        OnPropertyChanged(nameof(CanSend));
+    }
+
+    private void ClearSelectionButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _currentSession = null;
+        UpdateSelectionUI();
+        OnDebugLog(this, "Cleared selection.");
+    }
+
+    private void ExecuteSendButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (SelectedDevice == null || _currentSession == null || _currentSession.Files.Count == 0) return;
+        
+        var targetIp = SelectedDevice.Address;
+        var targetPort = 55000;
+        
+        OnDebugLog(this, $"Starting transmission of {SelectedFiles.Count} files to {SelectedDevice.Name}...");
+        
+        // Fire and forget send
+        _ = _transferService.TransmitSessionAsync(targetIp, targetPort, _currentSession);
+    }
+
     private async void SendFilesButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (SelectedDevice == null) return;
-
         // Open File Picker
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel == null) return;
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select files to send",
+            Title = "Select files to add",
             AllowMultiple = true
         });
 
@@ -176,11 +226,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            var targetIp = SelectedDevice.Address;
-            var targetPort = 55000;
-            
-            // Fire and forget send
-            _ = _transferService.SendFilesAsync(targetIp, targetPort, paths);
+            OnDebugLog(this, $"Scanning {paths.Count} items...");
+            _currentSession = await _transferService.ScanItemsAsync(paths);
+            UpdateSelectionUI();
         }
     }
 
@@ -188,32 +236,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         try
         {
-            if (SelectedDevice == null) return;
-
             var topLevel = TopLevel.GetTopLevel(this);
             if (topLevel == null) return;
 
-            var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "Select folder to send"
+                Title = "Select folder(s) to add",
+                AllowMultiple = true
             });
 
-            if (folder.Count > 0)
+            if (folders.Count > 0)
             {
-                var localPath = folder[0].TryGetLocalPath() ?? folder[0].Path.LocalPath;
-                if (string.IsNullOrEmpty(localPath))
+                var paths = new List<string>();
+                foreach (var f in folders)
                 {
-                    OnDebugLog(this, "Failed to resolve local path for selected folder. Is this a network or virtual drive?");
+                    var localPath = f.TryGetLocalPath() ?? f.Path.LocalPath;
+                    if (!string.IsNullOrEmpty(localPath))
+                    {
+                        paths.Add(localPath);
+                    }
+                }
+
+                if (paths.Count == 0)
+                {
+                    OnDebugLog(this, "Failed to resolve local path for selected folders. Are these network or virtual drives?");
                     return;
                 }
 
-                OnDebugLog(this, $"Folder picked: {localPath}");
-                var paths = new List<string> { localPath };
-                var targetIp = SelectedDevice.Address;
-                var targetPort = 55000;
-                
-                // Fire and forget send
-                _ = _transferService.SendFilesAsync(targetIp, targetPort, paths);
+                OnDebugLog(this, $"Scanning {paths.Count} root folder(s)...");
+                _currentSession = await _transferService.ScanItemsAsync(paths);
+                UpdateSelectionUI();
             }
         }
         catch (Exception ex)

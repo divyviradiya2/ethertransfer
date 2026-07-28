@@ -53,7 +53,15 @@ public class TransferService : IDisposable
         await receiver.HandleClientAsync(client, _cts.Token);
     }
 
-    public async Task SendFilesAsync(string targetIp, int targetPort, List<string> filePaths)
+    public Task<TransferSession> ScanItemsAsync(List<string> filePaths)
+    {
+        var sender = new TransferSender();
+        sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
+        
+        return sender.ScanItemsAsync(filePaths);
+    }
+
+    public async Task TransmitSessionAsync(string targetIp, int targetPort, TransferSession session)
     {
         var sender = new TransferSender();
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
@@ -64,12 +72,11 @@ public class TransferService : IDisposable
         {
             try
             {
-                await sender.SendItemsAsync(targetIp, targetPort, _computerName, filePaths, _cts.Token);
+                await sender.TransmitSessionAsync(targetIp, targetPort, _computerName, session, _cts.Token);
             }
             catch (Exception ex)
             {
                 Log($"Send failed: {ex.Message}");
-                // You could fire a TransferFailed event here
             }
         });
     }

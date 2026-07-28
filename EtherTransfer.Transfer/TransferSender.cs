@@ -23,18 +23,90 @@ public class TransferSender
 
     private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Sender] {msg}");
 
-    /// <summary>
-    /// Connects to a receiver, performs the handshake, and sends the items (files/folders) if accepted.
-    /// </summary>
-    public async Task SendItemsAsync(string targetIp, int targetPort, string senderName, List<string> itemPaths, CancellationToken ct)
+    public Task<TransferSession> ScanItemsAsync(List<string> itemPaths)
     {
+        return Task.Run(() => 
+        {
+            Log("Scanning items...");
+            var filesToSendBag = new System.Collections.Concurrent.ConcurrentBag<FileSelectionItem>();
+            long totalSize = 0;
+            bool containsFolders = false;
+
+            System.Threading.Tasks.Parallel.ForEach(itemPaths, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, path =>
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        var fi = new FileInfo(path);
+                        filesToSendBag.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, Size = fi.Length });
+                        System.Threading.Interlocked.Add(ref totalSize, fi.Length);
+                    }
+                    else if (Directory.Exists(path))
+                    {
+                        containsFolders = true;
+                        var baseDir = new DirectoryInfo(path);
+                        var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
+                        var options = new EnumerationOptions 
+                        { 
+                            IgnoreInaccessible = true, 
+                            RecurseSubdirectories = true,
+                            ReturnSpecialDirectories = false
+                        };
+
+                        foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
+                        {
+                            try
+                            {
+                                string relPath = fileInfo.FullName.Substring(parentDir.Length);
+                                if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
+                                {
+                                    relPath = relPath.Substring(1);
+                                }
+                                relPath = relPath.Replace('\\', '/');
+
+                                filesToSendBag.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
+                                System.Threading.Interlocked.Add(ref totalSize, fileInfo.Length);
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Skipped {path}: {ex.Message}");
+                }
+            });
+
+            var session = new TransferSession
+            {
+                Files = filesToSendBag.OrderBy(f => f.RelativePath).ToList(),
+                ContainsFolders = containsFolders
+            };
+            
+            if (session.Files.Count == 0)
+            {
+                Log("No valid files found to scan.");
+            }
+            else
+            {
+                Log($"Found {session.Files.Count} files ({session.TotalSize / 1024 / 1024} MB). Ready to send.");
+            }
+            
+            return session;
+        });
+    }
+
+    public async Task TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
+    {
+        if (session.Files.Count == 0) return;
+        
         Log($"Connecting to {targetIp}:{targetPort}...");
         using var client = new TcpClient();
         
-        // Timeout for connection
         var connectTcs = new TaskCompletionSource();
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        connectCts.CancelAfter(5000); // 5 sec timeout
+        connectCts.CancelAfter(5000); 
         
         try
         {
@@ -44,7 +116,7 @@ public class TransferSender
                 await Task.WhenAny(connectTask, connectTcs.Task);
                 if (connectTcs.Task.IsCanceled)
                     throw new TimeoutException("Connection timed out.");
-                await connectTask; // propagate any connection exceptions
+                await connectTask; 
             }
         }
         catch (Exception ex)
@@ -53,81 +125,14 @@ public class TransferSender
             throw;
         }
 
-        // Build flat list of files to send
-        Log("Scanning items...");
-        var filesToSendBag = new System.Collections.Concurrent.ConcurrentBag<(string AbsolutePath, string RelativePath, long Size)>();
-        long totalSize = 0;
-        bool containsFolders = false;
-
-        System.Threading.Tasks.Parallel.ForEach(itemPaths, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, path =>
-        {
-            try
-            {
-                if (File.Exists(path))
-                {
-                    var fi = new FileInfo(path);
-                    filesToSendBag.Add((path, fi.Name, fi.Length));
-                    System.Threading.Interlocked.Add(ref totalSize, fi.Length);
-                }
-                else if (Directory.Exists(path))
-                {
-                    containsFolders = true;
-                    var baseDir = new DirectoryInfo(path);
-                    var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
-                    var options = new EnumerationOptions 
-                    { 
-                        IgnoreInaccessible = true, 
-                        RecurseSubdirectories = true,
-                        ReturnSpecialDirectories = false
-                    };
-
-                    // Using DirectoryInfo.EnumerateFiles completely eliminates secondary disk 'stat' calls for sizes
-                    foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
-                    {
-                        try
-                        {
-                            string relPath = fileInfo.FullName.Substring(parentDir.Length);
-                            if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
-                            {
-                                relPath = relPath.Substring(1);
-                            }
-                            relPath = relPath.Replace('\\', '/');
-
-                            filesToSendBag.Add((fileInfo.FullName, relPath, fileInfo.Length));
-                            System.Threading.Interlocked.Add(ref totalSize, fileInfo.Length);
-                        }
-                        catch
-                        {
-                            // Bulletproof: If path logic fails on a weird system file, skip it silently
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // Bulletproof: If an entire root folder throws, skip it and continue
-                Log($"Skipped {path}: {ex.Message}");
-            }
-        });
-
-        var filesToSend = filesToSendBag.ToList();
-
-        if (filesToSend.Count == 0)
-        {
-            Log("No valid files found to send.");
-            return;
-        }
-
-        Log($"Found {filesToSend.Count} files ({totalSize / 1024 / 1024} MB). Connecting...");
-        
         var stream = client.GetStream();
         
         var request = new TransferRequestMessage
         {
             SenderName = senderName,
-            TotalFiles = filesToSend.Count,
-            TotalSize = totalSize,
-            ContainsFolders = containsFolders
+            TotalFiles = session.TotalFiles,
+            TotalSize = session.TotalSize,
+            ContainsFolders = session.ContainsFolders
         };
 
         // 1. Send Request
@@ -151,15 +156,12 @@ public class TransferSender
         // 3. Stream Files
         long totalSent = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
-
-        // 1MB buffer for fast chunked streaming
         var buffer = new byte[1024 * 1024];
 
-        foreach (var item in filesToSend)
+        foreach (var item in session.Files)
         {
-            // A. Send FileBegin metadata
             var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
-            await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct); // Marker
+            await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct); 
             
             var meta = new FileItemMetadata
             {
@@ -168,19 +170,16 @@ public class TransferSender
             };
             await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
-            // B. Send Raw Binary Data
-            // Upgraded to FileShare.ReadWrite to allow transferring soft-locked files that are currently in use by other processes
             using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer.Length, useAsync: true);
             
             int read;
             long fileSent = 0;
             
-            // Fire progress immediately so UI shows 0% for this file
             ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
             {
                 CurrentFile = item.RelativePath,
                 BytesSent = totalSent,
-                TotalBytes = totalSize,
+                TotalBytes = session.TotalSize,
                 SpeedMbPerSec = 0
             });
             
@@ -193,9 +192,8 @@ public class TransferSender
                 fileSent += read;
                 totalSent += read;
                 
-                // Throttle UI updates to max ~20 FPS (every 50ms) to prevent UI flooding and OOM crashes
                 var currentElapsed = watch.ElapsedMilliseconds;
-                if (currentElapsed - lastUpdate >= 50 || totalSent == totalSize)
+                if (currentElapsed - lastUpdate >= 50 || totalSent == session.TotalSize)
                 {
                     lastUpdate = currentElapsed;
                     var elapsedSec = watch.Elapsed.TotalSeconds;
@@ -205,7 +203,7 @@ public class TransferSender
                     {
                         CurrentFile = item.RelativePath,
                         BytesSent = totalSent,
-                        TotalBytes = totalSize,
+                        TotalBytes = session.TotalSize,
                         SpeedMbPerSec = speed
                     });
                 }
@@ -218,6 +216,6 @@ public class TransferSender
         await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
         
         watch.Stop();
-        Log($"Transfer complete! Sent {totalSize / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.");
+        Log($"Transfer complete! Sent {session.TotalSize / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.");
     }
 }
