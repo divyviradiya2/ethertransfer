@@ -200,7 +200,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var session = new TransferSession();
         foreach (var payload in SelectedPayloads)
         {
-            if (payload.Type == PayloadItemType.Folder) session.ContainsFolders = true;
+            if (payload.Type == PayloadItemType.Folder) 
+            {
+                session.ContainsFolders = true;
+                session.PayloadFolderCount++;
+            }
+            else 
+            {
+                session.PayloadFileCount++;
+            }
             session.Files.AddRange(payload.DeepScannedFiles);
         }
 
@@ -305,7 +313,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         
         Dispatcher.UIThread.InvokeAsync(() =>
         {
-            IncomingRequestText = $"{request.SenderName} wants to send {request.TotalFiles} file(s) ({request.TotalSize / 1024 / 1024} MB).";
+            string sizeStr = $"{request.TotalSize / 1024 / 1024} MB";
+            
+            if (request.PayloadFolderCount > 0 && request.PayloadFileCount > 0)
+            {
+                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) and {request.PayloadFileCount} file(s) ({sizeStr}).";
+            }
+            else if (request.PayloadFolderCount > 0)
+            {
+                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) containing {request.TotalFiles} file(s) ({sizeStr}).";
+            }
+            else
+            {
+                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFileCount} file(s) ({sizeStr}).";
+            }
+
             _incomingRequestTcs = tcs;
             HasIncomingRequest = true;
         });

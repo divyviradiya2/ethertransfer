@@ -117,7 +117,9 @@ public class TransferSender
             SenderName = senderName,
             TotalFiles = session.TotalFiles,
             TotalSize = session.TotalSize,
-            ContainsFolders = session.ContainsFolders
+            ContainsFolders = session.ContainsFolders,
+            PayloadFolderCount = session.PayloadFolderCount,
+            PayloadFileCount = session.PayloadFileCount
         };
 
         // 1. Send Request
