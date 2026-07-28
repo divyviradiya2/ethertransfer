@@ -31,7 +31,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="5" VerticalAlignment="Center">
-                        <PathIcon Data="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="18" Height="18" Margin="0,0,10,0" Foreground="#A6ADC8" />
+                        <Image Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="20" Height="20" Margin="0,0,10,0" />
                         <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#A6E3A1" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding Address}" Margin="10,0,0,0" Foreground="#6C7086" VerticalAlignment="Center"/>
                     </StackPanel>

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -19,5 +19,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EtherTransfer.Services\EtherTransfer.Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="assests\**" />
   </ItemGroup>
 </Project>
