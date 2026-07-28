@@ -229,10 +229,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
-            OnDebugLog(this, $"Scanning {paths.Count} items...");
-            foreach (var path in paths)
+            OnDebugLog(this, $"Scanning {paths.Count} items in parallel...");
+            
+            var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
+            var scanDialog = new ScanDialog(scanTasksList);
+            _ = scanDialog.ShowDialog(this);
+            
+            var scanTasks = paths.Select(p => 
             {
-                var payload = await _transferService.ScanItemAsync(path);
+                var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
+                Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
+                
+                var progress = new Progress<int>(count => 
+                {
+                    Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
+                });
+                
+                return _transferService.ScanItemAsync(p, progress).ContinueWith(t => 
+                {
+                    Dispatcher.UIThread.InvokeAsync(() => 
+                    {
+                        vm.IsComplete = true;
+                    });
+                    return t.Result;
+                });
+            });
+            
+            var payloads = await Task.WhenAll(scanTasks);
+            scanDialog.Close();
+            
+            foreach (var payload in payloads)
+            {
                 SelectedPayloads.Add(payload);
             }
             UpdateSelectionUI();
@@ -270,10 +297,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     return;
                 }
 
-                OnDebugLog(this, $"Scanning {paths.Count} root folder(s)...");
-                foreach (var path in paths)
+                OnDebugLog(this, $"Scanning {paths.Count} root folder(s) in parallel...");
+                
+                var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
+                var scanDialog = new ScanDialog(scanTasksList);
+                _ = scanDialog.ShowDialog(this);
+                
+                var scanTasks = paths.Select(p => 
                 {
-                    var payload = await _transferService.ScanItemAsync(path);
+                    var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
+                    Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
+                    
+                    var progress = new Progress<int>(count => 
+                    {
+                        Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
+                    });
+                    
+                    return _transferService.ScanItemAsync(p, progress).ContinueWith(t => 
+                    {
+                        Dispatcher.UIThread.InvokeAsync(() => 
+                        {
+                            vm.IsComplete = true;
+                        });
+                        return t.Result;
+                    });
+                });
+                
+                var payloads = await Task.WhenAll(scanTasks);
+                scanDialog.Close();
+                
+                foreach (var payload in payloads)
+                {
                     SelectedPayloads.Add(payload);
                 }
                 UpdateSelectionUI();

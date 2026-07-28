@@ -53,12 +53,12 @@ public class TransferService : IDisposable
         await receiver.HandleClientAsync(client, _cts.Token);
     }
 
-    public Task<PayloadItem> ScanItemAsync(string path)
+    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
     {
         var sender = new TransferSender();
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
         
-        return sender.ScanItemAsync(path);
+        return sender.ScanItemAsync(path, progress);
     }
 
     public async Task TransmitSessionAsync(string targetIp, int targetPort, TransferSession session, CancellationToken userCt = default)

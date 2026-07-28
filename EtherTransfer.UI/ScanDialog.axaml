@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:EtherTransfer.UI"
+        x:Class="EtherTransfer.UI.ScanDialog"
+        x:DataType="ui:ScanDialog"
+        Title="Scanning Folders"
+        Width="350" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        WindowDecorations="BorderOnly"
+        Background="#1E1E2E"
+        Foreground="#CDD6F4"
+        CanResize="False">
+    
+    <Border BorderBrush="#45475A" BorderThickness="1" CornerRadius="8">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Scanning Files..." FontSize="20" FontWeight="Bold" Foreground="#A6E3A1"/>
+            <TextBlock Text="Please wait while files are being scanned." Foreground="#A6ADC8" Margin="0,5,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Scanning List -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="250">
+            <ItemsControl ItemsSource="{Binding ScanTasks}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="ui:ScanProgressViewModel">
+                        <Border Background="#313244" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding FolderName}" FontWeight="Bold" Foreground="#CDD6F4" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding StatusText}" Foreground="#6C7086" FontSize="12" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ProgressBar Grid.Column="1" IsIndeterminate="{Binding !IsComplete}" Width="50" Height="10" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#89B4FA" IsVisible="{Binding !IsComplete}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+    </Border>
+</Window>

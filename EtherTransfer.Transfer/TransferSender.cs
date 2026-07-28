@@ -23,7 +23,7 @@ public class TransferSender
 
     private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Sender] {msg}");
 
-    public Task<PayloadItem> ScanItemAsync(string path)
+    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
     {
         return Task.Run(() => 
         {
@@ -55,6 +55,7 @@ public class TransferSender
                         ReturnSpecialDirectories = false
                     };
 
+                    int count = 0;
                     foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
                     {
                         try
@@ -67,9 +68,16 @@ public class TransferSender
                             relPath = relPath.Replace('\\', '/');
 
                             payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
+                            
+                            count++;
+                            if (count % 100 == 0)
+                            {
+                                progress?.Report(count);
+                            }
                         }
                         catch { }
                     }
+                    progress?.Report(count); // Final report
                 }
             }
             catch (Exception ex)
