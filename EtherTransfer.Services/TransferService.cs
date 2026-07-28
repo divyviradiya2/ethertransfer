@@ -16,6 +16,7 @@ public class TransferService : IDisposable
     
     public event EventHandler<string>? DebugLog;
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
+    public event EventHandler<(bool success, string? error)>? TransferFinished;
 
     // Delegate to ask the UI for permission
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
@@ -48,6 +49,7 @@ public class TransferService : IDisposable
         var receiver = new TransferReceiver();
         receiver.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
         receiver.ProgressUpdated += (_, e) => ProgressUpdated?.Invoke(this, e);
+        receiver.TransferFinished += (_, e) => TransferFinished?.Invoke(this, e);
         receiver.OnIncomingTransfer = OnIncomingTransfer;
 
         await receiver.HandleClientAsync(client, _cts.Token);

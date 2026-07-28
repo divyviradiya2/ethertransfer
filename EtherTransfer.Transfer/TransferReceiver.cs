@@ -27,6 +27,7 @@ public class TransferReceiver
 
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
+    public event EventHandler<(bool success, string? error)>? TransferFinished;
 
     private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Receiver] {msg}");
 
@@ -222,15 +223,22 @@ public class TransferReceiver
 
                 watch.Stop();
                 Log($"Transfer complete! {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s — {filesReceived} received, {filesSkipped} skipped.");
+                TransferFinished?.Invoke(this, (true, null));
             }
         }
         catch (OperationCanceledException)
         {
             Log("Transfer cancelled.");
+            TransferFinished?.Invoke(this, (false, "Transfer cancelled by user."));
         }
         catch (Exception ex)
         {
-            Log($"Error handling connection: {ex.Message}");
+            var msg = ex.Message;
+            if (ex is IOException || ex is SocketException)
+                msg = "Connection lost (Ethernet cable disconnected or sender aborted).";
+                
+            Log($"Error handling connection: {msg}");
+            TransferFinished?.Invoke(this, (false, msg));
         }
     }
 

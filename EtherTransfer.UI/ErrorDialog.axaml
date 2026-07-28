@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="EtherTransfer.UI.ErrorDialog"
+        Title="Error"
+        Width="450" Height="200"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#1E1E1E">
+    <Grid RowDefinitions="*, Auto" Margin="20">
+        <TextBlock Name="MessageText" 
+                   Foreground="#FF6B6B"
+                   TextWrapping="Wrap" 
+                   VerticalAlignment="Center" 
+                   HorizontalAlignment="Center" 
+                   TextAlignment="Center"
+                   FontSize="16" />
+        <Button Grid.Row="1" 
+                Content="OK" 
+                Click="Ok_Click" 
+                HorizontalAlignment="Center" 
+                HorizontalContentAlignment="Center"
+                Width="100" 
+                Margin="0,20,0,0" />
+    </Grid>
+</Window>

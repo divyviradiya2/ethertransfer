@@ -67,6 +67,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
+        _deviceService.NetworkChanged += OnNetworkChanged;
         _deviceService.DebugLog += OnDebugLog;
         _deviceService.Start(CustomDeviceName, 55000);
 
@@ -74,8 +75,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _transferService = new TransferService(CustomDeviceName, 55000);
         _transferService.DebugLog += OnDebugLog;
         _transferService.ProgressUpdated += OnProgressUpdated;
+        _transferService.TransferFinished += OnTransferFinished;
         _transferService.OnIncomingTransfer = HandleIncomingTransferAsync;
         _transferService.Start();
+    }
+
+    private void OnNetworkChanged(object? sender, EventArgs e)
+    {
+        OnDebugLog(this, "Network interfaces changed (Ethernet cable plugged/unplugged). Scanning for active devices...");
+    }
+
+    private void OnTransferFinished(object? sender, (bool success, string? error) e)
+    {
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_activeDialog != null && _activeDialog.IsVisible && !e.success)
+            {
+                OnDebugLog(this, $"Transfer stopped: {e.error}");
+                _activeDialog.Close();
+                
+                var errorDialog = new ErrorDialog(e.error ?? "Transfer failed due to a network error.");
+                _ = errorDialog.ShowDialog(this);
+            }
+        });
     }
 
     private void OnDevicesChanged(object? sender, EventArgs e)
@@ -192,8 +214,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            OnDebugLog(this, $"Transfer failed: {ex.Message}");
+            var msg = ex.Message;
+            if (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException)
+                msg = "Connection lost (Ethernet cable disconnected or receiver aborted).";
+
+            OnDebugLog(this, $"Transfer failed: {msg}");
             dialog.Close();
+
+            var errorDialog = new ErrorDialog(msg);
+            _ = errorDialog.ShowDialog(this);
         }
         finally
         {

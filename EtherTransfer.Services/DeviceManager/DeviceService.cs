@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.NetworkInformation;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Network.UdpDiscovery;
 using EtherTransfer.Network.NetworkInterfaces;
@@ -17,8 +18,10 @@ public class DeviceService : IDisposable
     private readonly ConcurrentDictionary<string, DiscoveredDevice> _devices = new();
     private CancellationTokenSource? _cts;
     private string _computerName = string.Empty;
+    private int _tcpPort;
     
     public event EventHandler? DevicesChanged;
+    public event EventHandler? NetworkChanged;
     public event EventHandler<string>? DebugLog;
 
     public DeviceService()
@@ -31,11 +34,30 @@ public class DeviceService : IDisposable
     public void Start(string computerName, int tcpPort)
     {
         _computerName = computerName;
+        _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
         _discoveryService.Start(computerName, tcpPort);
         
+        NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
+        
         // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
+    }
+
+    private void OnNetworkAddressChanged(object? sender, EventArgs e)
+    {
+        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Network interfaces changed. Refreshing devices...");
+        _devices.Clear();
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+        NetworkChanged?.Invoke(this, EventArgs.Empty);
+
+        // Restart discovery to bind UDP sockets to new interfaces
+        try 
+        {
+            _discoveryService.Stop();
+            _discoveryService.Start(_computerName, _tcpPort);
+        }
+        catch { }
     }
 
     public void UpdateComputerName(string newName)
@@ -46,6 +68,7 @@ public class DeviceService : IDisposable
 
     public void Stop()
     {
+        NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
         _cts?.Cancel();
         _discoveryService.Stop();
     }
