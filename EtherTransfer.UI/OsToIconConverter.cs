@@ -18,9 +18,9 @@ public class OsToIconConverter : IValueConverter
     {
         try
         {
-            _windowsIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/assests/windows.png")));
-            _appleIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/assests/apple.png")));
-            _linuxIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/assests/linux.png")));
+            _windowsIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/Assets/windows.png")));
+            _appleIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/Assets/apple.png")));
+            _linuxIcon = new Bitmap(AssetLoader.Open(new Uri("avares://EtherTransfer.UI/Assets/linux.png")));
         }
         catch { }
     }
