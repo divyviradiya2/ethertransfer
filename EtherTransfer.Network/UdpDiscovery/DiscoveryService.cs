@@ -96,6 +96,13 @@ public class DiscoveryService : IDisposable
             SendBye();
         }
         _cts?.Cancel();
+        
+        try
+        {
+            _globalListener?.Dispose();
+            _globalListener = null;
+        }
+        catch { }
     }
 
     private void SendBye()
@@ -155,6 +162,8 @@ public class DiscoveryService : IDisposable
             Log($"Failed to create global sender: {ex.Message}");
         }
 
+        bool wasEmpty = false;
+
         try
         {
             while (!ct.IsCancellationRequested)
@@ -164,7 +173,15 @@ public class DiscoveryService : IDisposable
                 
                 if (ethInterfaces.Count == 0)
                 {
-                    Log("No Ethernet interfaces found. Waiting...");
+                    if (!wasEmpty)
+                    {
+                        Log("No Ethernet interfaces found. Waiting...");
+                        wasEmpty = true;
+                    }
+                }
+                else
+                {
+                    wasEmpty = false;
                 }
 
                 // Re-build message each loop to pick up any custom name changes

@@ -19,6 +19,7 @@ public class DeviceService : IDisposable
     private CancellationTokenSource? _cts;
     private string _computerName = string.Empty;
     private int _tcpPort;
+    private CancellationTokenSource? _debounceCts;
     
     public event EventHandler? DevicesChanged;
     public event EventHandler? NetworkChanged;
@@ -46,18 +47,29 @@ public class DeviceService : IDisposable
 
     private void OnNetworkAddressChanged(object? sender, EventArgs e)
     {
-        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Network interfaces changed. Refreshing devices...");
-        _devices.Clear();
-        DevicesChanged?.Invoke(this, EventArgs.Empty);
-        NetworkChanged?.Invoke(this, EventArgs.Empty);
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
 
-        // Restart discovery to bind UDP sockets to new interfaces
-        try 
+        Task.Run(async () =>
         {
-            _discoveryService.Stop();
-            _discoveryService.Start(_computerName, _tcpPort);
-        }
-        catch { }
+            try
+            {
+                // Debounce rapid network state changes (DHCP, link up/down)
+                await Task.Delay(1000, token);
+                if (token.IsCancellationRequested) return;
+
+                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Network state settled. Re-binding sockets...");
+                _devices.Clear();
+                DevicesChanged?.Invoke(this, EventArgs.Empty);
+                NetworkChanged?.Invoke(this, EventArgs.Empty);
+
+                // Restart discovery to bind UDP sockets to new interfaces
+                _discoveryService.Stop();
+                _discoveryService.Start(_computerName, _tcpPort);
+            }
+            catch { }
+        });
     }
 
     public void UpdateComputerName(string newName)
