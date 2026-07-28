@@ -509,6 +509,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         base.OnClosed(e);
     }
 
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        
+        // Force the window to the absolute foreground in case the UAC prompt 
+        // or netsh console stole focus during the startup sequence.
+        this.Topmost = true;
+        this.Topmost = false;
+        this.Activate();
+        this.Focus();
+    }
+
     public new event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
