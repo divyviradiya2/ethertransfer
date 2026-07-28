@@ -3,91 +3,168 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="clr-namespace:EtherTransfer.UI"
-        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="600"
-        Width="700" Height="650"
+        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="600"
+        Width="850" Height="650"
         x:Class="EtherTransfer.UI.MainWindow"
         x:DataType="ui:MainWindow"
         Title="EtherTransfer"
-        Background="#1E1E2E"
-        Foreground="#CDD6F4">
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
+        WindowStartupLocation="CenterScreen">
+
     <Window.Resources>
         <ui:OsToIconConverter x:Key="OsToIconConverter"/>
     </Window.Resources>
 
-    <Grid Margin="15" RowDefinitions="Auto,Auto,*,Auto,Auto,*,Auto,Auto,Auto,Auto,150">
+    <Grid RowDefinitions="Auto,*,Auto">
         
-        <!-- Row 0: Header & Profile -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,10">
-            <TextBlock Grid.Column="0" Text="EtherTransfer" FontWeight="Bold" FontSize="18" Foreground="#89B4FA" VerticalAlignment="Center" Margin="0,0,15,0"/>
-            <TextBox Grid.Column="1" Text="{Binding CustomDeviceName}" PlaceholderText="Custom Device Name" Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" VerticalAlignment="Center"/>
-            <Button Grid.Column="2" Content="Save" Click="SaveName_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
-        </Grid>
+        <!-- HEADER / TOOLBAR -->
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,15">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                    <PathIcon Data="{StaticResource SendIcon}" Foreground="{DynamicResource AccentColor}" Width="24" Height="24"/>
+                    <TextBlock Text="EtherTransfer" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Text="Device Name:" Foreground="{DynamicResource AppForegroundSecondary}" VerticalAlignment="Center" FontSize="12"/>
+                    <TextBox Text="{Binding CustomDeviceName}" Width="200" PlaceholderText="Custom Device Name" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="3" Content="Save" Classes="Primary" Click="SaveName_Click" Margin="10,0,0,0" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
         
-        <!-- Row 1: Connected Devices Header -->
-        <TextBlock Text="Connected Devices" FontWeight="Bold" FontSize="14" Margin="0,5,0,5" Grid.Row="1" Foreground="#BAC2DE"/>
-        
-        <!-- Row 2: Device list -->
-        <ListBox x:Name="DevicesList" Grid.Row="2" Background="#313244" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DiscoveredDevices}" Foreground="#CDD6F4" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="5" VerticalAlignment="Center">
-                        <Image Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="20" Height="20" Margin="0,0,10,0" />
-                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#A6E3A1" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Address}" Margin="10,0,0,0" Foreground="#6C7086" VerticalAlignment="Center"/>
+        <!-- MAIN CONTENT (SPLIT LAYOUT) -->
+        <Grid Grid.Row="1" ColumnDefinitions="300,1,*" Background="{DynamicResource AppBackground}">
+            
+            <!-- LEFT PANE: DEVICES -->
+            <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="15">
+                <TextBlock Grid.Row="0" Text="Discovered Devices" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" Margin="5,0,0,10"/>
+                
+                <ListBox x:Name="DevicesList" Grid.Row="1" ItemsSource="{Binding DiscoveredDevices}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="Transparent" CornerRadius="4" Padding="10">
+                                <Grid ColumnDefinitions="Auto,*">
+                                    <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
+                                        <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                
+                <!-- Empty State for Devices (Overlay on ListBox) -->
+                <StackPanel Grid.Row="1" IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Margin="20">
+                    <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Looking for devices connected with ethernet cable" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+            
+            <!-- DIVIDER -->
+            <Border Grid.Column="1" Background="{DynamicResource AppBorder}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            
+            <!-- RIGHT PANE: FILES -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Margin="20,15">
+                
+                <!-- File Actions Header -->
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,15">
+                    <TextBlock Grid.Column="0" Text="Files to Transfer" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" VerticalAlignment="Center"/>
+                    
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                        <Button Content="Clear" Classes="Danger" x:Name="ClearSelectionButton" Click="ClearSelectionButton_Click" IsVisible="{Binding HasSelectedFiles}"/>
+                        <Button Content="Add Folder" x:Name="SendFolderButton" Click="SendFolderButton_Click">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource FolderIcon}" Width="14" Height="14"/>
+                                        <TextBlock Text="Add Folder"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+                        <Button Content="Add Files" x:Name="SendFilesButton" Click="SendFilesButton_Click">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource FileIcon}" Width="14" Height="14"/>
+                                        <TextBlock Text="Add Files"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-
-        <!-- Row 3: Add Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,15,0,5" Spacing="10">
-            <!-- Buttons are always enabled now to allow picking files first -->
-            <Button Content="Add Files..." x:Name="SendFilesButton" Click="SendFilesButton_Click" Background="#45475A" Foreground="#CDD6F4" BorderBrush="#585B70" BorderThickness="1" Padding="15,5"/>
-            <Button Content="Add Folder..." x:Name="SendFolderButton" Click="SendFolderButton_Click" Background="#45475A" Foreground="#CDD6F4" BorderBrush="#585B70" BorderThickness="1" Padding="15,5"/>
-            <Button Content="Clear Selection" x:Name="ClearSelectionButton" Click="ClearSelectionButton_Click" Background="#F38BA8" Foreground="#11111B" FontWeight="Bold" BorderThickness="0" Padding="15,5" IsVisible="{Binding HasSelectedFiles}"/>
-        </StackPanel>
-
-        <!-- Row 4: Review Card Header -->
-        <Grid Grid.Row="4" ColumnDefinitions="Auto,*" Margin="0,10,0,5">
-            <TextBlock Grid.Column="0" Text="Selected Items" FontWeight="Bold" FontSize="14" Foreground="#BAC2DE" VerticalAlignment="Bottom"/>
-            <TextBlock Grid.Column="1" Text="{Binding SelectionSummaryText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
-        </Grid>
-
-        <!-- Row 5: Review Card ListBox -->
-        <ListBox x:Name="SelectedItemsList" Grid.Row="5" Background="#313244" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding SelectedPayloads}" Foreground="#CDD6F4">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="5">
-                        <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="#89B4FA" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                </Grid>
+                
+                <!-- File List -->
+                <Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6">
+                    <Grid>
+                        <ListBox x:Name="SelectedItemsList" ItemsSource="{Binding SelectedPayloads}" Background="Transparent" Margin="5">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,4">
+                                        <!-- Since Icon is a string in the model, keep it as TextBlock -->
+                                        <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                        
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="{DynamicResource AppForeground}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding DisplayCount}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0" IsVisible="{Binding DisplayCount, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        </StackPanel>
+                                        
+                                        <TextBlock Grid.Column="2" Text="{Binding DisplaySize}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="15,0" VerticalAlignment="Center"/>
+                                        
+                                        <Button Grid.Column="3" Classes="Danger" Click="RemovePayload_Click" CommandParameter="{Binding Id}" Padding="6" CornerRadius="4" VerticalAlignment="Center" ToolTip.Tip="Remove">
+                                            <PathIcon Data="{StaticResource DeleteIcon}" Width="14" Height="14" Foreground="{DynamicResource DangerColor}"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                         
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
-                            <TextBlock Text="{Binding DisplaySize}" Foreground="#A6ADC8" Margin="0,0,5,0"/>
-                            <TextBlock Text="{Binding DisplayCount}" Foreground="#6C7086"/>
+                        <!-- Empty State for Files -->
+                        <StackPanel IsVisible="{Binding !HasSelectedFiles}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
+                            <PathIcon Data="{StaticResource FileIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
+                            <TextBlock Text="No files selected" FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Click 'Add Files' or 'Add Folder' to select items to send." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                         </StackPanel>
-                        
-                        <Button Grid.Column="3" Content="✕" Click="RemovePayload_Click" CommandParameter="{Binding Id}" Background="Transparent" Foreground="#F38BA8" Padding="5,0" FontWeight="Bold" Cursor="Hand" VerticalAlignment="Center"/>
                     </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        
-        <!-- Row 6: Big SEND Button -->
-        <Button Grid.Row="6" Content="SEND TO SELECTED DEVICE" x:Name="ExecuteSendButton" Click="ExecuteSendButton_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" FontSize="16" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,15" Padding="15,10" IsEnabled="{Binding CanSend}"/>
-
-        <!-- Row 9: Debug header -->
-        <Grid Grid.Row="9" Margin="0,5,0,5">
-            <TextBlock Text="Debug Log" FontWeight="Bold" FontSize="14" Foreground="#F9E2AF" VerticalAlignment="Center"/>
-            <Button Content="Copy Log" Click="CopyLog_Click" Background="#45475A" Foreground="#CDD6F4" FontSize="11" Padding="10,4" HorizontalAlignment="Right" Cursor="Hand" ToolTip.Tip="Copy all logs to clipboard"/>
+                </Border>
+                
+                <!-- Transfer Summary -->
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,15,0,0">
+                    <TextBlock Grid.Column="0" Text="{Binding SelectionSummaryText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="13" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="Send to Device" x:Name="ExecuteSendButton" Click="ExecuteSendButton_Click" Classes="Primary" FontSize="14" Padding="24,10" IsEnabled="{Binding CanSend}">
+                        <Button.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource SendIcon}" Width="16" Height="16"/>
+                                    <TextBlock Text="Send to Device"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </Button.ContentTemplate>
+                    </Button>
+                </Grid>
+            </Grid>
         </Grid>
         
-        <!-- Row 10: Debug log -->
-        <ListBox x:Name="DebugLogList" Grid.Row="10" Background="#181825" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DebugMessages}" FontSize="11" FontFamily="Consolas, monospace">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Text}" Foreground="{Binding Color}" TextWrapping="Wrap" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <!-- FOOTER: DEVELOPER LOGS EXPANDER -->
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,1,0,0">
+            <Expander Header="Developer Logs" HorizontalAlignment="Stretch" Padding="15,5" Background="Transparent" BorderThickness="0">
+                <Grid RowDefinitions="Auto,200" Margin="0,10,0,0">
+                    <Button Grid.Row="0" Content="Copy Log" Click="CopyLog_Click" Classes="Primary" HorizontalAlignment="Right" Padding="8,4" FontSize="11" Margin="0,0,0,5"/>
+                    <ListBox x:Name="DebugLogList" Grid.Row="1" Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="4" ItemsSource="{Binding DebugMessages}" FontSize="12" FontFamily="Consolas, monospace" Padding="5">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="{Binding Color}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Expander>
+        </Border>
+        
     </Grid>
 </Window>

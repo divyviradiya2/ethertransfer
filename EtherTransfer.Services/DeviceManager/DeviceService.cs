@@ -152,11 +152,12 @@ public class DeviceService : IDisposable
             }
             return;
         }
+        var isNew = false;
         _devices.AddOrUpdate(sourceIp,
             _ =>
             {
                 updated = true;
-                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] NEW DEVICE: {e.Message.ComputerName} at {sourceIp}");
+                isNew = true;
                 return new DiscoveredDevice
                 {
                     Name = e.Message.ComputerName,
@@ -176,6 +177,11 @@ public class DeviceService : IDisposable
                 }
                 return existing;
             });
+
+        if (isNew)
+        {
+            DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] NEW DEVICE: {e.Message.ComputerName} at {sourceIp}");
+        }
 
         if (updated)
         {

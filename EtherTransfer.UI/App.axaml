@@ -4,7 +4,137 @@
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- Light Theme Colors -->
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppBackground" Color="#F3F3F3"/>
+                    <SolidColorBrush x:Key="SurfaceBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#E5E5E5"/>
+                    <SolidColorBrush x:Key="AppForeground" Color="#111111"/>
+                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#666666"/>
+                    <SolidColorBrush x:Key="AppBorder" Color="#E0E0E0"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#0067C0"/>
+                    <SolidColorBrush x:Key="AccentColorHover" Color="#005A9E"/>
+                    <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="DangerColor" Color="#D13438"/>
+                    <SolidColorBrush x:Key="SuccessColor" Color="#107C10"/>
+                    <SolidColorBrush x:Key="WarningColor" Color="#FFB900"/>
+                </ResourceDictionary>
+                <!-- Dark Theme Colors -->
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppBackground" Color="#202020"/>
+                    <SolidColorBrush x:Key="SurfaceBackground" Color="#2D2D2D"/>
+                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#3D3D3D"/>
+                    <SolidColorBrush x:Key="AppForeground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#AAAAAA"/>
+                    <SolidColorBrush x:Key="AppBorder" Color="#444444"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#4CC2FF"/>
+                    <SolidColorBrush x:Key="AccentColorHover" Color="#47B1E8"/>
+                    <SolidColorBrush x:Key="AccentForeground" Color="#000000"/>
+                    <SolidColorBrush x:Key="DangerColor" Color="#F1707B"/>
+                    <SolidColorBrush x:Key="SuccessColor" Color="#6CCB5F"/>
+                    <SolidColorBrush x:Key="WarningColor" Color="#FCE100"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Vector Icons -->
+            <StreamGeometry x:Key="FolderIcon">M10,4H4C2.9,4,2.01,4.9,2.01,6L2,18C2,19.1,2.9,20,4,20H20C21.1,20,22,19.1,22,18V8C22,6.9,21.1,6,20,6H12L10,4Z</StreamGeometry>
+            <StreamGeometry x:Key="FileIcon">M14,2H6C4.9,2,4.01,2.9,4.01,4L4,20C4,21.1,4.89,22,5.99,22H18C19.1,22,20,21.1,20,20V8L14,2M13,9V3.5L18.5,9H13Z</StreamGeometry>
+            <StreamGeometry x:Key="SendIcon">M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z</StreamGeometry>
+            <StreamGeometry x:Key="DeleteIcon">M6,19C6,20.1,6.9,21,8,21H16C17.1,21,18,20.1,18,19V7H6V19M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19V4Z</StreamGeometry>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        
+        <!-- Global Button Style -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppForeground}"/>
+        </Style>
+        
+        <!-- Primary Button Style -->
+        <Style Selector="Button.Primary">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.Primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentColorHover}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColorHover}"/>
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource AccentForeground}"/>
+        </Style>
+        <Style Selector="Button.Primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppForegroundSecondary}"/>
+        </Style>
+
+        <!-- Danger Button Style -->
+        <Style Selector="Button.Danger">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerColor}"/>
+        </Style>
+        <Style Selector="Button.Danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
+        </Style>
+
+        <!-- ListBox Style -->
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Padding" Value="8"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
+        </Style>
+        
+        <!-- TextBox Style -->
+        <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppForeground}"/>
+        </Style>
+        <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{DynamicResource AppForegroundSecondary}"/>
+        </Style>
+        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <!-- ScrollViewer -->
+        <Style Selector="ScrollViewer">
+            <Setter Property="AllowAutoHide" Value="True"/>
+        </Style>
+
     </Application.Styles>
 </Application>

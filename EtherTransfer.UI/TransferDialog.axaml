@@ -3,67 +3,72 @@
         xmlns:ui="clr-namespace:EtherTransfer.UI"
         x:Class="EtherTransfer.UI.TransferDialog"
         x:DataType="ui:TransferDialog"
-        Title="Transfer Dialog"
-        Width="450" Height="250"
+        Title="Transfer Progress"
+        Width="480" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         WindowDecorations="BorderOnly"
-        Background="#1E1E2E"
-        Foreground="#CDD6F4"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         CanResize="False">
     
-    <Border BorderBrush="#45475A" BorderThickness="1" CornerRadius="8">
-        <Grid Margin="20">
+    <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBackground}">
+        <Grid Margin="25">
             
             <!-- Sender Mode: Waiting for acceptance -->
             <StackPanel IsVisible="{Binding IsSenderMode}" VerticalAlignment="Center" Spacing="20">
-                <TextBlock Text="{Binding WaitingText}" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                <TextBlock Text="Awaiting Response" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding WaitingText}" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                 
-                <ProgressBar IsIndeterminate="True" Height="4" Margin="20,0" Foreground="#89B4FA" Background="#313244"/>
+                <ProgressBar IsIndeterminate="True" Height="4" Margin="20,10" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="2"/>
                 
-                <Button Content="Cancel" Click="Cancel_Click" Background="#F38BA8" Foreground="#11111B" FontWeight="Bold" HorizontalAlignment="Center" Padding="30,8"/>
+                <Button Content="Cancel" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Padding="24,8"/>
             </StackPanel>
             
             <!-- Receiver Mode: Incoming Request -->
             <StackPanel IsVisible="{Binding IsReceiverMode}" VerticalAlignment="Center" Spacing="15">
-                <TextBlock Text="Incoming Transfer Request" FontSize="18" FontWeight="Bold" Foreground="#A6E3A1" TextAlignment="Center"/>
-                <TextBlock Text="{Binding IncomingRequestText}" FontSize="14" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                <TextBlock Text="Incoming Transfer" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding IncomingRequestText}" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
                 
-                <Grid ColumnDefinitions="*,Auto" Margin="0,5">
-                    <TextBox Grid.Column="0" Text="{Binding SavePath}" IsReadOnly="True" Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Content="Change" Click="ChangeFolder_Click" Margin="10,0,0,0" Background="#45475A" Foreground="#CDD6F4" VerticalAlignment="Center"/>
-                </Grid>
+                <StackPanel Spacing="5" Margin="0,5">
+                    <TextBlock Text="Save Location:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBox Grid.Column="0" Text="{Binding SavePath}" IsReadOnly="True" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Change" Click="ChangeFolder_Click" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
                 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,15,0,0">
-                    <Button Content="Decline" Click="Decline_Click" Background="#45475A" Foreground="#CDD6F4" Padding="25,8" FontWeight="SemiBold"/>
-                    <Button Content="Accept" Click="Accept_Click" Background="#A6E3A1" Foreground="#11111B" Padding="25,8" FontWeight="Bold"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15" Margin="0,20,0,0">
+                    <Button Content="Decline" Click="Decline_Click" Padding="25,8"/>
+                    <Button Content="Accept" Classes="Primary" Click="Accept_Click" Padding="25,8"/>
                 </StackPanel>
             </StackPanel>
 
             <!-- Progress Mode: Transferring Data -->
             <StackPanel IsVisible="{Binding IsProgressMode}" VerticalAlignment="Center" Spacing="10">
-                <TextBlock Text="Transferring..." FontWeight="Bold" Foreground="#F9E2AF" FontSize="16" TextAlignment="Center"/>
-                <TextBlock Text="{Binding TransferFileName}" Foreground="#CDD6F4" TextTrimming="CharacterEllipsis" TextAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="Transferring" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding TransferFileName}" Foreground="{DynamicResource AppForegroundSecondary}" TextTrimming="CharacterEllipsis" TextAlignment="Center" Margin="0,0,0,15"/>
                 
-                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="15" Margin="20,0" Foreground="#A6E3A1" Background="#313244"/>
+                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="6" Margin="0,5" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="3"/>
                 
-                <Grid ColumnDefinitions="*,*" Margin="20,5,20,0">
-                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Left"/>
-                    <TextBlock Grid.Column="1" Text="{Binding TransferSpeedText}" Foreground="#A6ADC8" FontSize="12" HorizontalAlignment="Right"/>
+                <Grid ColumnDefinitions="*,*" Margin="0,5,0,15">
+                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Right"/>
                 </Grid>
                 
-                <Button Content="Cancel" Click="Cancel_Click" Background="#F38BA8" Foreground="#11111B" FontWeight="Bold" HorizontalAlignment="Center" Padding="30,8" Margin="0,10,0,0"/>
+                <Button Content="Cancel" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Padding="24,8"/>
             </StackPanel>
 
             <!-- Success Mode: Transfer Complete -->
             <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="15">
-                <TextBlock Text="Transfer Complete" FontWeight="Bold" Foreground="#A6E3A1" FontSize="18" TextAlignment="Center"/>
+                <PathIcon Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Foreground="{DynamicResource SuccessColor}" Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="Transfer Complete" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
                 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,10">
-                    <TextBlock Text="{Binding TransferTotalMegabytes, StringFormat={}{0:F2}}" Foreground="#A6ADC8"/>
-                    <TextBlock Text="MB successfully transferred." Foreground="#A6ADC8"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
+                    <TextBlock Text="{Binding TransferTotalMegabytes, StringFormat={}{0:F2}}" Foreground="{DynamicResource AppForegroundSecondary}"/>
+                    <TextBlock Text="MB successfully transferred." Foreground="{DynamicResource AppForegroundSecondary}"/>
                 </StackPanel>
                 
-                <Button Content="Done" Click="Done_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" HorizontalAlignment="Center" Padding="40,10"/>
+                <Button Content="Done" Classes="Primary" Click="Done_Click" HorizontalAlignment="Center" Padding="32,8"/>
             </StackPanel>
 
         </Grid>
