@@ -44,7 +44,7 @@ public class DiscoveryService : IDisposable
         DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {msg}");
     }
 
-    public void Start(string computerName, int tcpPort)
+    public async Task StartAsync(string computerName, int tcpPort)
     {
         _computerName = computerName;
         _cts = new CancellationTokenSource();
@@ -52,7 +52,7 @@ public class DiscoveryService : IDisposable
         Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
 
         // Auto-configure Ethernet on Linux (assign link-local IP if missing)
-        var configLog = EthernetConfigurator.EnsureEthernetReady();
+        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync();
         foreach (var line in configLog)
         {
             Log(line);

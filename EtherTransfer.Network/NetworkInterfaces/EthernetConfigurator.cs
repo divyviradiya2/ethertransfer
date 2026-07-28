@@ -20,7 +20,7 @@ public static class EthernetConfigurator
 
     private record ConfigChange(string Type, string ConnectionName, string InterfaceName, string? OriginalMethod);
 
-    public static List<string> EnsureEthernetReady()
+    public static async Task<List<string>> EnsureEthernetReadyAsync()
     {
         var log = new List<string>();
 
@@ -53,11 +53,11 @@ public static class EthernetConfigurator
 
             if (!hasIpv4)
             {
-                // Give NetworkManager up to 2.5 seconds to finish its DHCP/link-local handshake natively.
+                // Give NetworkManager up to 6 seconds to finish its DHCP/link-local handshake natively.
                 // This prevents the app from starting up with 0 listeners and immediately restarting when NM finishes.
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 12; i++)
                 {
-                    System.Threading.Thread.Sleep(500);
+                    await Task.Delay(500);
                     
                     var updatedNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == currentNi.Id);
                     if (updatedNi != null && updatedNi.GetIPProperties().UnicastAddresses.Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork))

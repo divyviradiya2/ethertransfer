@@ -41,7 +41,7 @@ public class DeviceService : IDisposable
         _computerName = computerName;
         _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
-        _discoveryService.Start(computerName, tcpPort);
+        _ = Task.Run(async () => await _discoveryService.StartAsync(computerName, tcpPort));
 
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAddressChanged;
@@ -79,14 +79,13 @@ public class DeviceService : IDisposable
                 }
                 _lastKnownIps = currentIps;
 
-                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Network state settled. Re-binding sockets...");
                 _devices.Clear();
                 DevicesChanged?.Invoke(this, EventArgs.Empty);
                 NetworkChanged?.Invoke(this, EventArgs.Empty);
 
                 // Restart discovery to bind UDP sockets to new interfaces
                 _discoveryService.Stop();
-                _discoveryService.Start(_computerName, _tcpPort);
+                await _discoveryService.StartAsync(_computerName, _tcpPort);
             }
             catch { }
         });
