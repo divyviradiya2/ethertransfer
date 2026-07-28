@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -11,7 +12,6 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Services.DeviceManager;
-using EtherTransfer.Core.Models;
 using EtherTransfer.Services;
 
 namespace EtherTransfer.UI;
@@ -66,13 +66,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string TransferSpeedText { get => _transferSpeedText; set { _transferSpeedText = value; OnPropertyChanged(); } }
 
     // Incoming Request State
-    private bool _hasIncomingRequest;
-    public bool HasIncomingRequest { get => _hasIncomingRequest; set { _hasIncomingRequest = value; OnPropertyChanged(); } }
-    
-    private string _incomingRequestText = "";
-    public string IncomingRequestText { get => _incomingRequestText; set { _incomingRequestText = value; OnPropertyChanged(); } }
-    
-    private TaskCompletionSource<(bool accept, string savePath)>? _incomingRequestTcs;
     
     private string _customDeviceName = "";
     public string CustomDeviceName { get => _customDeviceName; set { _customDeviceName = value; OnPropertyChanged(); } }
@@ -196,7 +189,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var targetIp = SelectedDevice.Address;
         var targetPort = 55000;
         
-        // Dynamically compile the TransferSession from all queued payloads
         var session = new TransferSession();
         foreach (var payload in SelectedPayloads)
         {
@@ -212,26 +204,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             session.Files.AddRange(payload.DeepScannedFiles);
         }
 
-        if (session.Files.Count == 0)
-        {
-            OnDebugLog(this, "No valid files to send.");
-            return;
-        }
+        if (session.Files.Count == 0) return;
         
-        OnDebugLog(this, $"Starting transmission of {session.TotalFiles} files to {SelectedDevice.Name}...");
+        var cts = new CancellationTokenSource();
+        var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
+        
+        // Don't await the dialog, just show it. It will close itself on cancel, or we will close it when transfer finishes.
+        _ = dialog.ShowDialog(this);
         
         try
         {
-            await _transferService.TransmitSessionAsync(targetIp, targetPort, session);
+            await _transferService.TransmitSessionAsync(targetIp, targetPort, session, cts.Token);
             
             // Auto-clear selection after successful transfer
             SelectedPayloads.Clear();
             UpdateSelectionUI();
             OnDebugLog(this, "Transfer finished successfully. Selection cleared.");
         }
+        catch (OperationCanceledException)
+        {
+            OnDebugLog(this, "Transfer cancelled by user.");
+        }
         catch (Exception ex)
         {
             OnDebugLog(this, $"Transfer failed: {ex.Message}");
+        }
+        finally
+        {
+            // Close the dialog when finished or if errored
+            dialog.Close();
         }
     }
 
@@ -322,67 +323,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var tcs = new TaskCompletionSource<(bool, string)>();
         
-        Dispatcher.UIThread.InvokeAsync(() =>
+        Dispatcher.UIThread.InvokeAsync(async () =>
         {
             string sizeStr = $"{request.TotalSize / 1024 / 1024} MB";
+            string text;
             
             if (request.PayloadFolderCount > 0 && request.PayloadFileCount > 0)
             {
-                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) and {request.PayloadFileCount} file(s) ({sizeStr}).";
+                text = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) and {request.PayloadFileCount} file(s) ({sizeStr}).";
             }
             else if (request.PayloadFolderCount > 0)
             {
-                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) containing {request.TotalFiles} file(s) ({sizeStr}).";
+                text = $"{request.SenderName} wants to send {request.PayloadFolderCount} folder(s) containing {request.TotalFiles} file(s) ({sizeStr}).";
             }
             else
             {
-                IncomingRequestText = $"{request.SenderName} wants to send {request.PayloadFileCount} file(s) ({sizeStr}).";
+                text = $"{request.SenderName} wants to send {request.PayloadFileCount} file(s) ({sizeStr}).";
             }
 
-            _incomingRequestTcs = tcs;
-            HasIncomingRequest = true;
+            var dialog = TransferDialog.CreateReceiver(text, tcs);
+            await dialog.ShowDialog(this);
         });
 
         return tcs.Task;
-    }
-
-    private async void AcceptTransfer_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel == null) return;
-
-            // Pick save folder
-            var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-            {
-                Title = "Choose save location"
-            });
-
-            HasIncomingRequest = false;
-
-            if (folder.Count > 0 && _incomingRequestTcs != null)
-            {
-                _incomingRequestTcs.TrySetResult((true, folder[0].Path.LocalPath));
-            }
-            else if (_incomingRequestTcs != null)
-            {
-                _incomingRequestTcs.TrySetResult((false, ""));
-            }
-        }
-        catch (Exception ex)
-        {
-            HasIncomingRequest = false;
-            _incomingRequestTcs?.TrySetResult((false, ""));
-            // Log to our UI debugger
-            OnDebugLog(this, $"Error opening folder picker: {ex.Message}");
-        }
-    }
-
-    private void DeclineTransfer_Click(object? sender, RoutedEventArgs e)
-    {
-        HasIncomingRequest = false;
-        _incomingRequestTcs?.TrySetResult((false, ""));
     }
 
     private void SaveName_Click(object? sender, RoutedEventArgs e)

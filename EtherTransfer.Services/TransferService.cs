@@ -61,7 +61,7 @@ public class TransferService : IDisposable
         return sender.ScanItemAsync(path);
     }
 
-    public async Task TransmitSessionAsync(string targetIp, int targetPort, TransferSession session)
+    public async Task TransmitSessionAsync(string targetIp, int targetPort, TransferSession session, CancellationToken userCt = default)
     {
         var sender = new TransferSender();
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
@@ -72,7 +72,8 @@ public class TransferService : IDisposable
         {
             try
             {
-                await sender.TransmitSessionAsync(targetIp, targetPort, _computerName, session, _cts.Token);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, userCt);
+                await sender.TransmitSessionAsync(targetIp, targetPort, _computerName, session, linkedCts.Token);
             }
             catch (Exception ex)
             {

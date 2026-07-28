@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:EtherTransfer.UI"
+        x:Class="EtherTransfer.UI.TransferDialog"
+        x:DataType="ui:TransferDialog"
+        Title="Transfer Dialog"
+        Width="450" Height="250"
+        WindowStartupLocation="CenterOwner"
+        WindowDecorations="BorderOnly"
+        Background="#1E1E2E"
+        Foreground="#CDD6F4"
+        CanResize="False">
+    
+    <Border BorderBrush="#45475A" BorderThickness="1" CornerRadius="8">
+        <Grid Margin="20">
+            
+            <!-- Sender Mode: Waiting for acceptance -->
+            <StackPanel IsVisible="{Binding IsSenderMode}" VerticalAlignment="Center" Spacing="20">
+                <TextBlock Text="{Binding WaitingText}" FontSize="16" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                
+                <ProgressBar IsIndeterminate="True" Height="4" Margin="20,0" Foreground="#89B4FA" Background="#313244"/>
+                
+                <Button Content="Cancel" Click="Cancel_Click" Background="#F38BA8" Foreground="#11111B" FontWeight="Bold" HorizontalAlignment="Center" Padding="30,8"/>
+            </StackPanel>
+            
+            <!-- Receiver Mode: Incoming Request -->
+            <StackPanel IsVisible="{Binding IsReceiverMode}" VerticalAlignment="Center" Spacing="15">
+                <TextBlock Text="Incoming Transfer Request" FontSize="18" FontWeight="Bold" Foreground="#A6E3A1" TextAlignment="Center"/>
+                <TextBlock Text="{Binding IncomingRequestText}" FontSize="14" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                
+                <Grid ColumnDefinitions="*,Auto" Margin="0,5">
+                    <TextBox Grid.Column="0" Text="{Binding SavePath}" IsReadOnly="True" Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Content="Change" Click="ChangeFolder_Click" Margin="10,0,0,0" Background="#45475A" Foreground="#CDD6F4" VerticalAlignment="Center"/>
+                </Grid>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,15,0,0">
+                    <Button Content="Decline" Click="Decline_Click" Background="#45475A" Foreground="#CDD6F4" Padding="25,8" FontWeight="SemiBold"/>
+                    <Button Content="Accept" Click="Accept_Click" Background="#A6E3A1" Foreground="#11111B" Padding="25,8" FontWeight="Bold"/>
+                </StackPanel>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>
