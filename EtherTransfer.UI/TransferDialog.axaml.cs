@@ -52,7 +52,18 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
 
     private long _transferTotalBytes;
-    public long TransferTotalBytes { get => _transferTotalBytes; set { _transferTotalBytes = value; OnPropertyChanged(); } }
+    public long TransferTotalBytes 
+    { 
+        get => _transferTotalBytes; 
+        set 
+        { 
+            _transferTotalBytes = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(TransferTotalMegabytes));
+        } 
+    }
+
+    public double TransferTotalMegabytes => _transferTotalBytes / 1024.0 / 1024.0;
 
     private long _transferSentBytes;
     public long TransferSentBytes { get => _transferSentBytes; set { _transferSentBytes = value; OnPropertyChanged(); } }

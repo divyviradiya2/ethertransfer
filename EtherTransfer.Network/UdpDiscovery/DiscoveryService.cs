@@ -91,7 +91,52 @@ public class DiscoveryService : IDisposable
 
     public void Stop()
     {
+        if (_cts != null && !_cts.IsCancellationRequested)
+        {
+            SendBye();
+        }
         _cts?.Cancel();
+    }
+
+    private void SendBye()
+    {
+        try
+        {
+            var message = new DiscoveryMessage
+            {
+                Type = "BYE",
+                ComputerName = _computerName,
+                TcpPort = 0,
+                Id = AppId
+            };
+            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+            
+            var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+            foreach (var netIf in ethInterfaces)
+            {
+                try
+                {
+                    using var sender = new UdpClient();
+                    sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                    sender.EnableBroadcast = true;
+                    var target = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
+                    sender.Send(payload, payload.Length, target);
+                }
+                catch { }
+            }
+            
+            try
+            {
+                using var globalSender = new UdpClient();
+                globalSender.EnableBroadcast = true;
+                var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
+                globalSender.Send(payload, payload.Length, globalTarget);
+            }
+            catch { }
+            
+            Log("Broadcasted BYE message.");
+        }
+        catch { }
     }
 
     private async Task BroadcastLoopAsync(int tcpPort, CancellationToken ct)
@@ -185,7 +230,7 @@ public class DiscoveryService : IDisposable
                 {
                     var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
                     
-                    if (message != null && message.Type == "HELLO" && message.Id == AppId)
+                    if (message != null && (message.Type == "HELLO" || message.Type == "BYE") && message.Id == AppId)
                     {
                         PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
                     }

@@ -83,6 +83,16 @@ public class DeviceService : IDisposable
         }
 
         var updated = false;
+        
+        if (e.Message.Type == "BYE")
+        {
+            if (_devices.TryRemove(sourceIp, out var removed))
+            {
+                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] DEVICE WENT OFFLINE: {removed.Name} at {sourceIp}");
+                DevicesChanged?.Invoke(this, EventArgs.Empty);
+            }
+            return;
+        }
         _devices.AddOrUpdate(sourceIp, 
             _ => 
             {
