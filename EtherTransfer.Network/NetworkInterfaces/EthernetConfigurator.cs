@@ -88,35 +88,21 @@ public static class EthernetConfigurator
             {
                 switch (change.Type)
                 {
-                    case "created":
-                        // We created a new connection — delete it and bring back the original
-                        log.Add($"   Removing '{change.ConnectionName}'...");
-                        RunCommand("nmcli", $"connection down \"{change.ConnectionName}\"");
-                        RunCommand("nmcli", $"connection delete \"{change.ConnectionName}\"");
-                        log.Add($"   ✅ Removed");
-                        break;
-
-                    case "modified":
-                        // We modified an existing connection — restore original method
-                        var method = change.OriginalMethod ?? "auto";
-                        log.Add($"   Restoring '{change.ConnectionName}' to ipv4.method={method}...");
-                        RunCommand("nmcli", $"connection modify \"{change.ConnectionName}\" ipv4.method {method}");
-                        
-                        // Fire-and-forget 'connection up' so it applies instantly without blocking app shutdown
-                        // if NetworkManager blocks waiting for a DHCP lease.
+                    case "device_modified":
+                        log.Add($"   Reapplying saved profile to {change.InterfaceName}...");
+                        // Run in background so it doesn't block UI shutdown if NM hangs on DHCP
                         try
                         {
                             Process.Start(new ProcessStartInfo
                             {
                                 FileName = "nmcli",
-                                Arguments = $"connection up \"{change.ConnectionName}\"",
+                                Arguments = $"device reapply {change.InterfaceName}",
                                 CreateNoWindow = true,
                                 UseShellExecute = false
                             });
                         }
                         catch { }
-                        
-                        log.Add($"   ✅ Restored and restarting connection in background");
+                        log.Add($"   ✅ Reapplied in background");
                         break;
 
                     case "manual_ip":
@@ -184,79 +170,18 @@ public static class EthernetConfigurator
                 return false;
             }
 
-            // Find existing connection for this interface
-            var listResult = RunCommand("nmcli", "-t -f NAME,DEVICE connection show");
-            string? connName = null;
-
-            if (listResult.exitCode == 0)
+            // Attempt temporary modification first (Enterprise robust: doesn't permanently alter profiles)
+            log.Add($"   Attempting temporary link-local config on device {ifaceName}...");
+            var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
+            if (devModResult.exitCode == 0)
             {
-                var lines = listResult.output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                foreach (var line in lines)
-                {
-                    var parts = line.Trim().Split(':');
-                    if (parts.Length >= 2 && parts[^1] == ifaceName)
-                    {
-                        connName = parts[0];
-                        break;
-                    }
-                }
-            }
-
-            if (string.IsNullOrEmpty(connName))
-            {
-                // Create a new connection — track for cleanup
-                connName = $"EtherTransfer-{ifaceName}";
-                log.Add($"   Creating connection '{connName}'...");
-                var addResult = RunCommand("nmcli", $"connection add type ethernet con-name \"{connName}\" ifname {ifaceName} ipv4.method link-local");
-                if (addResult.exitCode != 0)
-                {
-                    log.Add($"   Failed to create connection: {addResult.output}");
-                    return false;
-                }
-                _changes.Add(new ConfigChange("created", connName, ifaceName, null));
-            }
-            else
-            {
-                // Read current method before modifying
-                var methodResult = RunCommand("nmcli", $"-t -f ipv4.method connection show \"{connName}\"");
-                var originalMethod = "auto"; // default
-                if (methodResult.exitCode == 0)
-                {
-                    var val = methodResult.output.Trim();
-                    if (val.Contains(':'))
-                        originalMethod = val.Split(':')[^1].Trim();
-                }
-
-                // If already link-local, nothing to do
-                if (originalMethod == "link-local")
-                {
-                    log.Add($"   '{connName}' is already link-local, bringing up...");
-                    RunCommand("nmcli", $"connection up \"{connName}\"");
-                    return true;
-                }
-
-                log.Add($"   Setting '{connName}' to link-local (was: {originalMethod})...");
-                var modResult = RunCommand("nmcli", $"connection modify \"{connName}\" ipv4.method link-local");
-                if (modResult.exitCode != 0)
-                {
-                    log.Add($"   Failed to modify: {modResult.output}");
-                    return false;
-                }
-                _changes.Add(new ConfigChange("modified", connName, ifaceName, originalMethod));
-            }
-
-            // Bring it up
-            var upResult = RunCommand("nmcli", $"connection up \"{connName}\"");
-            if (upResult.exitCode == 0)
-            {
-                log.Add($"   ✅ Configured link-local via nmcli");
+                log.Add($"   ✅ Configured link-local temporarily on device");
+                _changes.Add(new ConfigChange("device_modified", "", ifaceName, null));
                 return true;
             }
-            else
-            {
-                log.Add($"   Failed to bring up: {upResult.output}");
-                return false;
-            }
+
+            log.Add($"   nmcli device modify failed: {devModResult.output}. Falling back to manual IP assignment...");
+            return false;
         }
         catch (Exception ex)
         {
