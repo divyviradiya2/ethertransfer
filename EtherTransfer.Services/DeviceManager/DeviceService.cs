@@ -40,6 +40,7 @@ public class DeviceService : IDisposable
         _discoveryService.Start(computerName, tcpPort);
         
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAddressChanged;
         
         // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
@@ -193,10 +194,50 @@ public class DeviceService : IDisposable
                     DevicesChanged?.Invoke(this, EventArgs.Empty);
                 }
 
+                if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+                {
+                    CheckForUnconfiguredLinuxEthernet();
+                }
+
                 await Task.Delay(2000, cancellationToken);
             }
         }
         catch (OperationCanceledException) { }
+    }
+
+    private void CheckForUnconfiguredLinuxEthernet()
+    {
+        try
+        {
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                             ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                             ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
+                             
+            foreach (var ni in interfaces)
+            {
+                var name = ni.Name.ToLowerInvariant();
+                var desc = ni.Description.ToLowerInvariant();
+
+                if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+                    continue;
+                if (name.StartsWith("docker") || name.StartsWith("br-") || name.StartsWith("veth") ||
+                    name.StartsWith("virbr") || name.StartsWith("tun") || name.StartsWith("tap"))
+                    continue;
+
+                var hasIpv4 = ni.GetIPProperties().UnicastAddresses
+                    .Any(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                    
+                if (!hasIpv4)
+                {
+                    DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Found unconfigured Ethernet '{ni.Name}'. Forcing network refresh...");
+                    // Trigger the network change logic which restarts Discovery and runs EnsureEthernetReady()
+                    OnNetworkAddressChanged(this, EventArgs.Empty);
+                    break;
+                }
+            }
+        }
+        catch { }
     }
 
     public void Dispose()
