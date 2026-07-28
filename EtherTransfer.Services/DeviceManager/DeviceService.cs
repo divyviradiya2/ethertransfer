@@ -216,7 +216,6 @@ public class DeviceService : IDisposable
                 if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
                 {
                     EthernetConfigurator.AuditInterfaces();
-                    CheckForUnconfiguredLinuxEthernet();
                 }
 
                 await Task.Delay(2000, cancellationToken);
@@ -225,51 +224,14 @@ public class DeviceService : IDisposable
         catch (OperationCanceledException) { }
     }
 
-    private void CheckForUnconfiguredLinuxEthernet()
-    {
-        try
-        {
-            var interfaces = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
-                             ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                             ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
-
-            foreach (var ni in interfaces)
-            {
-                var name = ni.Name.ToLowerInvariant();
-                var desc = ni.Description.ToLowerInvariant();
-
-                if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-                    continue;
-                if (name.StartsWith("docker") || name.StartsWith("br-") || name.StartsWith("veth") ||
-                    name.StartsWith("virbr") || name.StartsWith("tun") || name.StartsWith("tap"))
-                    continue;
-
-                var hasIpv4 = ni.GetIPProperties().UnicastAddresses
-                    .Any(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-
-                if (!hasIpv4)
-                {
-                    if (_lastRefreshAttempt.TryGetValue(ni.Name, out var lastAttempt) && (DateTime.Now - lastAttempt).TotalSeconds < 15)
-                    {
-                        continue;
-                    }
-
-                    _lastRefreshAttempt[ni.Name] = DateTime.Now;
-                    
-                    DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Found unconfigured Ethernet '{ni.Name}'. Forcing network refresh...");
-                    // Trigger the network change logic which restarts Discovery and runs EnsureEthernetReady()
-                    OnNetworkAddressChanged(this, EventArgs.Empty);
-                    break;
-                }
-            }
-        }
-        catch { }
-    }
-
     public void Dispose()
     {
-        Stop();
-        _discoveryService.Dispose();
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _discoveryService?.Dispose();
+        NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAddressChanged;
     }
 }
