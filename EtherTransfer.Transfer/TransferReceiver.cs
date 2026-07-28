@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +12,6 @@ public class IncomingTransferEventArgs : EventArgs
 {
     public TransferRequestMessage Request { get; }
 
-    // The UI should set this to true if accepted, and provide a SaveDirectory
     public bool Accept { get; set; }
     public string SaveDirectory { get; set; } = string.Empty;
 
@@ -25,9 +23,6 @@ public class IncomingTransferEventArgs : EventArgs
 
 public class TransferReceiver
 {
-    // SHA-256 hash is always exactly 32 bytes
-    private const int Sha256ByteLength = 32;
-
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
 
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
@@ -106,14 +101,12 @@ public class TransferReceiver
                 Directory.CreateDirectory(savePath);
                 Log($"Transfer accepted. Saving to: {savePath}");
 
-                // 4. Receive Files with integrity verification
+                // 4. Receive Files
                 long totalReceived = 0;
                 int filesReceived = 0;
                 int filesSkipped = 0;
-                int filesFailedIntegrity = 0;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var buffer = new byte[1024 * 1024];
-                var hashBuffer = new byte[Sha256ByteLength];
 
                 while (!ct.IsCancellationRequested)
                 {
@@ -147,8 +140,7 @@ public class TransferReceiver
                     if (safePath == null)
                     {
                         Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
-                        // Drain file bytes + 32-byte hash to keep protocol in sync
-                        await DrainBytesAsync(stream, fileMeta.Size + Sha256ByteLength, buffer, ct);
+                        await DrainBytesAsync(stream, fileMeta.Size, buffer, ct);
                         filesSkipped++;
                         continue;
                     }
@@ -159,112 +151,63 @@ public class TransferReceiver
                     var dirPath = Path.GetDirectoryName(safePath);
                     if (dirPath != null) Directory.CreateDirectory(dirPath);
 
-                    // === .part FILE STRATEGY ===
-                    var partPath = safePath + ".part";
-                    string? computedHashHex = null;
-                    bool fileWriteSuccess = false;
-
                     try
                     {
-                        using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-                        using (var fs = new FileStream(partPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true))
+                        using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+                        
+                        long fileReceived = 0;
+
+                        var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+                        var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+
+                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                         {
-                            long fileReceived = 0;
+                            CurrentFile = fileMeta.RelativePath,
+                            BytesSent = totalReceived,
+                            TotalBytes = request.TotalSize,
+                            SpeedMbPerSec = initialSpeed
+                        });
 
-                            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-                            var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+                        var lastUpdate = watch.ElapsedMilliseconds;
 
-                            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        while (fileReceived < fileMeta.Size)
+                        {
+                            int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
+                            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
+                                throw new IOException("Connection lost while reading file data.");
+
+                            await fs.WriteAsync(buffer, 0, toRead, ct);
+
+                            fileReceived += toRead;
+                            totalReceived += toRead;
+
+                            var currentElapsed = watch.ElapsedMilliseconds;
+                            if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
                             {
-                                CurrentFile = fileMeta.RelativePath,
-                                BytesSent = totalReceived,
-                                TotalBytes = request.TotalSize,
-                                SpeedMbPerSec = initialSpeed
-                            });
+                                lastUpdate = currentElapsed;
+                                var elapsedSec = watch.Elapsed.TotalSeconds;
+                                var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
 
-                            var lastUpdate = watch.ElapsedMilliseconds;
-
-                            while (fileReceived < fileMeta.Size)
-                            {
-                                int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
-                                    throw new IOException("Connection lost while reading file data.");
-
-                                sha256.AppendData(buffer, 0, toRead);
-                                await fs.WriteAsync(buffer, 0, toRead, ct);
-
-                                fileReceived += toRead;
-                                totalReceived += toRead;
-
-                                var currentElapsed = watch.ElapsedMilliseconds;
-                                if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
+                                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                                 {
-                                    lastUpdate = currentElapsed;
-                                    var elapsedSec = watch.Elapsed.TotalSeconds;
-                                    var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
-
-                                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
-                                    {
-                                        CurrentFile = fileMeta.RelativePath,
-                                        BytesSent = totalReceived,
-                                        TotalBytes = request.TotalSize,
-                                        SpeedMbPerSec = speed
-                                    });
-                                }
+                                    CurrentFile = fileMeta.RelativePath,
+                                    BytesSent = totalReceived,
+                                    TotalBytes = request.TotalSize,
+                                    SpeedMbPerSec = speed
+                                });
                             }
-
-                            await fs.FlushAsync(ct);
-                            computedHashHex = Convert.ToHexString(sha256.GetHashAndReset());
                         }
 
-                        // Read the raw 32-byte SHA-256 hash from the sender
-                        if (!await ProtocolHelper.ReadExactAsync(stream, hashBuffer, Sha256ByteLength, ct))
-                            throw new IOException("Connection lost while reading checksum.");
-
-                        var senderHashHex = Convert.ToHexString(hashBuffer);
-
-                        if (!string.Equals(senderHashHex, computedHashHex, StringComparison.OrdinalIgnoreCase))
-                        {
-                            Log($"INTEGRITY FAIL: {fileMeta.RelativePath}");
-                            filesFailedIntegrity++;
-                        }
-                        else
-                        {
-                            fileWriteSuccess = true;
-                        }
+                        filesReceived++;
                     }
                     catch (Exception ex)
                     {
                         Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
                     }
-
-                    if (fileWriteSuccess)
-                    {
-                        try
-                        {
-                            if (File.Exists(safePath))
-                                safePath = PathSanitizer.ResolveCollision(safePath);
-
-                            File.Move(partPath, safePath);
-                            filesReceived++;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"Failed to finalize {fileMeta.RelativePath}: {ex.Message}");
-                            CleanupPartFile(partPath);
-                        }
-                    }
-                    else
-                    {
-                        CleanupPartFile(partPath);
-                    }
                 }
 
                 watch.Stop();
-                Log($"Transfer complete! {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s — {filesReceived} verified, {filesSkipped} skipped, {filesFailedIntegrity} failed.");
-
-                if (filesFailedIntegrity > 0)
-                    Log($"WARNING: {filesFailedIntegrity} file(s) failed SHA-256 verification.");
+                Log($"Transfer complete! {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s — {filesReceived} received, {filesSkipped} skipped.");
             }
         }
         catch (OperationCanceledException)
@@ -287,15 +230,5 @@ public class TransferReceiver
                 throw new IOException("Connection lost while draining skipped file data.");
             drained += toRead;
         }
-    }
-
-    private void CleanupPartFile(string partPath)
-    {
-        try
-        {
-            if (File.Exists(partPath))
-                File.Delete(partPath);
-        }
-        catch { }
     }
 }

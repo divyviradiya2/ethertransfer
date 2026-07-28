@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using EtherTransfer.Core.Models;
@@ -19,9 +18,6 @@ public class TransferProgressEventArgs : EventArgs
 
 public class TransferSender
 {
-    // SHA-256 hash is always exactly 32 bytes
-    private const int Sha256ByteLength = 32;
-
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
 
@@ -152,7 +148,7 @@ public class TransferSender
 
         Log($"Transfer accepted! Streaming {session.TotalFiles} files...");
 
-        // 3. Stream Files with SHA-256 integrity hashing
+        // 3. Stream Files
         long totalSent = 0;
         int filesSent = 0;
         int filesSkipped = 0;
@@ -193,7 +189,6 @@ public class TransferSender
 
             using (fs)
             {
-                // Get actual file size at transfer time (it may have changed since scan)
                 var actualSize = fs.Length;
 
                 var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
@@ -205,9 +200,6 @@ public class TransferSender
                     Size = actualSize
                 };
                 await ProtocolHelper.SendMessageAsync(stream, meta, ct);
-
-                // Compute SHA-256 incrementally while streaming — zero extra memory or disk passes
-                using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
                 int read;
                 long fileSent = 0;
@@ -227,10 +219,6 @@ public class TransferSender
 
                 while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
                 {
-                    // Feed bytes into SHA-256 hasher (essentially free — CPU-bound, sub-microsecond)
-                    sha256.AppendData(buffer, 0, read);
-
-                    // Send bytes over the wire
                     await stream.WriteAsync(buffer, 0, read, ct);
 
                     fileSent += read;
@@ -253,12 +241,6 @@ public class TransferSender
                     }
                 }
                 await stream.FlushAsync(ct);
-
-                // Send raw 32-byte SHA-256 hash directly on the wire — NO JSON, NO serialization overhead.
-                // The receiver knows to read exactly 32 bytes after the file data ends.
-                var hashBytes = sha256.GetHashAndReset();
-                await stream.WriteAsync(hashBytes, 0, Sha256ByteLength, ct);
-
                 filesSent++;
             }
         }
