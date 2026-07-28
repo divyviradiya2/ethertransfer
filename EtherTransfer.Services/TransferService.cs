@@ -77,6 +77,7 @@ public class TransferService : IDisposable
             catch (Exception ex)
             {
                 Log($"Send failed: {ex.Message}");
+                throw;
             }
         });
     }

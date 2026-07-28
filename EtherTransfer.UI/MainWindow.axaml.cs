@@ -189,7 +189,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void ExecuteSendButton_Click(object? sender, RoutedEventArgs e)
+    private async void ExecuteSendButton_Click(object? sender, RoutedEventArgs e)
     {
         if (SelectedDevice == null || SelectedPayloads.Count == 0) return;
         
@@ -220,8 +220,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         
         OnDebugLog(this, $"Starting transmission of {session.TotalFiles} files to {SelectedDevice.Name}...");
         
-        // Fire and forget send
-        _ = _transferService.TransmitSessionAsync(targetIp, targetPort, session);
+        try
+        {
+            await _transferService.TransmitSessionAsync(targetIp, targetPort, session);
+            
+            // Auto-clear selection after successful transfer
+            SelectedPayloads.Clear();
+            UpdateSelectionUI();
+            OnDebugLog(this, "Transfer finished successfully. Selection cleared.");
+        }
+        catch (Exception ex)
+        {
+            OnDebugLog(this, $"Transfer failed: {ex.Message}");
+        }
     }
 
     private async void SendFilesButton_Click(object? sender, RoutedEventArgs e)
