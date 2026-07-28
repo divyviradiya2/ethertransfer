@@ -58,6 +58,12 @@ public static class EthernetConfigurator
                 continue;
             }
 
+            if (IsTrackingInterface(ni.Name))
+            {
+                log.Add($"[Ethernet] {ni.Name}: Waiting for OS to assign IP (configuration pending)...");
+                continue;
+            }
+
             log.Add($"[Ethernet] {ni.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
 
             if (TryConfigureWithNmcli(ni.Name, log))
@@ -121,6 +127,14 @@ public static class EthernetConfigurator
 
         _changes.Clear();
         return log;
+    }
+
+    /// <summary>
+    /// Checks if we have already issued configuration commands for this interface.
+    /// </summary>
+    public static bool IsTrackingInterface(string ifaceName)
+    {
+        return _changes.Any(c => c.InterfaceName == ifaceName);
     }
 
     /// <summary>

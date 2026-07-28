@@ -237,6 +237,13 @@ public class DeviceService : IDisposable
 
                 if (!hasIpv4)
                 {
+                    if (EthernetConfigurator.IsTrackingInterface(ni.Name))
+                    {
+                        // We already initiated link-local configuration. 
+                        // Wait for the OS to finish assigning the IP.
+                        continue;
+                    }
+
                     DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Found unconfigured Ethernet '{ni.Name}'. Forcing network refresh...");
                     // Trigger the network change logic which restarts Discovery and runs EnsureEthernetReady()
                     OnNetworkAddressChanged(this, EventArgs.Empty);
