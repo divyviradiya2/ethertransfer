@@ -191,14 +191,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 DebugMessages.RemoveAt(0);
             }
-
-            // Auto-scroll to bottom AFTER modifying the collection
-            var count = DebugMessages.Count;
-            if (count > 0 && DebugLogList != null)
-            {
-                DebugLogList.ScrollIntoView(DebugMessages[count - 1]);
-            }
         });
+    }
+
+    private DebugWindow? _debugWindow;
+
+    private void ShowDebugLog_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_debugWindow == null)
+        {
+            _debugWindow = new DebugWindow();
+            _debugWindow.DataContext = this;
+            _debugWindow.Closed += (s, args) => _debugWindow = null;
+            _debugWindow.Show(this);
+        }
+        else
+        {
+            _debugWindow.Activate();
+        }
     }
 
     private void OnProgressUpdated(object? sender, EtherTransfer.Transfer.TransferProgressEventArgs e)
@@ -490,16 +500,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _deviceService.UpdateComputerName(CustomDeviceName);
         OnDebugLog(this, $"Saved and broadcasted new name: {CustomDeviceName}");
-    }
-
-    private async void CopyLog_Click(object? sender, RoutedEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.Clipboard != null)
-        {
-            var fullLog = string.Join(Environment.NewLine, DebugMessages.Select(m => m.Text));
-            await topLevel.Clipboard.SetTextAsync(fullLog);
-        }
     }
 
     protected override void OnClosed(EventArgs e)

@@ -3,7 +3,7 @@
         xmlns:ui="clr-namespace:EtherTransfer.UI"
         x:Class="EtherTransfer.UI.TransferDialog"
         x:DataType="ui:TransferDialog"
-        Title="Transfer Progress"
+        Title="Transfer Window"
         Width="480" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         WindowDecorations="BorderOnly"

@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:EtherTransfer.UI"
+        x:Class="EtherTransfer.UI.DebugWindow"
+        x:DataType="ui:MainWindow"
+        Title="Developer Logs"
+        Width="600" Height="400"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
+        WindowStartupLocation="CenterOwner">
+    
+    <Grid RowDefinitions="Auto,*" Margin="15">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+            <TextBlock Grid.Column="0" Text="Developer Logs" FontWeight="SemiBold" FontSize="16" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="Copy Log" Click="CopyLog_Click" Classes="Primary" Padding="12,6" FontSize="12"/>
+        </Grid>
+        
+        <ListBox x:Name="DebugLogList" Grid.Row="1" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="4" ItemsSource="{Binding DebugMessages}" FontSize="12" FontFamily="Consolas, monospace" Padding="10">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="{Binding Color}" Margin="0,0,0,2"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</Window>

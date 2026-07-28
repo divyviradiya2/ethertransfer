@@ -56,6 +56,7 @@
             <StreamGeometry x:Key="FileIcon">M14,2H6C4.9,2,4.01,2.9,4.01,4L4,20C4,21.1,4.89,22,5.99,22H18C19.1,22,20,21.1,20,20V8L14,2M13,9V3.5L18.5,9H13Z</StreamGeometry>
             <StreamGeometry x:Key="SendIcon">M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z</StreamGeometry>
             <StreamGeometry x:Key="DeleteIcon">M6,19C6,20.1,6.9,21,8,21H16C17.1,21,18,20.1,18,19V7H6V19M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19V4Z</StreamGeometry>
+            <StreamGeometry x:Key="SettingsIcon">M20,19V7H4V19H20M20,3A2,2 0 0,1 22,5V19A2,2 0 0,1 20,21H4A2,2 0 0,1 2,19V5C2,3.89 2.9,3 4,3H20M8.97,8L13.25,12L8.97,16L7.56,14.59L10.41,11.75L7.56,8.91L8.97,8M12,17V15H18V17H12Z</StreamGeometry>
         </ResourceDictionary>
     </Application.Resources>
 
