@@ -29,13 +29,13 @@ public class DiscoveryService : IDisposable
 {
     private const int DiscoveryPort = 50000;
     private const string AppId = "EtherTransferApp-V1";
-    
+
     private CancellationTokenSource? _cts;
     private UdpClient? _globalListener;
     private string _computerName = string.Empty;
-    
+
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
-    
+
     // Debug log for the UI
     public event EventHandler<string>? DebugLog;
 
@@ -48,23 +48,23 @@ public class DiscoveryService : IDisposable
     {
         _computerName = computerName;
         _cts = new CancellationTokenSource();
-        
+
         Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
-        
+
         // Auto-configure Ethernet on Linux (assign link-local IP if missing)
         var configLog = EthernetConfigurator.EnsureEthernetReady();
         foreach (var line in configLog)
         {
             Log(line);
         }
-        
+
         // Run diagnostics
         var diag = NetworkHelper.DiagnoseInterfaces();
         foreach (var line in diag)
         {
             Log(line);
         }
-        
+
         // Global listener on 0.0.0.0:50000 to receive ALL broadcast packets
         try
         {
@@ -78,7 +78,7 @@ public class DiscoveryService : IDisposable
         {
             Log($"FAILED to bind listener: {ex.Message}");
         }
-        
+
         // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
     }
@@ -96,7 +96,7 @@ public class DiscoveryService : IDisposable
             SendBye();
         }
         _cts?.Cancel();
-        
+
         try
         {
             _globalListener?.Dispose();
@@ -118,7 +118,7 @@ public class DiscoveryService : IDisposable
                 OS = GetCurrentOS()
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
-            
+
             var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
             foreach (var netIf in ethInterfaces)
             {
@@ -132,7 +132,7 @@ public class DiscoveryService : IDisposable
                 }
                 catch { }
             }
-            
+
             try
             {
                 using var globalSender = new UdpClient();
@@ -141,7 +141,7 @@ public class DiscoveryService : IDisposable
                 globalSender.Send(payload, payload.Length, globalTarget);
             }
             catch { }
-            
+
             Log("Broadcasted BYE message.");
         }
         catch { }
@@ -170,7 +170,7 @@ public class DiscoveryService : IDisposable
             {
                 // Get all Ethernet interface broadcast addresses
                 var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
-                
+
                 if (ethInterfaces.Count == 0)
                 {
                     if (!wasEmpty)
@@ -211,7 +211,7 @@ public class DiscoveryService : IDisposable
                         Log($"Send failed on {netIf.LocalAddress}: {ex.Message}");
                     }
                 }
-                
+
                 // Strategy 2: Also send global 255.255.255.255 broadcast as fallback
                 if (globalSender != null)
                 {
@@ -244,11 +244,11 @@ public class DiscoveryService : IDisposable
             {
                 var result = await listener.ReceiveAsync(ct);
                 var json = Encoding.UTF8.GetString(result.Buffer);
-                
+
                 try
                 {
                     var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
-                    
+
                     if (message != null && (message.Type == "HELLO" || message.Type == "BYE") && message.Id == AppId)
                     {
                         PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
@@ -269,20 +269,30 @@ public class DiscoveryService : IDisposable
         catch (ObjectDisposedException) { }
     }
 
-    public void Dispose()
+    protected virtual void Dispose(bool disposing)
     {
-        Stop();
-        _globalListener?.Dispose();
-        
-        // Restore original Ethernet config on Linux
-        var restoreLog = EthernetConfigurator.RestoreOriginalConfig();
-        foreach (var line in restoreLog)
+        if (disposing)
         {
-            Log(line);
+            Stop();
+            _cts?.Dispose();
+            _globalListener?.Dispose();
+
+            // Restore original Ethernet config on Linux
+            var restoreLog = EthernetConfigurator.RestoreOriginalConfig();
+            foreach (var line in restoreLog)
+            {
+                Log(line);
+            }
         }
     }
 
-    private string GetCurrentOS()
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private static string GetCurrentOS()
     {
         if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)) return "Windows";
         if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)) return "macOS";

@@ -46,9 +46,9 @@ public static class SettingsManager
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsFile, json);
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Failed to save settings: {ex.Message}");
+            // Fail silently if we can't save settings, we'll just use defaults
         }
     }
 }

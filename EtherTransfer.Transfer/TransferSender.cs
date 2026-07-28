@@ -219,7 +219,7 @@ public class TransferSender
 
                 using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+                while ((read = await fs.ReadAsync(buffer, ct)) > 0)
                 {
                     watchdogCts.CancelAfter(15000); // 15 seconds to write 1MB before considering connection dead
                     try

@@ -19,7 +19,7 @@ public static class ProtocolHelper
     {
         var json = JsonSerializer.Serialize(message);
         var bytes = Encoding.UTF8.GetBytes(json);
-        
+
         // Protocol: 4 bytes length prefix, followed by UTF8 JSON payload
         var lengthPrefix = BitConverter.GetBytes(bytes.Length);
         await stream.WriteAsync(lengthPrefix, 0, 4, ct);
@@ -53,7 +53,7 @@ public static class ProtocolHelper
         int totalRead = 0;
         while (totalRead < count)
         {
-            int read = await stream.ReadAsync(buffer, totalRead, count - totalRead, ct);
+            int read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), ct);
             if (read == 0) return false; // Connection closed
             totalRead += read;
         }

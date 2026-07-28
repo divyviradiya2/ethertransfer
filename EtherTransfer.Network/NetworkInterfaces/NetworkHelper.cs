@@ -27,7 +27,7 @@ public static class NetworkHelper
     public static IEnumerable<InterfaceAddressInfo> GetEthernetInterfaces()
     {
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.OperationalStatus == OperationalStatus.Up && 
+            .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
                          ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
                          ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
 
@@ -47,7 +47,7 @@ public static class NetworkHelper
                 {
                     var ipBytes = ip.Address.GetAddressBytes();
                     var maskBytes = ip.IPv4Mask.GetAddressBytes();
-                    
+
                     if (maskBytes.Length == 4 && ipBytes.Length == 4)
                     {
                         var broadcastBytes = new byte[4];
@@ -55,7 +55,7 @@ public static class NetworkHelper
                         {
                             broadcastBytes[i] = (byte)(ipBytes[i] | ~maskBytes[i]);
                         }
-                        
+
                         if (!maskBytes.All(b => b == 0))
                         {
                             yield return new InterfaceAddressInfo(ip.Address, new IPAddress(broadcastBytes));
@@ -73,7 +73,7 @@ public static class NetworkHelper
     public static List<string> DiagnoseInterfaces()
     {
         var results = new List<string>();
-        
+
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
                          ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
@@ -84,9 +84,9 @@ public static class NetworkHelper
             var desc = ni.Description.ToLowerInvariant();
             if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
                 continue;
-            
+
             // Skip virtual/WAN miniport adapters on Windows
-            if (name.Contains("local area connection") || desc.Contains("wan miniport") || 
+            if (name.Contains("local area connection") || desc.Contains("wan miniport") ||
                 desc.Contains("filter") || desc.Contains("scheduler"))
                 continue;
 

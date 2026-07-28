@@ -54,11 +54,11 @@ public static class EthernetConfigurator
                 var ip = ni.GetIPProperties().UnicastAddresses
                     .First(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                     .Address.ToString();
-                log.Add($"✅ {ni.Name}: already has IP {ip}");
+                log.Add($"[Ethernet] {ni.Name}: Already has IP {ip}");
                 continue;
             }
 
-            log.Add($"⚠️ {ni.Name}: UP but no IPv4 — configuring link-local...");
+            log.Add($"[Ethernet] {ni.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
 
             if (TryConfigureWithNmcli(ni.Name, log))
                 continue;
@@ -102,20 +102,20 @@ public static class EthernetConfigurator
                             });
                         }
                         catch { }
-                        log.Add($"   ✅ Reapplied in background");
+                        log.Add($"   Successfully reapplied in background");
                         break;
 
                     case "manual_ip":
                         // We manually added an IP — remove it
                         log.Add($"   Flushing manual IP from {change.InterfaceName}...");
                         RunCommand("ip", $"addr flush dev {change.InterfaceName} scope link");
-                        log.Add($"   ✅ Flushed");
+                        log.Add($"   Successfully flushed");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                log.Add($"   ⚠️ Restore failed for {change.ConnectionName}: {ex.Message}");
+                log.Add($"   Restore failed for {change.ConnectionName}: {ex.Message}");
             }
         }
 
@@ -150,7 +150,7 @@ public static class EthernetConfigurator
             var originalChanges = _changes.ToList();
             _changes.Clear();
             _changes.AddRange(changesToRestore);
-            
+
             RestoreOriginalConfig();
 
             // Put back the ones that are still active
@@ -175,7 +175,7 @@ public static class EthernetConfigurator
             var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
             if (devModResult.exitCode == 0)
             {
-                log.Add($"   ✅ Configured link-local temporarily on device");
+                log.Add($"   Successfully configured link-local temporarily on device");
                 _changes.Add(new ConfigChange("device_modified", "", ifaceName, null));
                 return true;
             }
@@ -201,7 +201,7 @@ public static class EthernetConfigurator
             var result = RunCommand("ip", $"addr add {ip}/16 dev {ifaceName}");
             if (result.exitCode == 0)
             {
-                log.Add($"   ✅ Manually assigned {ip}");
+                log.Add($"   Successfully manually assigned {ip}");
                 _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
             }
             else
@@ -209,12 +209,12 @@ public static class EthernetConfigurator
                 var sudoResult = RunCommand("sudo", $"-n ip addr add {ip}/16 dev {ifaceName}");
                 if (sudoResult.exitCode == 0)
                 {
-                    log.Add($"   ✅ Assigned {ip} (via sudo)");
+                    log.Add($"   Successfully assigned {ip} (via sudo)");
                     _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
                 }
                 else
                 {
-                    log.Add($"   ❌ Could not assign IP. Try running with sudo.");
+                    log.Add($"   Could not assign IP. Try running with sudo.");
                 }
             }
         }

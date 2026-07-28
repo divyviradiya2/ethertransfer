@@ -16,7 +16,7 @@ public class TransferSession
     public bool ContainsFolders { get; set; }
     public int PayloadFolderCount { get; set; }
     public int PayloadFileCount { get; set; }
-    
+
     public long TotalSize => Files.Sum(f => f.Size);
     public int TotalFiles => Files.Count;
 }

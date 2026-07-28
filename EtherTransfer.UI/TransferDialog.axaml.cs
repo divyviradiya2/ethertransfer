@@ -13,24 +13,24 @@ namespace EtherTransfer.UI;
 public partial class TransferDialog : Window, INotifyPropertyChanged
 {
     private bool _isSenderMode;
-    public bool IsSenderMode 
-    { 
-        get => _isSenderMode && !IsProgressMode && !IsSuccessMode; 
-        set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); } 
+    public bool IsSenderMode
+    {
+        get => _isSenderMode && !IsProgressMode && !IsSuccessMode;
+        set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); }
     }
-    
+
     public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode;
 
     private bool _isProgressMode;
     public bool IsProgressMode
     {
         get => _isProgressMode && !IsSuccessMode;
-        set 
-        { 
-            _isProgressMode = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(IsSenderMode)); 
-            OnPropertyChanged(nameof(IsReceiverMode)); 
+        set
+        {
+            _isProgressMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSenderMode));
+            OnPropertyChanged(nameof(IsReceiverMode));
         }
     }
 
@@ -38,13 +38,13 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public bool IsSuccessMode
     {
         get => _isSuccessMode;
-        set 
-        { 
-            _isSuccessMode = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(IsSenderMode)); 
-            OnPropertyChanged(nameof(IsReceiverMode)); 
-            OnPropertyChanged(nameof(IsProgressMode)); 
+        set
+        {
+            _isSuccessMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSenderMode));
+            OnPropertyChanged(nameof(IsReceiverMode));
+            OnPropertyChanged(nameof(IsProgressMode));
         }
     }
 
@@ -52,15 +52,15 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
 
     private long _transferTotalBytes;
-    public long TransferTotalBytes 
-    { 
-        get => _transferTotalBytes; 
-        set 
-        { 
-            _transferTotalBytes = value; 
-            OnPropertyChanged(); 
+    public long TransferTotalBytes
+    {
+        get => _transferTotalBytes;
+        set
+        {
+            _transferTotalBytes = value;
+            OnPropertyChanged();
             OnPropertyChanged(nameof(TransferTotalMegabytes));
-        } 
+        }
     }
 
     public double TransferTotalMegabytes => _transferTotalBytes / 1024.0 / 1024.0;
@@ -151,7 +151,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             TransferFileName = e.CurrentFile;
             TransferTotalBytes = e.TotalBytes;
             TransferSentBytes = e.BytesSent;
-            
+
             double mbSent = e.BytesSent / 1024.0 / 1024.0;
             double mbTotal = e.TotalBytes / 1024.0 / 1024.0;
             TransferProgressText = $"{mbSent:F1} MB / {mbTotal:F1} MB";
@@ -161,7 +161,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             {
                 _successQueued = true;
                 // Wait a tiny bit so the user sees the progress bar hit 100%
-                Task.Delay(500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => 
+                Task.Delay(500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     IsSuccessMode = true;
                 }));

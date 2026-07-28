@@ -16,7 +16,7 @@ public class PayloadItem
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public PayloadItemType Type { get; set; }
-    
+
     // Deep scanned items for actual transmission
     public List<FileSelectionItem> DeepScannedFiles { get; set; } = new();
 

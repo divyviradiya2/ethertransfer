@@ -20,7 +20,7 @@ public class DeviceService : IDisposable
     private string _computerName = string.Empty;
     private int _tcpPort;
     private CancellationTokenSource? _debounceCts;
-    
+
     public event EventHandler? DevicesChanged;
     public event EventHandler? NetworkChanged;
     public event EventHandler<string>? DebugLog;
@@ -38,10 +38,10 @@ public class DeviceService : IDisposable
         _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
         _discoveryService.Start(computerName, tcpPort);
-        
+
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAddressChanged;
-        
+
         // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
     }
@@ -121,7 +121,7 @@ public class DeviceService : IDisposable
     private void OnPeerDiscovered(object? sender, PeerDiscoveredEventArgs e)
     {
         var sourceIp = e.SourceAddress.ToString();
-        
+
         // Dynamically check local IPs each time — critical on Linux where the
         // link-local IP is assigned AFTER startup by EthernetConfigurator.
         if (GetCurrentLocalIps().Contains(sourceIp))
@@ -130,7 +130,7 @@ public class DeviceService : IDisposable
         }
 
         var updated = false;
-        
+
         if (e.Message.Type == "BYE")
         {
             if (_devices.TryRemove(sourceIp, out var removed))
@@ -140,20 +140,20 @@ public class DeviceService : IDisposable
             }
             return;
         }
-        _devices.AddOrUpdate(sourceIp, 
-            _ => 
+        _devices.AddOrUpdate(sourceIp,
+            _ =>
             {
                 updated = true;
                 DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] NEW DEVICE: {e.Message.ComputerName} at {sourceIp}");
-                return new DiscoveredDevice 
-                { 
-                    Name = e.Message.ComputerName, 
-                    Address = sourceIp, 
+                return new DiscoveredDevice
+                {
+                    Name = e.Message.ComputerName,
+                    Address = sourceIp,
                     OS = e.Message.OS,
-                    LastSeen = DateTime.UtcNow 
+                    LastSeen = DateTime.UtcNow
                 };
-            }, 
-            (_, existing) => 
+            },
+            (_, existing) =>
             {
                 existing.LastSeen = DateTime.UtcNow;
                 if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS)
@@ -220,7 +220,7 @@ public class DeviceService : IDisposable
                 .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
                              ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
                              ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
-                             
+
             foreach (var ni in interfaces)
             {
                 var name = ni.Name.ToLowerInvariant();
@@ -234,7 +234,7 @@ public class DeviceService : IDisposable
 
                 var hasIpv4 = ni.GetIPProperties().UnicastAddresses
                     .Any(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                    
+
                 if (!hasIpv4)
                 {
                     DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Found unconfigured Ethernet '{ni.Name}'. Forcing network refresh...");

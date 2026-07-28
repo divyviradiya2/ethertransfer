@@ -18,14 +18,14 @@ public class ScanProgressViewModel : INotifyPropertyChanged
         get => _filesFound;
         set { _filesFound = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
     }
-    
+
     private bool _isComplete;
     public bool IsComplete
     {
         get => _isComplete;
         set { _isComplete = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusText)); }
     }
-    
+
     public string StatusText => IsComplete ? $"Complete ({FilesFound} files)" : $"Scanning... ({FilesFound} files found)";
 
     public event PropertyChangedEventHandler? PropertyChanged;

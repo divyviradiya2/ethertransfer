@@ -158,7 +158,7 @@ public class TransferReceiver
                     try
                     {
                         using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
-                        
+
                         long fileReceived = 0;
 
                         var elapsedSecInitial = watch.Elapsed.TotalSeconds;
@@ -179,9 +179,9 @@ public class TransferReceiver
                         while (fileReceived < fileMeta.Size)
                         {
                             watchdogCts.CancelAfter(15000); // 15 seconds to receive 1MB
-                            
+
                             int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-                            
+
                             try
                             {
                                 if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
@@ -219,7 +219,7 @@ public class TransferReceiver
                     catch (Exception ex)
                     {
                         Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
-                        
+
                         // Clean up partially received file
                         try
                         {
@@ -248,7 +248,7 @@ public class TransferReceiver
             var msg = ex.Message;
             if (ex is IOException || ex is SocketException)
                 msg = "Connection lost (Ethernet cable disconnected or sender aborted).";
-                
+
             Log($"Error handling connection: {msg}");
             TransferFinished?.Invoke(this, (false, msg));
         }

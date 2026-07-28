@@ -13,7 +13,7 @@ public class TransferService : IDisposable
     private readonly TcpServer _server;
     private readonly CancellationTokenSource _cts;
     private readonly string _computerName;
-    
+
     public event EventHandler<string>? DebugLog;
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<(bool success, string? error)>? TransferFinished;
@@ -28,7 +28,7 @@ public class TransferService : IDisposable
         _computerName = computerName;
         _cts = new CancellationTokenSource();
         _server = new TcpServer(tcpPort);
-        
+
         _server.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
         _server.OnClientConnected = HandleIncomingClient;
     }
@@ -59,7 +59,7 @@ public class TransferService : IDisposable
     {
         var sender = new TransferSender();
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
-        
+
         return sender.ScanItemAsync(path, progress);
     }
 
@@ -82,7 +82,7 @@ public class TransferService : IDisposable
                 Log($"Send failed: {ex.Message}");
                 throw;
             }
-        });
+        }, userCt);
     }
 
     public void Dispose()

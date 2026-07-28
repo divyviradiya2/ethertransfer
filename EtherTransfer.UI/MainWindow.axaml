@@ -79,6 +79,12 @@
         <TextBlock Text="Debug Log" FontWeight="Bold" FontSize="14" Margin="0,5,0,5" Grid.Row="9" Foreground="#F9E2AF"/>
         
         <!-- Row 10: Debug log -->
-        <ListBox x:Name="DebugLogList" Grid.Row="10" Background="#181825" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DebugMessages}" Foreground="#A6ADC8" FontSize="11" FontFamily="Consolas, monospace"/>
+        <ListBox x:Name="DebugLogList" Grid.Row="10" Background="#181825" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DebugMessages}" FontSize="11" FontFamily="Consolas, monospace">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Text}" Foreground="{Binding Color}" TextWrapping="Wrap" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </Window>
