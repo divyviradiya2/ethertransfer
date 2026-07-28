@@ -149,7 +149,7 @@ public class DiscoveryService : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        Log($"Global broadcast failed: {ex.Message}");
+                        // Some Linux networks reject 255.255.255.255 entirely, this is harmless if subnet broadcasts worked.
                     }
                 }
 
