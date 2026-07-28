@@ -201,7 +201,7 @@ public class DiscoveryService : IDisposable
                         var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
                         await globalSender.SendAsync(payload, payload.Length, globalTarget);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // Some Linux networks reject 255.255.255.255 entirely, this is harmless if subnet broadcasts worked.
                     }

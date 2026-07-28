@@ -15,7 +15,7 @@
         <!-- Row 0: Header & Profile -->
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,10">
             <TextBlock Grid.Column="0" Text="EtherTransfer" FontWeight="Bold" FontSize="18" Foreground="#89B4FA" VerticalAlignment="Center" Margin="0,0,15,0"/>
-            <TextBox Grid.Column="1" Text="{Binding CustomDeviceName}" Watermark="Custom Device Name" Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" Text="{Binding CustomDeviceName}" PlaceholderText="Custom Device Name" Background="#313244" Foreground="#CDD6F4" BorderBrush="#45475A" VerticalAlignment="Center"/>
             <Button Grid.Column="2" Content="Save" Click="SaveName_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" Margin="10,0,0,0" VerticalAlignment="Center"/>
         </Grid>
         
