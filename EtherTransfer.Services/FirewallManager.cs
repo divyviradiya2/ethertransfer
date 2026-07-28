@@ -94,7 +94,9 @@ public static class FirewallManager
         }
         catch (System.ComponentModel.Win32Exception)
         {
-            // User cancelled the UAC prompt
+            // User cancelled the UAC prompt. 
+            // The app cannot function without these permissions, so terminate immediately.
+            Environment.Exit(1);
         }
     }
 }
