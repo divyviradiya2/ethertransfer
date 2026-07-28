@@ -52,7 +52,12 @@ public class DeviceService : IDisposable
 
     public IEnumerable<DiscoveredDevice> GetActiveDevices()
     {
-        return _devices.Values.ToList();
+        // Group by Name to deduplicate devices broadcasting from multiple network interfaces 
+        // (e.g. Wi-Fi and Ethernet simultaneously). Pick the most recently seen IP address.
+        return _devices.Values
+            .GroupBy(d => d.Name)
+            .Select(g => g.OrderByDescending(d => d.LastSeen).First())
+            .ToList();
     }
 
     private static HashSet<string> GetCurrentLocalIps()
@@ -131,7 +136,11 @@ public class DeviceService : IDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;
-                var staleThreshold = TimeSpan.FromSeconds(10);
+                // Increased from 10s to 45s. During extremely heavy TCP file transfers that saturate 
+                // the NIC, UDP broadcast packets are frequently dropped by network switch buffers.
+                // 45 seconds ensures that even with 95% UDP packet loss, the device stays active.
+                // Graceful closures will still be instant thanks to the "BYE" broadcast packet.
+                var staleThreshold = TimeSpan.FromSeconds(45);
                 var removedAny = false;
 
                 var keysToRemove = _devices.Where(kvp => now - kvp.Value.LastSeen > staleThreshold).Select(kvp => kvp.Key).ToList();
