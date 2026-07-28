@@ -10,8 +10,7 @@
         Title="EtherTransfer"
         Background="{DynamicResource AppBackground}"
         Foreground="{DynamicResource AppForeground}"
-        WindowStartupLocation="CenterScreen"
-        ExtendClientAreaToDecorationsHint="True">
+        WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <ui:OsToIconConverter x:Key="OsToIconConverter"/>
@@ -20,7 +19,7 @@
     <Grid RowDefinitions="Auto,*,Auto">
         
         <!-- HEADER / TOOLBAR -->
-        <Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,30,140,15">
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,15">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
                     <PathIcon Data="{StaticResource SendIcon}" Foreground="{DynamicResource AccentColor}" Width="24" Height="24"/>
