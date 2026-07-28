@@ -124,10 +124,14 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _receiverTcs?.TrySetResult((true, SavePath));
     }
 
+    private bool _successQueued = false;
+
     public void UpdateProgress(EtherTransfer.Transfer.TransferProgressEventArgs e)
     {
         Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
+            if (IsSuccessMode) return;
+
             if (!IsProgressMode) IsProgressMode = true;
 
             TransferFileName = e.CurrentFile;
@@ -139,8 +143,9 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             TransferProgressText = $"{mbSent:F1} MB / {mbTotal:F1} MB";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
 
-            if (e.BytesSent >= e.TotalBytes)
+            if (e.BytesSent >= e.TotalBytes && !_successQueued)
             {
+                _successQueued = true;
                 // Wait a tiny bit so the user sees the progress bar hit 100%
                 Task.Delay(500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => 
                 {

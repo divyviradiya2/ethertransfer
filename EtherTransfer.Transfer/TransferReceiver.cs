@@ -56,13 +56,14 @@ public class TransferReceiver
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
+                using var disconnectCts = new CancellationTokenSource();
                 using var uiCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
                 var uiTask = OnIncomingTransfer(request, uiCts.Token);
                 
                 var disconnectTask = Task.Run(async () =>
                 {
-                    while (!uiCts.Token.IsCancellationRequested)
+                    while (!disconnectCts.Token.IsCancellationRequested)
                     {
                         try
                         {
@@ -73,7 +74,7 @@ public class TransferReceiver
                             }
                         }
                         catch { return true; }
-                        await Task.Delay(200, uiCts.Token);
+                        await Task.Delay(200, disconnectCts.Token);
                     }
                     return false;
                 });
@@ -87,7 +88,7 @@ public class TransferReceiver
                     return;
                 }
                 
-                uiCts.Cancel(); // stop polling
+                disconnectCts.Cancel(); // stop polling, DO NOT cancel uiCts
                 var (accepted, savePath) = await uiTask;
 
                 // 3. Send Response

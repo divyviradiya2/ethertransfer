@@ -188,16 +188,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (OperationCanceledException)
         {
             OnDebugLog(this, "Transfer cancelled by user.");
+            dialog.Close();
         }
         catch (Exception ex)
         {
             OnDebugLog(this, $"Transfer failed: {ex.Message}");
+            dialog.Close();
         }
         finally
         {
-            // Close the dialog when finished or if errored
+            // Dialog manages its own closure on success via the Done button
             _activeDialog = null;
-            dialog.Close();
         }
     }
 
