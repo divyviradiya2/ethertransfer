@@ -157,17 +157,20 @@ public class TransferSender
             };
             await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
-            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer.Length, useAsync: true);
+            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536, useAsync: true);
             
             int read;
             long fileSent = 0;
+            
+            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+            var initialSpeed = elapsedSecInitial > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSecInitial : 0;
             
             ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
             {
                 CurrentFile = item.RelativePath,
                 BytesSent = totalSent,
                 TotalBytes = session.TotalSize,
-                SpeedMbPerSec = 0
+                SpeedMbPerSec = initialSpeed
             });
             
             var lastUpdate = watch.ElapsedMilliseconds;

@@ -145,17 +145,20 @@ public class TransferReceiver
                         var dirPath = Path.GetDirectoryName(safePath);
                         if (dirPath != null) Directory.CreateDirectory(dirPath);
 
-                        using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length, useAsync: true);
+                        using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
                         
                         long fileReceived = 0;
                         
-                        // Fire progress immediately so UI shows 0% for this file
+                        var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+                        var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+                        
+                        // Fire progress immediately so UI shows the file name change without resetting speed to 0
                         ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                         {
                             CurrentFile = fileMeta.RelativePath,
                             BytesSent = totalReceived,
                             TotalBytes = request.TotalSize,
-                            SpeedMbPerSec = 0
+                            SpeedMbPerSec = initialSpeed
                         });
                         
                         var lastUpdate = watch.ElapsedMilliseconds;
