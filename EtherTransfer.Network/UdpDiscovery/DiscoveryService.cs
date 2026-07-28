@@ -58,13 +58,6 @@ public class DiscoveryService : IDisposable
             Log(line);
         }
 
-        // Run diagnostics
-        var diag = NetworkHelper.DiagnoseInterfaces();
-        foreach (var line in diag)
-        {
-            Log(line);
-        }
-
         // Global listener on 0.0.0.0:50000 to receive ALL broadcast packets
         try
         {

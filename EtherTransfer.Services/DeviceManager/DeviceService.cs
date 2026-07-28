@@ -17,6 +17,10 @@ public class DeviceService : IDisposable
     private readonly DiscoveryService _discoveryService;
     private readonly ConcurrentDictionary<string, DiscoveredDevice> _devices = new();
     private CancellationTokenSource? _cts;
+    
+    // Track last refresh attempt per interface to prevent spamming discovery restarts
+    private readonly Dictionary<string, DateTime> _lastRefreshAttempt = new();
+    private HashSet<string> _lastKnownIps = new();
     private string _computerName = string.Empty;
     private int _tcpPort;
     private CancellationTokenSource? _debounceCts;
@@ -44,6 +48,7 @@ public class DeviceService : IDisposable
 
         // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
+        _lastKnownIps = GetCurrentLocalIps();
     }
 
     private void OnNetworkAddressChanged(object? sender, EventArgs e)
@@ -65,6 +70,14 @@ public class DeviceService : IDisposable
                 // Debounce rapid network state changes (DHCP, link up/down)
                 await Task.Delay(1000, token);
                 if (token.IsCancellationRequested) return;
+
+                var currentIps = GetCurrentLocalIps();
+                if (_lastKnownIps.SetEquals(currentIps))
+                {
+                    // Ignore spurious OS routing changes if our IPv4 addresses haven't changed
+                    return;
+                }
+                _lastKnownIps = currentIps;
 
                 DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Network state settled. Re-binding sockets...");
                 _devices.Clear();
@@ -237,6 +250,13 @@ public class DeviceService : IDisposable
 
                 if (!hasIpv4)
                 {
+                    if (_lastRefreshAttempt.TryGetValue(ni.Name, out var lastAttempt) && (DateTime.Now - lastAttempt).TotalSeconds < 15)
+                    {
+                        continue;
+                    }
+
+                    _lastRefreshAttempt[ni.Name] = DateTime.Now;
+                    
                     DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] Found unconfigured Ethernet '{ni.Name}'. Forcing network refresh...");
                     // Trigger the network change logic which restarts Discovery and runs EnsureEthernetReady()
                     OnNetworkAddressChanged(this, EventArgs.Empty);

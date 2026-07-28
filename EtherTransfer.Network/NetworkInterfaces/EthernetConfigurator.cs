@@ -16,6 +16,7 @@ public static class EthernetConfigurator
 {
     // Track what we changed so we can undo it
     private static readonly List<ConfigChange> _changes = new();
+    private static readonly Dictionary<string, DateTime> _lastConfigAttempt = new();
 
     private record ConfigChange(string Type, string ConnectionName, string InterfaceName, string? OriginalMethod);
 
@@ -58,6 +59,16 @@ public static class EthernetConfigurator
                 continue;
             }
 
+            if (_lastConfigAttempt.TryGetValue(ni.Name, out var lastAttempt))
+            {
+                if ((DateTime.Now - lastAttempt).TotalSeconds < 15)
+                {
+                    log.Add($"[Ethernet] {ni.Name}: Waiting for OS to assign IP (NetworkManager is working...)");
+                    continue;
+                }
+            }
+
+            _lastConfigAttempt[ni.Name] = DateTime.Now;
             log.Add($"[Ethernet] {ni.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
 
             if (TryConfigureWithNmcli(ni.Name, log))
@@ -166,21 +177,16 @@ public static class EthernetConfigurator
             var whichResult = RunCommand("which", "nmcli");
             if (whichResult.exitCode != 0)
             {
-                log.Add("   nmcli not found, trying manual fallback...");
                 return false;
             }
 
             // Attempt temporary modification first (Enterprise robust: doesn't permanently alter profiles)
-            log.Add($"   Attempting temporary link-local config on device {ifaceName}...");
             var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
             if (devModResult.exitCode == 0)
             {
-                log.Add($"   Successfully configured link-local temporarily on device");
                 _changes.Add(new ConfigChange("device_modified", "", ifaceName, null));
                 return true;
             }
-
-            log.Add($"   nmcli device modify failed: {devModResult.output}. Falling back to manual IP assignment...");
             return false;
         }
         catch (Exception ex)
@@ -201,7 +207,6 @@ public static class EthernetConfigurator
             var result = RunCommand("ip", $"addr add {ip}/16 dev {ifaceName}");
             if (result.exitCode == 0)
             {
-                log.Add($"   Successfully manually assigned {ip}");
                 _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
             }
             else
@@ -209,18 +214,18 @@ public static class EthernetConfigurator
                 var sudoResult = RunCommand("sudo", $"-n ip addr add {ip}/16 dev {ifaceName}");
                 if (sudoResult.exitCode == 0)
                 {
-                    log.Add($"   Successfully assigned {ip} (via sudo)");
                     _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
                 }
                 else
                 {
-                    log.Add($"   Could not assign IP. Try running with sudo.");
+                    _changes.Add(new ConfigChange("failed", "", ifaceName, null));
                 }
             }
         }
         catch (Exception ex)
         {
             log.Add($"   Manual config error: {ex.Message}");
+            _changes.Add(new ConfigChange("failed", "", ifaceName, null));
         }
     }
 

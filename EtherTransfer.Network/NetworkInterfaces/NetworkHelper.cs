@@ -104,10 +104,6 @@ public static class NetworkHelper
                 else
                 {
                     results.Add($"⚠️ {ni.Name}: UP but NO IPv4 address!");
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    {
-                        results.Add($"   FIX: Run './run-linux.sh' or manually: sudo nmcli connection modify \"Wired connection 1\" ipv4.method link-local && sudo nmcli connection up \"Wired connection 1\"");
-                    }
                 }
             }
             else if (ni.OperationalStatus == OperationalStatus.Down)
