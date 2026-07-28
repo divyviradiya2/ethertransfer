@@ -59,4 +59,25 @@ public static class ProtocolHelper
         }
         return true;
     }
+
+    /// <summary>
+    /// Reads a length-prefixed JSON message from the stream and returns the raw JSON string.
+    /// This allows the caller to inspect the "Type" field before deserializing to the correct type.
+    /// </summary>
+    public static async Task<string?> ReceiveRawJsonAsync(NetworkStream stream, CancellationToken ct)
+    {
+        var lengthBuffer = new byte[4];
+        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct))
+            return null;
+
+        var length = BitConverter.ToInt32(lengthBuffer, 0);
+        if (length <= 0 || length > 10 * 1024 * 1024)
+            throw new InvalidDataException($"Invalid metadata length: {length}");
+
+        var payloadBuffer = new byte[length];
+        if (!await ReadExactAsync(stream, payloadBuffer, length, ct))
+            return null;
+
+        return Encoding.UTF8.GetString(payloadBuffer);
+    }
 }

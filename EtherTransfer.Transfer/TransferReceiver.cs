@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace EtherTransfer.Transfer;
 public class IncomingTransferEventArgs : EventArgs
 {
     public TransferRequestMessage Request { get; }
-    
+
     // The UI should set this to true if accepted, and provide a SaveDirectory
     public bool Accept { get; set; }
     public string SaveDirectory { get; set; } = string.Empty;
@@ -28,7 +29,7 @@ public class TransferReceiver
     // For async UI, we can use an async delegate or a TCS.
     // Let's use a Func to make it cleanly awaitable from the UI thread.
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
-    
+
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
 
@@ -60,7 +61,7 @@ public class TransferReceiver
                 using var uiCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
                 var uiTask = OnIncomingTransfer(request, uiCts.Token);
-                
+
                 var disconnectTask = Task.Run(async () =>
                 {
                     while (!disconnectCts.Token.IsCancellationRequested)
@@ -87,7 +88,7 @@ public class TransferReceiver
                     Log("Sender disconnected before request was accepted.");
                     return;
                 }
-                
+
                 disconnectCts.Cancel(); // stop polling, DO NOT cancel uiCts
                 var (accepted, savePath) = await uiTask;
 
@@ -110,97 +111,242 @@ public class TransferReceiver
 
                 Log($"Transfer accepted. Saving to: {savePath}");
 
-                // 4. Receive Files
+                // 4. Receive Files with integrity verification
                 long totalReceived = 0;
+                int filesReceived = 0;
+                int filesSkipped = 0;
+                int filesFailedIntegrity = 0;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                var buffer = new byte[1024 * 1024];
+                var buffer = new byte[1024 * 1024]; // 1 MB write buffer
 
                 while (!ct.IsCancellationRequested)
                 {
-                    // Read the next marker
-                    var marker = await ProtocolHelper.ReceiveMessageAsync<BaseProtocolMessage>(stream, ct);
-                    if (marker == null) break;
+                    // Read the next marker (generic JSON, we parse the Type field)
+                    var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, ct);
+                    if (markerJson == null) break;
 
-                    if (marker.Type == "TRANSFER_END")
+                    var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
+                    if (baseMsg == null) break;
+
+                    if (baseMsg.Type == "TRANSFER_END")
                     {
                         Log("Received TRANSFER_END.");
                         break;
                     }
 
-                    if (marker.Type == "FILE_BEGIN")
+                    if (baseMsg.Type == "FILE_SKIP")
                     {
-                        var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, ct);
-                        if (fileMeta == null) break;
-
-                        // Securely combine paths to prevent directory traversal
-                        var normalizedRelPath = fileMeta.RelativePath.Replace('\\', '/').TrimStart('/');
-                        if (normalizedRelPath.Contains("../") || normalizedRelPath.Contains("..\\"))
-                            throw new Exception($"Security violation: Directory traversal attempt blocked ({normalizedRelPath})");
-                            
-                        // Use Path.GetFullPath to ensure it stays within the saveDirectory
-                        var safePath = Path.GetFullPath(Path.Combine(savePath, normalizedRelPath));
-                        if (!safePath.StartsWith(Path.GetFullPath(savePath)))
-                            throw new Exception($"Security violation: Path escaped save directory ({safePath})");
-
-                        var dirPath = Path.GetDirectoryName(safePath);
-                        if (dirPath != null) Directory.CreateDirectory(dirPath);
-
-                        using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
-                        
-                        long fileReceived = 0;
-                        
-                        var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-                        var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
-                        
-                        // Fire progress immediately so UI shows the file name change without resetting speed to 0
-                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        var skipMsg = JsonSerializer.Deserialize<FileSkipMessage>(markerJson);
+                        if (skipMsg != null)
                         {
-                            CurrentFile = fileMeta.RelativePath,
-                            BytesSent = totalReceived,
-                            TotalBytes = request.TotalSize,
-                            SpeedMbPerSec = initialSpeed
-                        });
-                        
-                        var lastUpdate = watch.ElapsedMilliseconds;
+                            Log($"Sender skipped: {skipMsg.RelativePath} — {skipMsg.Reason}");
+                            filesSkipped++;
+                        }
+                        continue;
+                    }
 
-                        while (fileReceived < fileMeta.Size)
+                    if (baseMsg.Type != "FILE_BEGIN")
+                    {
+                        Log($"Unexpected message type: {baseMsg.Type}. Ignoring.");
+                        continue;
+                    }
+
+                    // FILE_BEGIN — read metadata
+                    var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, ct);
+                    if (fileMeta == null) break;
+
+                    // === PATH SECURITY ===
+                    // Use PathSanitizer to guarantee the file stays inside the sandbox
+                    var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
+                    if (safePath == null)
+                    {
+                        Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
+                        // Still must consume the file bytes from the stream to keep protocol in sync
+                        await DrainBytesAsync(stream, fileMeta.Size, buffer, ct);
+                        // Also consume the checksum message
+                        await ProtocolHelper.ReceiveMessageAsync<FileChecksumMessage>(stream, ct);
+                        filesSkipped++;
+                        continue;
+                    }
+
+                    // === COLLISION RESOLUTION ===
+                    // Never silently overwrite existing files
+                    safePath = PathSanitizer.ResolveCollision(safePath);
+
+                    // Ensure parent directory exists
+                    var dirPath = Path.GetDirectoryName(safePath);
+                    if (dirPath != null) Directory.CreateDirectory(dirPath);
+
+                    // === .part FILE STRATEGY ===
+                    // Write to a temporary .part file. Only rename to final name after
+                    // SHA-256 verification passes. If anything fails, the .part file is cleaned up.
+                    var partPath = safePath + ".part";
+                    string? computedHash = null;
+                    bool fileWriteSuccess = false;
+
+                    try
+                    {
+                        using (var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
+                        using (var fs = new FileStream(partPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true))
                         {
-                            int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-                            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
-                                throw new Exception("Connection lost while reading file data.");
-                                
-                            await fs.WriteAsync(buffer, 0, toRead, ct);
-                            
-                            fileReceived += toRead;
-                            totalReceived += toRead;
-                            
-                            // Throttle UI updates to max ~20 FPS (every 50ms)
-                            var currentElapsed = watch.ElapsedMilliseconds;
-                            if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
+                            long fileReceived = 0;
+
+                            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+                            var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+
+                            // Fire progress immediately so UI shows the file name change
+                            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                             {
-                                lastUpdate = currentElapsed;
-                                var elapsedSec = watch.Elapsed.TotalSeconds;
-                                var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
-                                
-                                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                                CurrentFile = fileMeta.RelativePath,
+                                BytesSent = totalReceived,
+                                TotalBytes = request.TotalSize,
+                                SpeedMbPerSec = initialSpeed
+                            });
+
+                            var lastUpdate = watch.ElapsedMilliseconds;
+
+                            while (fileReceived < fileMeta.Size)
+                            {
+                                int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
+                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
+                                    throw new IOException("Connection lost while reading file data.");
+
+                                // Feed into SHA-256 hasher
+                                sha256.AppendData(buffer, 0, toRead);
+
+                                // Write to .part file
+                                await fs.WriteAsync(buffer, 0, toRead, ct);
+
+                                fileReceived += toRead;
+                                totalReceived += toRead;
+
+                                // Throttle UI updates to max ~20 FPS (every 50ms)
+                                var currentElapsed = watch.ElapsedMilliseconds;
+                                if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
                                 {
-                                    CurrentFile = fileMeta.RelativePath,
-                                    BytesSent = totalReceived,
-                                    TotalBytes = request.TotalSize,
-                                    SpeedMbPerSec = speed
-                                });
+                                    lastUpdate = currentElapsed;
+                                    var elapsedSec = watch.Elapsed.TotalSeconds;
+                                    var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
+
+                                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                                    {
+                                        CurrentFile = fileMeta.RelativePath,
+                                        BytesSent = totalReceived,
+                                        TotalBytes = request.TotalSize,
+                                        SpeedMbPerSec = speed
+                                    });
+                                }
                             }
+
+                            // Flush to ensure all data is on disk before verification
+                            await fs.FlushAsync(ct);
+
+                            computedHash = Convert.ToHexString(sha256.GetHashAndReset());
+                        }
+
+                        // === SHA-256 INTEGRITY VERIFICATION ===
+                        var checksumMsg = await ProtocolHelper.ReceiveMessageAsync<FileChecksumMessage>(stream, ct);
+
+                        if (checksumMsg == null)
+                        {
+                            Log($"INTEGRITY FAIL: No checksum received for {fileMeta.RelativePath}");
+                            filesFailedIntegrity++;
+                        }
+                        else if (!string.Equals(checksumMsg.Sha256, computedHash, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Log($"INTEGRITY FAIL: {fileMeta.RelativePath} — Expected={checksumMsg.Sha256[..16]}... Got={computedHash[..16]}...");
+                            filesFailedIntegrity++;
+                        }
+                        else
+                        {
+                            // Checksum matches — promote .part to final file
+                            fileWriteSuccess = true;
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
+                    }
+
+                    if (fileWriteSuccess)
+                    {
+                        // Atomic rename: .part -> final name
+                        try
+                        {
+                            // If final file appeared between our collision check and now, resolve again
+                            if (File.Exists(safePath))
+                                safePath = PathSanitizer.ResolveCollision(safePath);
+
+                            File.Move(partPath, safePath);
+                            filesReceived++;
+                            Log($"Verified: {fileMeta.RelativePath} SHA256={computedHash![..16]}...");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"Failed to finalize {fileMeta.RelativePath}: {ex.Message}");
+                            CleanupPartFile(partPath);
+                        }
+                    }
+                    else
+                    {
+                        // Integrity failed or error — clean up the .part file
+                        CleanupPartFile(partPath);
+                    }
                 }
-                
+
                 watch.Stop();
-                Log($"Transfer complete! Received {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.");
+                var summary = $"Transfer complete! Received {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s. " +
+                              $"({filesReceived} verified, {filesSkipped} skipped, {filesFailedIntegrity} failed integrity)";
+                Log(summary);
+
+                if (filesFailedIntegrity > 0)
+                {
+                    Log($"WARNING: {filesFailedIntegrity} file(s) failed SHA-256 verification and were NOT saved.");
+                }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            Log("Transfer cancelled.");
         }
         catch (Exception ex)
         {
             Log($"Error handling connection: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Drains (discards) a specified number of bytes from the stream.
+    /// Used when a file must be skipped but the sender has already started streaming its data.
+    /// </summary>
+    private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)
+    {
+        long drained = 0;
+        while (drained < count)
+        {
+            int toRead = (int)Math.Min(buffer.Length, count - drained);
+            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
+                throw new IOException("Connection lost while draining skipped file data.");
+            drained += toRead;
+        }
+    }
+
+    /// <summary>
+    /// Safely deletes a .part file. Never throws.
+    /// </summary>
+    private void CleanupPartFile(string partPath)
+    {
+        try
+        {
+            if (File.Exists(partPath))
+            {
+                File.Delete(partPath);
+                Log($"Cleaned up: {Path.GetFileName(partPath)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Warning: Could not clean up {partPath}: {ex.Message}");
         }
     }
 }

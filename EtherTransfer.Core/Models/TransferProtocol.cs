@@ -46,3 +46,24 @@ public class FileItemMetadata
     public string RelativePath { get; set; } = string.Empty;
     public long Size { get; set; }
 }
+
+/// <summary>
+/// Sent by the sender after streaming a file's bytes. Contains the SHA-256 hash
+/// computed incrementally during the read so the receiver can verify integrity.
+/// </summary>
+public class FileChecksumMessage : BaseProtocolMessage
+{
+    public FileChecksumMessage() { Type = "FILE_CHECKSUM"; }
+    public string Sha256 { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Sent by the sender when a file cannot be read (locked, deleted, permission denied).
+/// The receiver must skip this file without aborting the entire transfer.
+/// </summary>
+public class FileSkipMessage : BaseProtocolMessage
+{
+    public FileSkipMessage() { Type = "FILE_SKIP"; }
+    public string RelativePath { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+}

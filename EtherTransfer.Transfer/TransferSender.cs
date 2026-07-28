@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using EtherTransfer.Core.Models;
@@ -25,7 +26,7 @@ public class TransferSender
 
     public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
     {
-        return Task.Run(() => 
+        return Task.Run(() =>
         {
             var payload = new PayloadItem
             {
@@ -48,9 +49,9 @@ public class TransferSender
                     payload.Type = PayloadItemType.Folder;
 
                     var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
-                    var options = new EnumerationOptions 
-                    { 
-                        IgnoreInaccessible = true, 
+                    var options = new EnumerationOptions
+                    {
+                        IgnoreInaccessible = true,
                         RecurseSubdirectories = true,
                         ReturnSpecialDirectories = false
                     };
@@ -68,7 +69,7 @@ public class TransferSender
                             relPath = relPath.Replace('\\', '/');
 
                             payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
-                            
+
                             count++;
                             if (count % 100 == 0)
                             {
@@ -84,7 +85,7 @@ public class TransferSender
             {
                 Log($"Error scanning {path}: {ex.Message}");
             }
-            
+
             Log($"Scanned {payload.Name} -> {payload.DeepScannedFiles.Count} files, {payload.TotalSize / 1024 / 1024} MB");
             return payload;
         });
@@ -93,14 +94,14 @@ public class TransferSender
     public async Task TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
     {
         if (session.Files.Count == 0) return;
-        
+
         Log($"Connecting to {targetIp}:{targetPort}...");
         using var client = new TcpClient();
-        
+
         var connectTcs = new TaskCompletionSource();
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        connectCts.CancelAfter(5000); 
-        
+        connectCts.CancelAfter(5000);
+
         try
         {
             await using (connectCts.Token.Register(() => connectTcs.TrySetCanceled()))
@@ -109,7 +110,7 @@ public class TransferSender
                 await Task.WhenAny(connectTask, connectTcs.Task);
                 if (connectTcs.Task.IsCanceled)
                     throw new TimeoutException("Connection timed out.");
-                await connectTask; 
+                await connectTask;
             }
         }
         catch (Exception ex)
@@ -119,7 +120,7 @@ public class TransferSender
         }
 
         var stream = client.GetStream();
-        
+
         var request = new TransferRequestMessage
         {
             SenderName = senderName,
@@ -136,10 +137,10 @@ public class TransferSender
         // 2. Wait for Response
         Log("Waiting for receiver to accept...");
         var response = await ProtocolHelper.ReceiveMessageAsync<TransferResponseMessage>(stream, ct);
-        
+
         if (response == null)
             throw new Exception("Connection closed by receiver before response.");
-            
+
         if (!response.Accepted)
         {
             Log($"Transfer declined: {response.Reason}");
@@ -148,72 +149,136 @@ public class TransferSender
 
         Log("Transfer accepted! Starting streaming...");
 
-        // 3. Stream Files
+        // 3. Stream Files with SHA-256 integrity hashing
         long totalSent = 0;
+        int filesSkipped = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var buffer = new byte[1024 * 1024];
+        var buffer = new byte[1024 * 1024]; // 1 MB read buffer
 
         foreach (var item in session.Files)
         {
-            var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
-            await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct); 
-            
-            var meta = new FileItemMetadata
-            {
-                RelativePath = item.RelativePath,
-                Size = item.Size
-            };
-            await ProtocolHelper.SendMessageAsync(stream, meta, ct);
+            ct.ThrowIfCancellationRequested();
 
-            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536, useAsync: true);
-            
-            int read;
-            long fileSent = 0;
-            
-            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-            var initialSpeed = elapsedSecInitial > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSecInitial : 0;
-            
-            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+            // Attempt to open the file — handle locks, deletions, permission issues gracefully
+            FileStream? fs;
+            try
             {
-                CurrentFile = item.RelativePath,
-                BytesSent = totalSent,
-                TotalBytes = session.TotalSize,
-                SpeedMbPerSec = initialSpeed
-            });
-            
-            var lastUpdate = watch.ElapsedMilliseconds;
-
-            while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
-            {
-                await stream.WriteAsync(buffer, 0, read, ct);
-                
-                fileSent += read;
-                totalSent += read;
-                
-                var currentElapsed = watch.ElapsedMilliseconds;
-                if (currentElapsed - lastUpdate >= 50 || totalSent == session.TotalSize)
-                {
-                    lastUpdate = currentElapsed;
-                    var elapsedSec = watch.Elapsed.TotalSeconds;
-                    var speed = elapsedSec > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSec : 0;
-                    
-                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
-                    {
-                        CurrentFile = item.RelativePath,
-                        BytesSent = totalSent,
-                        TotalBytes = session.TotalSize,
-                        SpeedMbPerSec = speed
-                    });
-                }
+                fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536, useAsync: true);
             }
-            await stream.FlushAsync(ct);
+            catch (FileNotFoundException)
+            {
+                Log($"SKIP (deleted): {item.RelativePath}");
+                await SendFileSkip(stream, item.RelativePath, "File was deleted after scan.", ct);
+                filesSkipped++;
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Log($"SKIP (access denied): {item.RelativePath}");
+                await SendFileSkip(stream, item.RelativePath, "Permission denied.", ct);
+                filesSkipped++;
+                continue;
+            }
+            catch (IOException ex)
+            {
+                Log($"SKIP (locked): {item.RelativePath} — {ex.Message}");
+                await SendFileSkip(stream, item.RelativePath, $"File locked: {ex.Message}", ct);
+                filesSkipped++;
+                continue;
+            }
+
+            using (fs)
+            {
+                // Get actual file size at transfer time (it may have changed since scan)
+                var actualSize = fs.Length;
+
+                var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
+                await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct);
+
+                var meta = new FileItemMetadata
+                {
+                    RelativePath = item.RelativePath,
+                    Size = actualSize
+                };
+                await ProtocolHelper.SendMessageAsync(stream, meta, ct);
+
+                // Compute SHA-256 incrementally while streaming — zero extra memory or passes
+                using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+                int read;
+                long fileSent = 0;
+
+                var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+                var initialSpeed = elapsedSecInitial > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+
+                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                {
+                    CurrentFile = item.RelativePath,
+                    BytesSent = totalSent,
+                    TotalBytes = session.TotalSize,
+                    SpeedMbPerSec = initialSpeed
+                });
+
+                var lastUpdate = watch.ElapsedMilliseconds;
+
+                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length, ct)) > 0)
+                {
+                    // Feed bytes into SHA-256 hasher
+                    sha256.AppendData(buffer, 0, read);
+
+                    // Send bytes over the wire
+                    await stream.WriteAsync(buffer, 0, read, ct);
+
+                    fileSent += read;
+                    totalSent += read;
+
+                    var currentElapsed = watch.ElapsedMilliseconds;
+                    if (currentElapsed - lastUpdate >= 50 || totalSent == session.TotalSize)
+                    {
+                        lastUpdate = currentElapsed;
+                        var elapsedSec = watch.Elapsed.TotalSeconds;
+                        var speed = elapsedSec > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSec : 0;
+
+                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        {
+                            CurrentFile = item.RelativePath,
+                            BytesSent = totalSent,
+                            TotalBytes = session.TotalSize,
+                            SpeedMbPerSec = speed
+                        });
+                    }
+                }
+                await stream.FlushAsync(ct);
+
+                // Send checksum so receiver can verify integrity
+                var hashBytes = sha256.GetHashAndReset();
+                var hashHex = Convert.ToHexString(hashBytes);
+
+                var checksumMsg = new FileChecksumMessage { Sha256 = hashHex };
+                await ProtocolHelper.SendMessageAsync(stream, checksumMsg, ct);
+
+                Log($"Sent: {item.RelativePath} ({actualSize / 1024 / 1024} MB) SHA256={hashHex[..16]}...");
+            }
         }
 
         // 4. End of Transfer
         var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
         await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
-        
+
         watch.Stop();
-        Log($"Transfer complete! Sent {session.TotalSize / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.");
+        var summary = $"Transfer complete! Sent {session.TotalSize / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s.";
+        if (filesSkipped > 0)
+            summary += $" ({filesSkipped} file(s) skipped due to access errors.)";
+        Log(summary);
+    }
+
+    private static async Task SendFileSkip(NetworkStream stream, string relativePath, string reason, CancellationToken ct)
+    {
+        var skipMsg = new FileSkipMessage
+        {
+            RelativePath = relativePath,
+            Reason = reason
+        };
+        await ProtocolHelper.SendMessageAsync(stream, skipMsg, ct);
     }
 }
