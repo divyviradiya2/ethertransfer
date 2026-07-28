@@ -27,7 +27,7 @@ public class TransferReceiver
     // Event fired when a new request comes in. The subscriber MUST set Accept and SaveDirectory synchronously or block.
     // For async UI, we can use an async delegate or a TCS.
     // Let's use a Func to make it cleanly awaitable from the UI thread.
-    public Func<TransferRequestMessage, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
+    public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
     
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
@@ -56,7 +56,39 @@ public class TransferReceiver
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
-                var (accepted, savePath) = await OnIncomingTransfer(request);
+                using var uiCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
+                var uiTask = OnIncomingTransfer(request, uiCts.Token);
+                
+                var disconnectTask = Task.Run(async () =>
+                {
+                    while (!uiCts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            // If SelectRead is true and 0 bytes available, connection closed.
+                            if (client.Client.Poll(1000, SelectMode.SelectRead) && client.Client.Available == 0)
+                            {
+                                return true;
+                            }
+                        }
+                        catch { return true; }
+                        await Task.Delay(200, uiCts.Token);
+                    }
+                    return false;
+                });
+
+                var finishedTask = await Task.WhenAny(uiTask, disconnectTask);
+
+                if (finishedTask == disconnectTask)
+                {
+                    uiCts.Cancel();
+                    Log("Sender disconnected before request was accepted.");
+                    return;
+                }
+                
+                uiCts.Cancel(); // stop polling
+                var (accepted, savePath) = await uiTask;
 
                 // 3. Send Response
                 var response = new TransferResponseMessage

@@ -284,9 +284,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private Task<(bool accept, string savePath)> HandleIncomingTransferAsync(TransferRequestMessage request)
+    private Task<(bool accept, string savePath)> HandleIncomingTransferAsync(TransferRequestMessage request, CancellationToken ct)
     {
         var tcs = new TaskCompletionSource<(bool, string)>();
+        
+        ct.Register(() => 
+        {
+            Dispatcher.UIThread.InvokeAsync(() => 
+            {
+                _activeDialog?.Close();
+                tcs.TrySetResult((false, ""));
+            });
+        });
         
         Dispatcher.UIThread.InvokeAsync(async () =>
         {
