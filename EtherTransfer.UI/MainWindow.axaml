@@ -76,7 +76,10 @@
         <Button Grid.Row="6" Content="SEND TO SELECTED DEVICE" x:Name="ExecuteSendButton" Click="ExecuteSendButton_Click" Background="#A6E3A1" Foreground="#11111B" FontWeight="Bold" FontSize="16" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,15,0,15" Padding="15,10" IsEnabled="{Binding CanSend}"/>
 
         <!-- Row 9: Debug header -->
-        <TextBlock Text="Debug Log" FontWeight="Bold" FontSize="14" Margin="0,5,0,5" Grid.Row="9" Foreground="#F9E2AF"/>
+        <Grid Grid.Row="9" Margin="0,5,0,5">
+            <TextBlock Text="Debug Log" FontWeight="Bold" FontSize="14" Foreground="#F9E2AF" VerticalAlignment="Center"/>
+            <Button Content="Copy Log" Click="CopyLog_Click" Background="#45475A" Foreground="#CDD6F4" FontSize="11" Padding="10,4" HorizontalAlignment="Right" Cursor="Hand" ToolTip.Tip="Copy all logs to clipboard"/>
+        </Grid>
         
         <!-- Row 10: Debug log -->
         <ListBox x:Name="DebugLogList" Grid.Row="10" Background="#181825" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DebugMessages}" FontSize="11" FontFamily="Consolas, monospace">

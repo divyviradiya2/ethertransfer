@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.Input.Platform;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Services.DeviceManager;
 using EtherTransfer.Services;
@@ -485,6 +486,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _deviceService.UpdateComputerName(CustomDeviceName);
         OnDebugLog(this, $"Saved and broadcasted new name: {CustomDeviceName}");
+    }
+
+    private async void CopyLog_Click(object? sender, RoutedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.Clipboard != null)
+        {
+            var fullLog = string.Join(Environment.NewLine, DebugMessages.Select(m => m.Text));
+            await topLevel.Clipboard.SetTextAsync(fullLog);
+        }
     }
 
     protected override void OnClosed(EventArgs e)
