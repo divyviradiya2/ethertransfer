@@ -20,9 +20,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 {
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
     public ObservableCollection<string> DebugMessages { get; } = new();
-    public ObservableCollection<FileSelectionItem> SelectedFiles { get; } = new();
-    
-    private TransferSession? _currentSession;
+    public ObservableCollection<PayloadItem> SelectedPayloads { get; } = new();
     
     private readonly DeviceService _deviceService;
     private readonly TransferService _transferService;
@@ -36,10 +34,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
     public bool HasSelection => SelectedDevice != null;
 
-    public bool HasSelectedFiles => SelectedFiles.Count > 0;
+    public bool HasSelectedFiles => SelectedPayloads.Count > 0;
     
-    public string SelectionSummaryText => HasSelectedFiles && _currentSession != null 
-        ? $"Total: {SelectedFiles.Count} files ({_currentSession.TotalSize / 1024 / 1024} MB)" 
+    public string SelectionSummaryText => HasSelectedFiles 
+        ? $"Total: {SelectedPayloads.Count} items ({SelectedPayloads.Sum(p => p.TotalSize) / 1024 / 1024} MB)" 
         : "";
         
     public bool CanSend => HasSelection && HasSelectedFiles && !IsTransferring;
@@ -165,15 +163,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateSelectionUI()
     {
-        SelectedFiles.Clear();
-        if (_currentSession != null)
-        {
-            foreach (var f in _currentSession.Files)
-            {
-                SelectedFiles.Add(f);
-            }
-        }
-        
         OnPropertyChanged(nameof(HasSelectedFiles));
         OnPropertyChanged(nameof(SelectionSummaryText));
         OnPropertyChanged(nameof(CanSend));
@@ -181,22 +170,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ClearSelectionButton_Click(object? sender, RoutedEventArgs e)
     {
-        _currentSession = null;
+        SelectedPayloads.Clear();
         UpdateSelectionUI();
         OnDebugLog(this, "Cleared selection.");
     }
 
+    private void RemovePayload_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.CommandParameter is string id)
+        {
+            var item = SelectedPayloads.FirstOrDefault(p => p.Id == id);
+            if (item != null)
+            {
+                SelectedPayloads.Remove(item);
+                UpdateSelectionUI();
+                OnDebugLog(this, $"Removed {item.Name} from selection.");
+            }
+        }
+    }
+
     private void ExecuteSendButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (SelectedDevice == null || _currentSession == null || _currentSession.Files.Count == 0) return;
+        if (SelectedDevice == null || SelectedPayloads.Count == 0) return;
         
         var targetIp = SelectedDevice.Address;
         var targetPort = 55000;
         
-        OnDebugLog(this, $"Starting transmission of {SelectedFiles.Count} files to {SelectedDevice.Name}...");
+        // Dynamically compile the TransferSession from all queued payloads
+        var session = new TransferSession();
+        foreach (var payload in SelectedPayloads)
+        {
+            if (payload.Type == PayloadItemType.Folder) session.ContainsFolders = true;
+            session.Files.AddRange(payload.DeepScannedFiles);
+        }
+
+        if (session.Files.Count == 0)
+        {
+            OnDebugLog(this, "No valid files to send.");
+            return;
+        }
+        
+        OnDebugLog(this, $"Starting transmission of {session.TotalFiles} files to {SelectedDevice.Name}...");
         
         // Fire and forget send
-        _ = _transferService.TransmitSessionAsync(targetIp, targetPort, _currentSession);
+        _ = _transferService.TransmitSessionAsync(targetIp, targetPort, session);
     }
 
     private async void SendFilesButton_Click(object? sender, RoutedEventArgs e)
@@ -227,7 +244,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             OnDebugLog(this, $"Scanning {paths.Count} items...");
-            _currentSession = await _transferService.ScanItemsAsync(paths);
+            foreach (var path in paths)
+            {
+                var payload = await _transferService.ScanItemAsync(path);
+                SelectedPayloads.Add(payload);
+            }
             UpdateSelectionUI();
         }
     }
@@ -264,7 +285,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
 
                 OnDebugLog(this, $"Scanning {paths.Count} root folder(s)...");
-                _currentSession = await _transferService.ScanItemsAsync(paths);
+                foreach (var path in paths)
+                {
+                    var payload = await _transferService.ScanItemAsync(path);
+                    SelectedPayloads.Add(payload);
+                }
                 UpdateSelectionUI();
             }
         }

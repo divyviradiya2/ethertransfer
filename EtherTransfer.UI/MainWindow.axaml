@@ -50,12 +50,20 @@
         </Grid>
 
         <!-- Row 5: Review Card ListBox -->
-        <ListBox x:Name="SelectedItemsList" Grid.Row="5" Background="#313244" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding SelectedFiles}" Foreground="#CDD6F4">
+        <ListBox x:Name="SelectedItemsList" Grid.Row="5" Background="#313244" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding SelectedPayloads}" Foreground="#CDD6F4">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="2">
-                        <TextBlock Text="{Binding RelativePath}" FontWeight="SemiBold" Foreground="#89B4FA" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="5">
+                        <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="SemiBold" Foreground="#89B4FA" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+                            <TextBlock Text="{Binding DisplaySize}" Foreground="#A6ADC8" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding DisplayCount}" Foreground="#6C7086"/>
+                        </StackPanel>
+                        
+                        <Button Grid.Column="3" Content="✕" Click="RemovePayload_Click" CommandParameter="{Binding Id}" Background="Transparent" Foreground="#F38BA8" Padding="5,0" FontWeight="Bold" Cursor="Hand" VerticalAlignment="Center"/>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

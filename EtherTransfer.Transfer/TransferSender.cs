@@ -23,77 +23,62 @@ public class TransferSender
 
     private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Sender] {msg}");
 
-    public Task<TransferSession> ScanItemsAsync(List<string> itemPaths)
+    public Task<PayloadItem> ScanItemAsync(string path)
     {
         return Task.Run(() => 
         {
-            Log("Scanning items...");
-            var filesToSendBag = new System.Collections.Concurrent.ConcurrentBag<FileSelectionItem>();
-            long totalSize = 0;
-            bool containsFolders = false;
-
-            System.Threading.Tasks.Parallel.ForEach(itemPaths, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, path =>
+            var payload = new PayloadItem
             {
-                try
-                {
-                    if (File.Exists(path))
-                    {
-                        var fi = new FileInfo(path);
-                        filesToSendBag.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, Size = fi.Length });
-                        System.Threading.Interlocked.Add(ref totalSize, fi.Length);
-                    }
-                    else if (Directory.Exists(path))
-                    {
-                        containsFolders = true;
-                        var baseDir = new DirectoryInfo(path);
-                        var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
-                        var options = new EnumerationOptions 
-                        { 
-                            IgnoreInaccessible = true, 
-                            RecurseSubdirectories = true,
-                            ReturnSpecialDirectories = false
-                        };
-
-                        foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
-                        {
-                            try
-                            {
-                                string relPath = fileInfo.FullName.Substring(parentDir.Length);
-                                if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
-                                {
-                                    relPath = relPath.Substring(1);
-                                }
-                                relPath = relPath.Replace('\\', '/');
-
-                                filesToSendBag.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
-                                System.Threading.Interlocked.Add(ref totalSize, fileInfo.Length);
-                            }
-                            catch { }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log($"Skipped {path}: {ex.Message}");
-                }
-            });
-
-            var session = new TransferSession
-            {
-                Files = filesToSendBag.OrderBy(f => f.RelativePath).ToList(),
-                ContainsFolders = containsFolders
+                Path = path
             };
-            
-            if (session.Files.Count == 0)
+
+            try
             {
-                Log("No valid files found to scan.");
+                if (File.Exists(path))
+                {
+                    var fi = new FileInfo(path);
+                    payload.Name = fi.Name;
+                    payload.Type = PayloadItemType.File;
+                    payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, Size = fi.Length });
+                }
+                else if (Directory.Exists(path))
+                {
+                    var baseDir = new DirectoryInfo(path);
+                    payload.Name = baseDir.Name;
+                    payload.Type = PayloadItemType.Folder;
+
+                    var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
+                    var options = new EnumerationOptions 
+                    { 
+                        IgnoreInaccessible = true, 
+                        RecurseSubdirectories = true,
+                        ReturnSpecialDirectories = false
+                    };
+
+                    foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
+                    {
+                        try
+                        {
+                            string relPath = fileInfo.FullName.Substring(parentDir.Length);
+                            if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
+                            {
+                                relPath = relPath.Substring(1);
+                            }
+                            relPath = relPath.Replace('\\', '/');
+
+                            payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
+                        }
+                        catch { }
+                    }
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Log($"Found {session.Files.Count} files ({session.TotalSize / 1024 / 1024} MB). Ready to send.");
+                Log($"Error scanning {path}: {ex.Message}");
             }
             
-            return session;
+            Log($"Scanned {payload.Name} -> {payload.DeepScannedFiles.Count} files, {payload.TotalSize / 1024 / 1024} MB");
+            return payload;
         });
     }
 
