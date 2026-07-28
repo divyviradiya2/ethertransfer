@@ -107,7 +107,8 @@ public class DiscoveryService : IDisposable
                 Type = "BYE",
                 ComputerName = _computerName,
                 TcpPort = 0,
-                Id = AppId
+                Id = AppId,
+                OS = GetCurrentOS()
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
             
@@ -172,7 +173,8 @@ public class DiscoveryService : IDisposable
                     Type = "HELLO",
                     ComputerName = _computerName,
                     TcpPort = tcpPort,
-                    Id = AppId
+                    Id = AppId,
+                    OS = GetCurrentOS()
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
@@ -261,5 +263,13 @@ public class DiscoveryService : IDisposable
         {
             Log(line);
         }
+    }
+
+    private string GetCurrentOS()
+    {
+        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)) return "Windows";
+        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)) return "macOS";
+        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux)) return "Linux";
+        return "Unknown";
     }
 }

@@ -10,6 +10,10 @@
         Title="EtherTransfer"
         Background="#1E1E2E"
         Foreground="#CDD6F4">
+    <Window.Resources>
+        <ui:OsToIconConverter x:Key="OsToIconConverter"/>
+    </Window.Resources>
+
     <Grid Margin="15" RowDefinitions="Auto,Auto,*,Auto,Auto,*,Auto,Auto,Auto,Auto,150">
         
         <!-- Row 0: Header & Profile -->
@@ -26,10 +30,10 @@
         <ListBox x:Name="DevicesList" Grid.Row="2" Background="#313244" BorderBrush="#45475A" BorderThickness="1" ItemsSource="{Binding DiscoveredDevices}" Foreground="#CDD6F4" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="5">
-                        <TextBlock Text="🖥" Margin="0,0,10,0" FontSize="16"/>
-                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#A6E3A1"/>
-                        <TextBlock Text="{Binding Address}" Margin="10,0,0,0" Foreground="#6C7086"/>
+                    <StackPanel Orientation="Horizontal" Margin="5" VerticalAlignment="Center">
+                        <PathIcon Data="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="18" Height="18" Margin="0,0,10,0" Foreground="#A6ADC8" />
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="#A6E3A1" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Address}" Margin="10,0,0,0" Foreground="#6C7086" VerticalAlignment="Center"/>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

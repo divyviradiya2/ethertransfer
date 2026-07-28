@@ -102,15 +102,17 @@ public class DeviceService : IDisposable
                 { 
                     Name = e.Message.ComputerName, 
                     Address = sourceIp, 
+                    OS = e.Message.OS,
                     LastSeen = DateTime.UtcNow 
                 };
             }, 
             (_, existing) => 
             {
                 existing.LastSeen = DateTime.UtcNow;
-                if (existing.Name != e.Message.ComputerName)
+                if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS)
                 {
                     existing.Name = e.Message.ComputerName;
+                    existing.OS = e.Message.OS;
                     updated = true;
                 }
                 return existing;
