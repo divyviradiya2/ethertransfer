@@ -79,8 +79,6 @@ public class DeviceService : IDisposable
                 }
                 _lastKnownIps = currentIps;
 
-                _devices.Clear();
-                DevicesChanged?.Invoke(this, EventArgs.Empty);
                 NetworkChanged?.Invoke(this, EventArgs.Empty);
 
                 // Restart discovery to bind UDP sockets to new interfaces
