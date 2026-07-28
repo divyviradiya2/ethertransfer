@@ -83,6 +83,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void OnNetworkChanged(object? sender, EventArgs e)
     {
         OnDebugLog(this, "Network interfaces changed (Ethernet cable plugged/unplugged). Scanning for active devices...");
+        
+        // Enterprise Robustness: Instantly kill active transfers if the physical link drops
+        Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_activeDialog != null && _activeDialog.IsVisible)
+            {
+                var ethInterfaces = EtherTransfer.Network.NetworkInterfaces.NetworkHelper.GetEthernetInterfaces().ToList();
+                if (ethInterfaces.Count == 0)
+                {
+                    OnDebugLog(this, "Physical link lost! Aborting active transfer instantly.");
+                    _activeDialog.Close();
+                    
+                    var errorDialog = new ErrorDialog("Connection lost (Ethernet cable disconnected).");
+                    _ = errorDialog.ShowDialog(this);
+                }
+            }
+        });
     }
 
     private void OnTransferFinished(object? sender, (bool success, string? error) e)

@@ -98,14 +98,25 @@ public static class EthernetConfigurator
 
                     case "modified":
                         // We modified an existing connection — restore original method
-                        // NOTE: We only modify the setting, we do NOT call "connection up" because
-                        // switching to DHCP on a direct cable (no router) would block forever
-                        // waiting for a DHCP lease, freezing the system.
-                        // The setting will apply on next reboot or cable replug.
                         var method = change.OriginalMethod ?? "auto";
                         log.Add($"   Restoring '{change.ConnectionName}' to ipv4.method={method}...");
                         RunCommand("nmcli", $"connection modify \"{change.ConnectionName}\" ipv4.method {method}");
-                        log.Add($"   ✅ Restored (applies on next connection)");
+                        
+                        // Fire-and-forget 'connection up' so it applies instantly without blocking app shutdown
+                        // if NetworkManager blocks waiting for a DHCP lease.
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = "nmcli",
+                                Arguments = $"connection up \"{change.ConnectionName}\"",
+                                CreateNoWindow = true,
+                                UseShellExecute = false
+                            });
+                        }
+                        catch { }
+                        
+                        log.Add($"   ✅ Restored and restarting connection in background");
                         break;
 
                     case "manual_ip":
@@ -124,6 +135,42 @@ public static class EthernetConfigurator
 
         _changes.Clear();
         return log;
+    }
+
+    /// <summary>
+    /// Checks if tracked interfaces have gone offline, and if so, instantly restores their config.
+    /// </summary>
+    public static void AuditInterfaces()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || _changes.Count == 0)
+            return;
+
+        var allInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+        var changesToRestore = new List<ConfigChange>();
+
+        foreach (var change in _changes.ToList())
+        {
+            var ni = allInterfaces.FirstOrDefault(i => i.Name == change.InterfaceName);
+            // If interface doesn't exist, or is down, or cable is unplugged
+            if (ni == null || ni.OperationalStatus != OperationalStatus.Up)
+            {
+                changesToRestore.Add(change);
+            }
+        }
+
+        if (changesToRestore.Count > 0)
+        {
+            // Temporarily replace the global tracking list with only the ones that dropped
+            var originalChanges = _changes.ToList();
+            _changes.Clear();
+            _changes.AddRange(changesToRestore);
+            
+            RestoreOriginalConfig();
+
+            // Put back the ones that are still active
+            var activeChanges = originalChanges.Except(changesToRestore).ToList();
+            _changes.AddRange(activeChanges);
+        }
     }
 
     private static bool TryConfigureWithNmcli(string ifaceName, List<string> log)

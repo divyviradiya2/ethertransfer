@@ -56,6 +56,12 @@ public class DeviceService : IDisposable
         {
             try
             {
+                // Unplug events: audit if any configured interfaces dropped
+                if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+                {
+                    EthernetConfigurator.AuditInterfaces();
+                }
+
                 // Debounce rapid network state changes (DHCP, link up/down)
                 await Task.Delay(1000, token);
                 if (token.IsCancellationRequested) return;
@@ -196,6 +202,7 @@ public class DeviceService : IDisposable
 
                 if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
                 {
+                    EthernetConfigurator.AuditInterfaces();
                     CheckForUnconfiguredLinuxEthernet();
                 }
 
