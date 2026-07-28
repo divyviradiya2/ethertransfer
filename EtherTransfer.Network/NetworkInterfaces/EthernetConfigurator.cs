@@ -38,8 +38,9 @@ public static class EthernetConfigurator
 
         foreach (var ni in interfaces)
         {
-            var name = ni.Name.ToLowerInvariant();
-            var desc = ni.Description.ToLowerInvariant();
+            var currentNi = ni;
+            var name = currentNi.Name.ToLowerInvariant();
+            var desc = currentNi.Description.ToLowerInvariant();
 
             if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
                 continue;
@@ -47,34 +48,52 @@ public static class EthernetConfigurator
                 name.StartsWith("virbr") || name.StartsWith("tun") || name.StartsWith("tap"))
                 continue;
 
-            var hasIpv4 = ni.GetIPProperties().UnicastAddresses
+            var hasIpv4 = currentNi.GetIPProperties().UnicastAddresses
                 .Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork);
+
+            if (!hasIpv4)
+            {
+                // Give NetworkManager up to 2.5 seconds to finish its DHCP/link-local handshake natively.
+                // This prevents the app from starting up with 0 listeners and immediately restarting when NM finishes.
+                for (int i = 0; i < 5; i++)
+                {
+                    System.Threading.Thread.Sleep(500);
+                    
+                    var updatedNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == currentNi.Id);
+                    if (updatedNi != null && updatedNi.GetIPProperties().UnicastAddresses.Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork))
+                    {
+                        hasIpv4 = true;
+                        currentNi = updatedNi;
+                        break;
+                    }
+                }
+            }
 
             if (hasIpv4)
             {
-                var ip = ni.GetIPProperties().UnicastAddresses
+                var ip = currentNi.GetIPProperties().UnicastAddresses
                     .First(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                     .Address.ToString();
-                log.Add($"[Ethernet] {ni.Name}: Already has IP {ip}");
+                log.Add($"[Ethernet] {currentNi.Name}: Already has IP {ip}");
                 continue;
             }
 
-            if (_lastConfigAttempt.TryGetValue(ni.Name, out var lastAttempt))
+            if (_lastConfigAttempt.TryGetValue(currentNi.Name, out var lastAttempt))
             {
                 if ((DateTime.Now - lastAttempt).TotalSeconds < 15)
                 {
-                    log.Add($"[Ethernet] {ni.Name}: Waiting for OS to assign IP (NetworkManager is working...)");
+                    log.Add($"[Ethernet] {currentNi.Name}: Waiting for OS to assign IP (NetworkManager is working...)");
                     continue;
                 }
             }
 
-            _lastConfigAttempt[ni.Name] = DateTime.Now;
-            log.Add($"[Ethernet] {ni.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
+            _lastConfigAttempt[currentNi.Name] = DateTime.Now;
+            log.Add($"[Ethernet] {currentNi.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
 
-            if (TryConfigureWithNmcli(ni.Name, log))
+            if (TryConfigureWithNmcli(currentNi.Name, log))
                 continue;
 
-            TryConfigureManually(ni.Name, log);
+            TryConfigureManually(currentNi.Name, log);
         }
 
         return log;
