@@ -132,6 +132,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 DiscoveredDevices.Add(device);
             }
+
+            // Auto-select if there is exactly 1 device
+            if (DiscoveredDevices.Count == 1 && SelectedDevice == null)
+            {
+                SelectedDevice = DiscoveredDevices[0];
+            }
         });
     }
 
