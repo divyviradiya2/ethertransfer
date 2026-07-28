@@ -16,6 +16,21 @@
         <ui:OsToIconConverter x:Key="OsToIconConverter"/>
     </Window.Resources>
 
+    <Window.Styles>
+        <Style Selector="Border.Skeleton">
+            <Style.Animations>
+                <Animation Duration="0:0:1.2" IterationCount="Infinite" PlaybackDirection="Alternate">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0.2"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.8"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+    </Window.Styles>
+
     <Grid RowDefinitions="Auto,*,Auto">
         
         <!-- HEADER / TOOLBAR -->
@@ -58,9 +73,25 @@
                 </ListBox>
                 
                 <!-- Empty State for Devices (Overlay on ListBox) -->
-                <StackPanel Grid.Row="1" IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Margin="20">
-                    <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Looking for devices connected with ethernet cable" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                <StackPanel Grid.Row="1" IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
+                    
+                    <!-- Skeleton Loader -->
+                    <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                                <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                                <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Text Instructions -->
+                    <StackPanel Spacing="10" Margin="10,0">
+                        <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Text="Please connect both devices directly to each other using an Ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.8" Margin="0,5,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
             

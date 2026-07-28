@@ -21,6 +21,12 @@
                     <SolidColorBrush x:Key="DangerColor" Color="#D13438"/>
                     <SolidColorBrush x:Key="SuccessColor" Color="#107C10"/>
                     <SolidColorBrush x:Key="WarningColor" Color="#FFB900"/>
+                    
+                    <!-- Fluent Theme Overrides -->
+                    <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#E5E5E5"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#D0D0D0"/>
+                    <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
                 </ResourceDictionary>
                 <!-- Dark Theme Colors -->
                 <ResourceDictionary x:Key="Dark">
@@ -36,6 +42,12 @@
                     <SolidColorBrush x:Key="DangerColor" Color="#F1707B"/>
                     <SolidColorBrush x:Key="SuccessColor" Color="#6CCB5F"/>
                     <SolidColorBrush x:Key="WarningColor" Color="#FCE100"/>
+                    
+                    <!-- Fluent Theme Overrides -->
+                    <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#3D3D3D"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#444444"/>
+                    <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -134,6 +146,19 @@
         <!-- ScrollViewer -->
         <Style Selector="ScrollViewer">
             <Setter Property="AllowAutoHide" Value="True"/>
+        </Style>
+
+        <!-- Expander Style Override -->
+        <Style Selector="Expander">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Expander /template/ ToggleButton#ExpanderHeader:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
         </Style>
 
     </Application.Styles>
