@@ -15,6 +15,9 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Ensure firewall rules are configured on Windows (triggers UAC if missing)
+            _ = EtherTransfer.Services.FirewallManager.EnsureFirewallRulesAsync();
+
             desktop.MainWindow = new MainWindow();
         }
 
