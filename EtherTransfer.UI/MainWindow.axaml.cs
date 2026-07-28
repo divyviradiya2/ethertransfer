@@ -339,16 +339,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private Task<(bool accept, string savePath)> HandleIncomingTransferAsync(TransferRequestMessage request, CancellationToken ct)
+    private Task<(bool accept, string savePath, CancellationToken cancelToken)> HandleIncomingTransferAsync(TransferRequestMessage request, CancellationToken ct)
     {
-        var tcs = new TaskCompletionSource<(bool, string)>();
+        var tcs = new TaskCompletionSource<(bool, string, CancellationToken)>();
         
         ct.Register(() => 
         {
             Dispatcher.UIThread.InvokeAsync(() => 
             {
                 _activeDialog?.Close();
-                tcs.TrySetResult((false, ""));
+                tcs.TrySetResult((false, "", default));
             });
         });
         
@@ -370,7 +370,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 text = $"{request.SenderName} wants to send {request.PayloadFileCount} file(s) ({sizeStr}).";
             }
 
-            var dialog = TransferDialog.CreateReceiver(text, tcs);
+            var dialogCts = new CancellationTokenSource();
+            var dialog = TransferDialog.CreateReceiver(text, tcs, dialogCts);
             _activeDialog = dialog;
             await dialog.ShowDialog(this);
             _activeDialog = null;

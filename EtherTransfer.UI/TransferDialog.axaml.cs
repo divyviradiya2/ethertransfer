@@ -84,7 +84,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public string SavePath { get => _savePath; set { _savePath = value; OnPropertyChanged(); } }
 
     private CancellationTokenSource? _senderCts;
-    private TaskCompletionSource<(bool accepted, string path)>? _receiverTcs;
+    private CancellationTokenSource? _receiverCancelCts;
+    private TaskCompletionSource<(bool accepted, string path, CancellationToken cancelToken)>? _receiverTcs;
 
     public TransferDialog()
     {
@@ -105,13 +106,14 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     }
 
     // Factory method for Receiver Mode
-    public static TransferDialog CreateReceiver(string requestText, TaskCompletionSource<(bool, string)> tcs)
+    public static TransferDialog CreateReceiver(string requestText, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
     {
         var dialog = new TransferDialog
         {
             IsSenderMode = false,
             IncomingRequestText = requestText,
             _receiverTcs = tcs,
+            _receiverCancelCts = cancelCts,
             SavePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
         };
         return dialog;
@@ -120,6 +122,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         _senderCts?.Cancel();
+        _receiverCancelCts?.Cancel();
         Close();
     }
 
@@ -132,7 +135,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     {
         // Don't close! Just return the path so the transfer starts.
         // We will switch to progress mode automatically when the first ProgressUpdated event fires.
-        _receiverTcs?.TrySetResult((true, SavePath));
+        _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
     }
 
     private bool _successQueued = false;
@@ -168,7 +171,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     private void Decline_Click(object? sender, RoutedEventArgs e)
     {
-        _receiverTcs?.TrySetResult((false, ""));
+        _receiverTcs?.TrySetResult((false, "", default));
         Close();
     }
 
@@ -191,8 +194,9 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     protected override void OnClosed(EventArgs e)
     {
+        _receiverCancelCts?.Cancel(); // Cancel any ongoing transfer
         // Ensure TCS is completed if window is closed via the X button
-        _receiverTcs?.TrySetResult((false, ""));
+        _receiverTcs?.TrySetResult((false, "", default));
         base.OnClosed(e);
     }
 

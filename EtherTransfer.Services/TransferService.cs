@@ -18,7 +18,7 @@ public class TransferService : IDisposable
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
 
     // Delegate to ask the UI for permission
-    public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
+    public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
 
     private void Log(string msg) => DebugLog?.Invoke(this, $"[TransferService] {msg}");
 

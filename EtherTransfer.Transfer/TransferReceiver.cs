@@ -23,7 +23,7 @@ public class IncomingTransferEventArgs : EventArgs
 
 public class TransferReceiver
 {
-    public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath)>>? OnIncomingTransfer { get; set; }
+    public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
 
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<string>? DebugLog;
@@ -82,7 +82,10 @@ public class TransferReceiver
                 }
 
                 disconnectCts.Cancel();
-                var (accepted, savePath) = await uiTask;
+                var (accepted, savePath, cancelToken) = await uiTask;
+
+                using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(ct, cancelToken);
+                var transferCt = linkedCt.Token;
 
                 // 3. Send Response
                 var response = new TransferResponseMessage
@@ -90,7 +93,7 @@ public class TransferReceiver
                     Accepted = accepted,
                     Reason = accepted ? "" : "User declined."
                 };
-                await ProtocolHelper.SendMessageAsync(stream, response, ct);
+                await ProtocolHelper.SendMessageAsync(stream, response, transferCt);
 
                 if (!accepted)
                 {
@@ -108,9 +111,9 @@ public class TransferReceiver
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var buffer = new byte[1024 * 1024];
 
-                while (!ct.IsCancellationRequested)
+                while (!transferCt.IsCancellationRequested)
                 {
-                    var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, ct);
+                    var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt);
                     if (markerJson == null) break;
 
                     var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
@@ -132,7 +135,7 @@ public class TransferReceiver
                         continue;
 
                     // FILE_BEGIN — read metadata
-                    var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, ct);
+                    var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt);
                     if (fileMeta == null) break;
 
                     // === PATH SECURITY ===
@@ -140,7 +143,7 @@ public class TransferReceiver
                     if (safePath == null)
                     {
                         Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
-                        await DrainBytesAsync(stream, fileMeta.Size, buffer, ct);
+                        await DrainBytesAsync(stream, fileMeta.Size, buffer, transferCt);
                         filesSkipped++;
                         continue;
                     }
@@ -173,10 +176,10 @@ public class TransferReceiver
                         while (fileReceived < fileMeta.Size)
                         {
                             int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-                            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
+                            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, transferCt))
                                 throw new IOException("Connection lost while reading file data.");
 
-                            await fs.WriteAsync(buffer, 0, toRead, ct);
+                            await fs.WriteAsync(buffer, 0, toRead, transferCt);
 
                             fileReceived += toRead;
                             totalReceived += toRead;
@@ -203,6 +206,17 @@ public class TransferReceiver
                     catch (Exception ex)
                     {
                         Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
+                        
+                        // Clean up partially received file
+                        try
+                        {
+                            if (File.Exists(safePath))
+                                File.Delete(safePath);
+                        }
+                        catch { }
+
+                        if (ex is OperationCanceledException)
+                            throw;
                     }
                 }
 
