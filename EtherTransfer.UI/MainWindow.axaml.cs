@@ -59,22 +59,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string IncomingRequestText { get => _incomingRequestText; set { _incomingRequestText = value; OnPropertyChanged(); } }
     
     private TaskCompletionSource<(bool accept, string savePath)>? _incomingRequestTcs;
+    
+    private string _customDeviceName = "";
+    public string CustomDeviceName { get => _customDeviceName; set { _customDeviceName = value; OnPropertyChanged(); } }
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
 
-        string computerName = Environment.MachineName;
+        var settings = EtherTransfer.Core.SettingsManager.Load();
+        if (string.IsNullOrWhiteSpace(settings.CustomDeviceName))
+        {
+            settings.CustomDeviceName = Environment.MachineName;
+            EtherTransfer.Core.SettingsManager.Save(settings);
+        }
+        
+        CustomDeviceName = settings.CustomDeviceName;
 
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
         _deviceService.DebugLog += OnDebugLog;
-        _deviceService.Start(computerName, 55000);
+        _deviceService.Start(CustomDeviceName, 55000);
 
         // Start Transfer Service
-        _transferService = new TransferService(computerName, 55000);
+        _transferService = new TransferService(CustomDeviceName, 55000);
         _transferService.DebugLog += OnDebugLog;
         _transferService.ProgressUpdated += OnProgressUpdated;
         _transferService.OnIncomingTransfer = HandleIncomingTransferAsync;
@@ -263,6 +273,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         HasIncomingRequest = false;
         _incomingRequestTcs?.TrySetResult((false, ""));
+    }
+
+    private void SaveName_Click(object? sender, RoutedEventArgs e)
+    {
+        var settings = EtherTransfer.Core.SettingsManager.Load();
+        
+        if (string.IsNullOrWhiteSpace(CustomDeviceName))
+        {
+            CustomDeviceName = Environment.MachineName;
+        }
+
+        settings.CustomDeviceName = CustomDeviceName;
+        EtherTransfer.Core.SettingsManager.Save(settings);
+        
+        _deviceService.UpdateComputerName(CustomDeviceName);
+        OnDebugLog(this, $"Saved and broadcasted new name: {CustomDeviceName}");
     }
 
     protected override void OnClosed(EventArgs e)

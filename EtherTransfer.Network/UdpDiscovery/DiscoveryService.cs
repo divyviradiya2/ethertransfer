@@ -32,6 +32,7 @@ public class DiscoveryService : IDisposable
     
     private CancellationTokenSource? _cts;
     private UdpClient? _globalListener;
+    private string _computerName = string.Empty;
     
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
     
@@ -45,6 +46,7 @@ public class DiscoveryService : IDisposable
 
     public void Start(string computerName, int tcpPort)
     {
+        _computerName = computerName;
         _cts = new CancellationTokenSource();
         
         Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
@@ -78,7 +80,13 @@ public class DiscoveryService : IDisposable
         }
         
         // Start broadcast loop
-        _ = Task.Run(() => BroadcastLoopAsync(computerName, tcpPort, _cts.Token));
+        _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
+    }
+
+    public void UpdateComputerName(string newName)
+    {
+        _computerName = newName;
+        Log($"Discovery name updated to '{newName}'");
     }
 
     public void Stop()
@@ -86,17 +94,8 @@ public class DiscoveryService : IDisposable
         _cts?.Cancel();
     }
 
-    private async Task BroadcastLoopAsync(string computerName, int tcpPort, CancellationToken ct)
+    private async Task BroadcastLoopAsync(int tcpPort, CancellationToken ct)
     {
-        var message = new DiscoveryMessage
-        {
-            Type = "HELLO",
-            ComputerName = computerName,
-            TcpPort = tcpPort,
-            Id = AppId
-        };
-        var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
-
         // One persistent sender for the global 255.255.255.255 broadcast
         UdpClient? globalSender = null;
         try
@@ -121,6 +120,16 @@ public class DiscoveryService : IDisposable
                 {
                     Log("No Ethernet interfaces found. Waiting...");
                 }
+
+                // Re-build message each loop to pick up any custom name changes
+                var message = new DiscoveryMessage
+                {
+                    Type = "HELLO",
+                    ComputerName = _computerName,
+                    TcpPort = tcpPort,
+                    Id = AppId
+                };
+                var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
                 // Strategy 1: Send to each Ethernet interface's subnet broadcast
                 foreach (var netIf in ethInterfaces)

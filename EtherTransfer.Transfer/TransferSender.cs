@@ -55,48 +55,62 @@ public class TransferSender
 
         // Build flat list of files to send
         Log("Scanning items...");
-        var filesToSend = new List<(string AbsolutePath, string RelativePath, long Size)>();
+        var filesToSendBag = new System.Collections.Concurrent.ConcurrentBag<(string AbsolutePath, string RelativePath, long Size)>();
         long totalSize = 0;
         bool containsFolders = false;
 
-        foreach (var path in itemPaths)
+        System.Threading.Tasks.Parallel.ForEach(itemPaths, new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, path =>
         {
-            if (File.Exists(path))
+            try
             {
-                var fi = new FileInfo(path);
-                filesToSend.Add((path, fi.Name, fi.Length));
-                totalSize += fi.Length;
-            }
-            else if (Directory.Exists(path))
-            {
-                containsFolders = true;
-                var baseDir = new DirectoryInfo(path);
-                var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
-                var options = new EnumerationOptions 
-                { 
-                    IgnoreInaccessible = true, 
-                    RecurseSubdirectories = true 
-                };
-
-                foreach (var file in Directory.EnumerateFiles(path, "*", options))
+                if (File.Exists(path))
                 {
-                    var fi = new FileInfo(file);
-                    // Create relative path like "FolderName/SubFolder/file.txt"
-                    // Handle trailing slashes cleanly
-                    string relPath = file.Substring(parentDir.Length);
-                    if (relPath.StartsWith(Path.DirectorySeparatorChar) || relPath.StartsWith(Path.AltDirectorySeparatorChar))
-                    {
-                        relPath = relPath.Substring(1);
-                    }
-                    
-                    // Normalize to forward slashes for cross-platform compatibility
-                    relPath = relPath.Replace('\\', '/');
+                    var fi = new FileInfo(path);
+                    filesToSendBag.Add((path, fi.Name, fi.Length));
+                    System.Threading.Interlocked.Add(ref totalSize, fi.Length);
+                }
+                else if (Directory.Exists(path))
+                {
+                    containsFolders = true;
+                    var baseDir = new DirectoryInfo(path);
+                    var parentDir = baseDir.Parent?.FullName ?? baseDir.FullName;
+                    var options = new EnumerationOptions 
+                    { 
+                        IgnoreInaccessible = true, 
+                        RecurseSubdirectories = true,
+                        ReturnSpecialDirectories = false
+                    };
 
-                    filesToSend.Add((file, relPath, fi.Length));
-                    totalSize += fi.Length;
+                    // Using DirectoryInfo.EnumerateFiles completely eliminates secondary disk 'stat' calls for sizes
+                    foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
+                    {
+                        try
+                        {
+                            string relPath = fileInfo.FullName.Substring(parentDir.Length);
+                            if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
+                            {
+                                relPath = relPath.Substring(1);
+                            }
+                            relPath = relPath.Replace('\\', '/');
+
+                            filesToSendBag.Add((fileInfo.FullName, relPath, fileInfo.Length));
+                            System.Threading.Interlocked.Add(ref totalSize, fileInfo.Length);
+                        }
+                        catch
+                        {
+                            // Bulletproof: If path logic fails on a weird system file, skip it silently
+                        }
+                    }
                 }
             }
-        }
+            catch (Exception ex)
+            {
+                // Bulletproof: If an entire root folder throws, skip it and continue
+                Log($"Skipped {path}: {ex.Message}");
+            }
+        });
+
+        var filesToSend = filesToSendBag.ToList();
 
         if (filesToSend.Count == 0)
         {
@@ -155,7 +169,8 @@ public class TransferSender
             await ProtocolHelper.SendMessageAsync(stream, meta, ct);
 
             // B. Send Raw Binary Data
-            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length, useAsync: true);
+            // Upgraded to FileShare.ReadWrite to allow transferring soft-locked files that are currently in use by other processes
+            using var fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer.Length, useAsync: true);
             
             int read;
             long fileSent = 0;

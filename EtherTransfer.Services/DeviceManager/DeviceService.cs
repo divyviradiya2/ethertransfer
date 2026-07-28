@@ -38,6 +38,12 @@ public class DeviceService : IDisposable
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
     }
 
+    public void UpdateComputerName(string newName)
+    {
+        _computerName = newName;
+        _discoveryService.UpdateComputerName(newName);
+    }
+
     public void Stop()
     {
         _cts?.Cancel();
