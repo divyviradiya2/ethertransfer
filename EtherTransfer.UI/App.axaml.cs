@@ -16,7 +16,9 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Ensure firewall rules are configured on Windows (triggers UAC if missing)
-            _ = EtherTransfer.Services.FirewallManager.EnsureFirewallRulesAsync();
+            // MUST block synchronously here, otherwise MainWindow will bind to ports 
+            // before the UAC prompt finishes, causing double firewall popups!
+            EtherTransfer.Services.FirewallManager.EnsureFirewallRulesAsync().GetAwaiter().GetResult();
 
             desktop.MainWindow = new MainWindow();
         }

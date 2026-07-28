@@ -9,13 +9,13 @@ public static class FirewallManager
 {
     private const string RuleName = "Ether Transfer";
 
-    public static async Task EnsureFirewallRulesAsync()
+    public static Task EnsureFirewallRulesAsync()
     {
         if (OperatingSystem.IsWindows())
         {
-            await EnsureWindowsFirewallAsync();
+            return EnsureWindowsFirewallAsync();
         }
-        // macOS and Linux are excluded as per plan
+        return Task.CompletedTask;
     }
 
     [SupportedOSPlatform("windows")]
