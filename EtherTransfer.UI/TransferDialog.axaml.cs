@@ -15,22 +15,36 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isSenderMode;
     public bool IsSenderMode 
     { 
-        get => _isSenderMode && !IsProgressMode; 
+        get => _isSenderMode && !IsProgressMode && !IsSuccessMode; 
         set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); } 
     }
     
-    public bool IsReceiverMode => !_isSenderMode && !IsProgressMode;
+    public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode;
 
     private bool _isProgressMode;
     public bool IsProgressMode
     {
-        get => _isProgressMode;
+        get => _isProgressMode && !IsSuccessMode;
         set 
         { 
             _isProgressMode = value; 
             OnPropertyChanged(); 
             OnPropertyChanged(nameof(IsSenderMode)); 
             OnPropertyChanged(nameof(IsReceiverMode)); 
+        }
+    }
+
+    private bool _isSuccessMode;
+    public bool IsSuccessMode
+    {
+        get => _isSuccessMode;
+        set 
+        { 
+            _isSuccessMode = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(IsSenderMode)); 
+            OnPropertyChanged(nameof(IsReceiverMode)); 
+            OnPropertyChanged(nameof(IsProgressMode)); 
         }
     }
 
@@ -98,6 +112,11 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         Close();
     }
 
+    private void Done_Click(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
     private void Accept_Click(object? sender, RoutedEventArgs e)
     {
         // Don't close! Just return the path so the transfer starts.
@@ -122,8 +141,11 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             if (e.BytesSent >= e.TotalBytes)
             {
-                // Auto-close after completion
-                Task.Delay(1500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => Close()));
+                // Wait a tiny bit so the user sees the progress bar hit 100%
+                Task.Delay(500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => 
+                {
+                    IsSuccessMode = true;
+                }));
             }
         });
     }
