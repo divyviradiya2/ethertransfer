@@ -67,6 +67,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public bool IsConfigError => LinkState == EthernetLinkState.ConfigError;
     public bool IsReady => LinkState == EthernetLinkState.Ready;
 
+    private bool _isStartupFatalError;
+    public bool IsStartupFatalError { get => _isStartupFatalError; set { _isStartupFatalError = value; OnPropertyChanged(); } }
+    
+    private string _startupFatalErrorMessage = "";
+    public string StartupFatalErrorMessage { get => _startupFatalErrorMessage; set { _startupFatalErrorMessage = value; OnPropertyChanged(); } }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -118,18 +124,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _deviceService.DevicesChanged += OnDevicesChanged;
         _deviceService.DebugLog += OnDebugLog;
         
+        // Start Discovery asynchronously to catch bind errors
+        _ = StartDeviceServiceAsync(actualTcpPort);
+    }
+
+    private async Task StartDeviceServiceAsync(int actualTcpPort)
+    {
         try
         {
-            _deviceService.Start(CustomDeviceName, actualTcpPort);
+            await _deviceService.StartAsync(CustomDeviceName, actualTcpPort);
         }
         catch (Exception ex)
         {
-            Dispatcher.UIThread.InvokeAsync(async () =>
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
                 var msg = $"Fatal error: Unable to bind to UDP discovery port 50000. Is another application using it?\n\n{ex.Message}";
                 OnDebugLog(this, new StructuredLogMessage("startup.fatal", msg, LogLevel.Error));
-                var errorDialog = new ErrorDialog(msg);
-                await errorDialog.ShowDialog(this);
+                
+                IsStartupFatalError = true;
+                StartupFatalErrorMessage = msg;
             });
         }
     }

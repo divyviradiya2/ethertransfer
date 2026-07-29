@@ -42,12 +42,12 @@ public class DeviceService : IDisposable
         _discoveryService.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
     }
 
-    public void Start(string computerName, int tcpPort)
+    public async Task StartAsync(string computerName, int tcpPort)
     {
         _computerName = computerName;
         _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
-        _ = Task.Run(async () => await _discoveryService.StartAsync(computerName, tcpPort));
+        await _discoveryService.StartAsync(computerName, tcpPort);
 
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAddressChanged;

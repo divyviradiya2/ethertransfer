@@ -54,11 +54,6 @@ public class DiscoveryService : IDisposable
         _computerName = computerName;
         _cts = new CancellationTokenSource();
 
-        if (!isRebind)
-        {
-            Log($"Starting discovery as '{computerName}' on port {_config.DiscoveryPort}");
-        }
-
         // Global listener on 0.0.0.0:<DiscoveryPort> to receive ALL broadcast packets
         try
         {
@@ -68,6 +63,7 @@ public class DiscoveryService : IDisposable
             
             if (!isRebind)
             {
+                Log($"Starting discovery as '{computerName}' on port {_config.DiscoveryPort}");
                 Log("Listener bound to 0.0.0.0:" + _config.DiscoveryPort);
             }
             

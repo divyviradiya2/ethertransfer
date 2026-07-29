@@ -1,8 +1,27 @@
+<div align="center">
+  <img src="EtherTransfer.UI/Assets/logo.png" alt="EtherTransfer Logo" width="128" height="128">
+</div>
+
 # EtherTransfer
 
 EtherTransfer is a lightning-fast, cross-platform file and folder transfer application designed for direct Ethernet connections between two devices. 
 
 It emphasizes **maximum reliability, stability, simplicity, and enterprise-level robustness**. Users can simply connect an Ethernet cable between two devices, open EtherTransfer on both, and seamlessly transfer massive files or complex folder hierarchies without any configuration or technical knowledge.
+
+## How it Works
+
+```mermaid
+flowchart LR
+    A[Device A]
+    B[Device B]
+    
+    A -- "1. Connect Ethernet Cable" --- B
+    A -. "2. Auto-Discovery" .-> B
+    A == "3. High-Speed Transfer" ==> B
+    
+    style A fill:#2A2A2A,stroke:#4CAF50,stroke-width:2px,color:#fff
+    style B fill:#2A2A2A,stroke:#2196F3,stroke-width:2px,color:#fff
+```
 
 ## Features
 
