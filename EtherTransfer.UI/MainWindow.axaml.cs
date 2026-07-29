@@ -14,6 +14,7 @@ using Avalonia.Input.Platform;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Services.DeviceManager;
 using EtherTransfer.Services;
+using EtherTransfer.Network.NetworkInterfaces;
 
 namespace EtherTransfer.UI;
 
@@ -57,6 +58,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private string _customDeviceName = "";
     public string CustomDeviceName { get => _customDeviceName; set { _customDeviceName = value; OnPropertyChanged(); } }
 
+    private readonly EthernetLinkMonitor _linkMonitor;
+    public EthernetLinkState LinkState => _linkMonitor.CurrentState;
+    public string? LinkErrorMessage => _linkMonitor.LastErrorMessage;
+
+    public bool IsNoCable => LinkState == EthernetLinkState.NoCable;
+    public bool IsConfiguring => LinkState == EthernetLinkState.Configuring;
+    public bool IsConfigError => LinkState == EthernetLinkState.ConfigError;
+    public bool IsReady => LinkState == EthernetLinkState.Ready;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -70,6 +80,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         CustomDeviceName = settings.CustomDeviceName;
+
+        _linkMonitor = new EthernetLinkMonitor(new EtherTransfer.Network.NetworkInterfaces.DefaultNetworkInterfaceProvider());
+        _linkMonitor.StateChanged += OnLinkStateChanged;
+        _linkMonitor.Start();
 
         // Start Discovery
         _deviceService = new DeviceService();
@@ -87,25 +101,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _transferService.Start();
     }
 
-    private void OnNetworkChanged(object? sender, EventArgs e)
+    private void OnLinkStateChanged(object? sender, EthernetLinkState newState)
     {
-        // Enterprise Robustness: Instantly kill active transfers if the physical link drops
         Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_activeDialog != null && _activeDialog.IsVisible)
-            {
-                var ethInterfaces = EtherTransfer.Network.NetworkInterfaces.NetworkHelper.GetEthernetInterfaces().ToList();
-                if (ethInterfaces.Count == 0)
-                {
-                    OnDebugLog(this, new StructuredLogMessage("network.lost", "Physical link lost! Aborting active transfer instantly.", LogLevel.Error));
-                    _activeDialog.Close();
+            OnPropertyChanged(nameof(LinkState));
+            OnPropertyChanged(nameof(IsNoCable));
+            OnPropertyChanged(nameof(IsConfiguring));
+            OnPropertyChanged(nameof(IsConfigError));
+            OnPropertyChanged(nameof(IsReady));
+            OnPropertyChanged(nameof(LinkErrorMessage));
 
-                    var errorDialog = new ErrorDialog("Connection lost (Ethernet cable disconnected).");
-                    _ = errorDialog.ShowDialog(this);
-                }
+            // If we transition away from Ready while a transfer is active, abort it instantly.
+            if (newState != EthernetLinkState.Ready && _activeDialog != null && _activeDialog.IsVisible)
+            {
+                OnDebugLog(this, new StructuredLogMessage("network.lost", $"Link state changed to {newState}. Aborting active transfer.", LogLevel.Error));
+                _activeDialog.Close();
+
+                var errorDialog = new ErrorDialog($"Connection lost ({newState}).");
+                _ = errorDialog.ShowDialog(this);
             }
         });
     }
+
+    public void RetryConfig_Click(object? sender, RoutedEventArgs e)
+    {
+        _linkMonitor.ManualRetry();
+    }
+
+
 
     private void OnTransferFinished(object? sender, (bool success, string? error) e)
     {

@@ -79,13 +79,7 @@ public class DiscoveryService : IDisposable
         // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
 
-        // Auto-configure Ethernet on Linux (assign link-local IP if missing)
-        // This is no longer blocking the listener bind!
-        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync(isRebind);
-        foreach (var logMsg in configLog)
-        {
-            DebugLog?.Invoke(this, logMsg);
-        }
+
     }
 
     public void UpdateComputerName(string newName)
@@ -237,12 +231,7 @@ public class DiscoveryService : IDisposable
             _cts?.Dispose();
             _globalListener?.Dispose();
 
-            // Restore original Ethernet config on Linux
-            var restoreLog = EthernetConfigurator.RestoreOriginalConfig();
-            foreach (var logMsg in restoreLog)
-            {
-                DebugLog?.Invoke(this, logMsg);
-            }
+
         }
     }
 

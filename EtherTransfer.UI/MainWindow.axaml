@@ -61,42 +61,62 @@
             <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="15">
                 <TextBlock Grid.Row="0" Text="Discovered Devices" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" Margin="5,0,0,10"/>
                 
-                <ListBox x:Name="DevicesList" Grid.Row="1" ItemsSource="{Binding DiscoveredDevices}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}" Background="Transparent">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="Transparent" CornerRadius="4" Padding="10">
-                                <Grid ColumnDefinitions="Auto,*">
-                                    <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
-                                        <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                
-                <!-- Empty State for Devices (Overlay on ListBox) -->
-                <StackPanel Grid.Row="1" IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
+                <!-- Ready State -->
+                <StackPanel Grid.Row="1" IsVisible="{Binding IsReady}">
+                    <ListBox x:Name="DevicesList" ItemsSource="{Binding DiscoveredDevices}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="Transparent" CornerRadius="4" Padding="10">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
+                                            <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                     
-                    <!-- Skeleton Loader -->
-                    <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
-                        <Grid ColumnDefinitions="Auto,*">
-                            <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
-                                <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                    <StackPanel IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
+                        <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                                    <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                                    <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
-                    <!-- Text Instructions -->
-                    <StackPanel Spacing="10" Margin="10,0">
-                        <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
-                        <TextBlock Text="Please connect both devices directly to each other using an Ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.8" Margin="0,5,0,0"/>
+                        <StackPanel Spacing="10" Margin="10,0">
+                            <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </StackPanel>
+                </StackPanel>
+
+                <!-- No Cable State -->
+                <StackPanel Grid.Row="1" IsVisible="{Binding IsNoCable}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
+                    <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
+                    <TextBlock Text="No Ethernet cable connected." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Please connect both devices directly to each other using an Ethernet cable." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Configuring State -->
+                <StackPanel Grid.Row="1" IsVisible="{Binding IsConfiguring}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
+                    <PathIcon Data="{StaticResource SyncIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
+                    <TextBlock Text="Configuring network..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Assigning link-local address..." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Error State -->
+                <StackPanel Grid.Row="1" IsVisible="{Binding IsConfigError}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
+                    <PathIcon Data="{StaticResource ErrorIcon}" Width="48" Height="48" Foreground="{DynamicResource DangerColor}"/>
+                    <TextBlock Text="Configuration Failed" FontSize="16" Foreground="{DynamicResource DangerColor}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding LinkErrorMessage}" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                    <Button Content="Retry" Classes="Primary" Click="RetryConfig_Click" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                 </StackPanel>
             </Grid>
             
