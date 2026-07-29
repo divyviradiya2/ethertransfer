@@ -88,7 +88,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
-        _deviceService.NetworkChanged += OnNetworkChanged;
         _deviceService.DebugLog += OnDebugLog;
         _deviceService.Start(CustomDeviceName, 55000);
 
