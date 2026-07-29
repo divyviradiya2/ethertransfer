@@ -93,19 +93,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsReady));
         OnPropertyChanged(nameof(LinkErrorMessage));
 
-        // Start Discovery
-        _deviceService = new DeviceService();
-        _deviceService.DevicesChanged += OnDevicesChanged;
-        _deviceService.DebugLog += OnDebugLog;
-        _deviceService.Start(CustomDeviceName, 55000);
-
         // Start Transfer Service
-        _transferService = new TransferService(CustomDeviceName, 55000);
+        TransferService tempService;
+        try
+        {
+            tempService = new TransferService(CustomDeviceName, 55000);
+            tempService.Start();
+        }
+        catch
+        {
+            tempService = new TransferService(CustomDeviceName, 0); // Fallback to dynamic port
+            tempService.Start();
+        }
+        _transferService = tempService;
         _transferService.DebugLog += OnDebugLog;
         _transferService.ProgressUpdated += OnProgressUpdated;
         _transferService.TransferFinished += OnTransferFinished;
         _transferService.OnIncomingTransfer = HandleIncomingTransferAsync;
-        _transferService.Start();
+
+        int actualTcpPort = _transferService.TcpPort;
+
+        // Start Discovery
+        _deviceService = new DeviceService();
+        _deviceService.DevicesChanged += OnDevicesChanged;
+        _deviceService.DebugLog += OnDebugLog;
+        
+        try
+        {
+            _deviceService.Start(CustomDeviceName, actualTcpPort);
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.InvokeAsync(async () =>
+            {
+                var msg = $"Fatal error: Unable to bind to UDP discovery port 50000. Is another application using it?\n\n{ex.Message}";
+                OnDebugLog(this, new StructuredLogMessage("startup.fatal", msg, LogLevel.Error));
+                var errorDialog = new ErrorDialog(msg);
+                await errorDialog.ShowDialog(this);
+            });
+        }
     }
 
     private void OnLinkStateChanged(object? sender, EthernetLinkState newState)

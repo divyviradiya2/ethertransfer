@@ -49,6 +49,8 @@ public class DiscoveryService : IDisposable
 
     public async Task StartAsync(string computerName, int tcpPort, bool isRebind = false)
     {
+        Stop();
+
         _computerName = computerName;
         _cts = new CancellationTokenSource();
 
@@ -74,12 +76,11 @@ public class DiscoveryService : IDisposable
         catch (Exception ex)
         {
             Log($"FAILED to bind listener: {ex.Message}", LogLevel.Error, "discovery.bind.error");
+            throw; // Must throw to inform UI
         }
 
         // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
-
-
     }
 
     public void UpdateComputerName(string newName)
@@ -119,7 +120,16 @@ public class DiscoveryService : IDisposable
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
-            var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+            List<InterfaceAddressInfo> ethInterfaces = new List<InterfaceAddressInfo>();
+            try
+            {
+                ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+            }
+            catch (Exception ex)
+            {
+                Log($"Failed to get interfaces during SendBye: {ex.Message}", LogLevel.Warning, "discovery.sendbye.error");
+            }
+
             foreach (var netIf in ethInterfaces)
             {
                 try

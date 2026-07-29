@@ -62,6 +62,14 @@ public static class NetworkHelper
                         }
                     }
                 }
+                else if (ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                {
+                    // For IPv6, broadcast does not exist in the same way, but we can return the local address 
+                    // and use multicast (FF02::1) as the 'broadcast' target equivalent if needed by the caller,
+                    // but for UDP discovery binding, returning the local address is the primary goal.
+                    // The multicast address is standard for all-nodes link-local.
+                    yield return new InterfaceAddressInfo(ip.Address, IPAddress.Parse("ff02::1"));
+                }
             }
         }
     }
@@ -126,9 +134,9 @@ public static class NetworkHelper
     public static bool IsIpInActiveSubnets(string ipAddress)
     {
         if (!IPAddress.TryParse(ipAddress, out var targetIp)) return false;
-        if (targetIp.AddressFamily != AddressFamily.InterNetwork) return false;
 
         var targetBytes = targetIp.GetAddressBytes();
+        bool isIpv6 = targetIp.AddressFamily == AddressFamily.InterNetworkV6;
 
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
@@ -145,7 +153,7 @@ public static class NetworkHelper
 
             foreach (var ip in ni.GetIPProperties().UnicastAddresses)
             {
-                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                if (!isIpv6 && ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
                 {
                     var maskBytes = ip.IPv4Mask.GetAddressBytes();
                     var localBytes = ip.Address.GetAddressBytes();
@@ -159,6 +167,44 @@ public static class NetworkHelper
                             {
                                 matches = false;
                                 break;
+                            }
+                        }
+                        if (matches) return true;
+                    }
+                }
+                else if (isIpv6 && ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                {
+                    // For IPv6, we can do a simple prefix match based on the PrefixLength.
+                    // For link-local (fe80::/10), it's reachable on the same interface.
+                    // Simplified: assume reachable if we have an IPv6 address on this interface 
+                    // and the scope matches or it's on the same subnet.
+                    if (targetIp.IsIPv6LinkLocal && ip.Address.IsIPv6LinkLocal)
+                    {
+                        return true; 
+                    }
+                    
+                    // Simple full subnet check based on prefix length
+                    int prefixBits = ip.PrefixLength;
+                    var localBytes = ip.Address.GetAddressBytes();
+                    if (localBytes.Length == 16 && targetBytes.Length == 16)
+                    {
+                        bool matches = true;
+                        for (int i = 0; i < 16; i++)
+                        {
+                            if (prefixBits >= 8)
+                            {
+                                if (localBytes[i] != targetBytes[i]) { matches = false; break; }
+                                prefixBits -= 8;
+                            }
+                            else if (prefixBits > 0)
+                            {
+                                byte mask = (byte)(0xFF << (8 - prefixBits));
+                                if ((localBytes[i] & mask) != (targetBytes[i] & mask)) { matches = false; break; }
+                                prefixBits = 0;
+                            }
+                            else
+                            {
+                                break; // Checked all prefix bits
                             }
                         }
                         if (matches) return true;

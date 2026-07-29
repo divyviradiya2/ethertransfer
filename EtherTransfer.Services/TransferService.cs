@@ -14,6 +14,8 @@ public class TransferService : IDisposable
     private readonly CancellationTokenSource _cts;
     private readonly string _computerName;
 
+    public int TcpPort => _server.Port;
+
     public event EventHandler<StructuredLogMessage>? DebugLog;
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<(bool success, string? error)>? TransferFinished;

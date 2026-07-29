@@ -13,6 +13,8 @@ public class TcpServer : IDisposable
     private TcpListener? _listener;
     private CancellationTokenSource? _cts;
 
+    public int Port { get; private set; }
+
     // Action to handle incoming client connections.
     // The handler is responsible for taking ownership of the TcpClient and eventually disposing it.
     public Action<TcpClient>? OnClientConnected { get; set; }
@@ -27,10 +29,13 @@ public class TcpServer : IDisposable
     public TcpServer(int port)
     {
         _port = port;
+        Port = port;
     }
 
     public void Start()
     {
+        Stop(); // Ensure any previous listener is stopped
+
         _cts = new CancellationTokenSource();
 
         try
@@ -43,14 +48,17 @@ public class TcpServer : IDisposable
             _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
             _listener.Start();
-            Log($"Started listening on 0.0.0.0:{_port}");
+            
+            Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
+            Log($"Started listening on 0.0.0.0:{Port}");
 
             // Start accepting connections in the background
             _ = Task.Run(() => AcceptLoopAsync(_cts.Token));
         }
         catch (Exception ex)
         {
-            Log($"Failed to start TCP Server on port {_port}: {ex.Message}");
+            Log($"Failed to start TCP Server on port {_port}: {ex.Message}", LogLevel.Error);
+            throw;
         }
     }
 

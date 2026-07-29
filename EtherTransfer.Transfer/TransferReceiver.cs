@@ -257,11 +257,23 @@ public class TransferReceiver
     private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)
     {
         long drained = 0;
+        using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        
         while (drained < count)
         {
+            watchdogCts.CancelAfter(15000); // 15 seconds timeout per chunk
             int toRead = (int)Math.Min(buffer.Length, count - drained);
-            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct))
-                throw new IOException("Connection lost while draining skipped file data.");
+            
+            try
+            {
+                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
+                    throw new IOException("Connection lost while draining skipped file data.");
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new IOException("Connection timed out while draining skipped file data.");
+            }
+            
             drained += toRead;
         }
     }

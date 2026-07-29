@@ -103,14 +103,11 @@ public class TransferSender
 
         try
         {
-            await using (connectCts.Token.Register(() => connectTcs.TrySetCanceled()))
-            {
-                var connectTask = client.ConnectAsync(targetIp, targetPort);
-                await Task.WhenAny(connectTask, connectTcs.Task);
-                if (connectTcs.Task.IsCanceled)
-                    throw new TimeoutException("Connection timed out.");
-                await connectTask;
-            }
+            await client.ConnectAsync(targetIp, targetPort, connectCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException("Connection timed out.");
         }
         catch (Exception ex)
         {
