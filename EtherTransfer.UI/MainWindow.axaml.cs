@@ -78,6 +78,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
 
+        if (OperatingSystem.IsWindows())
+        {
+            // Only apply the custom title bar layout on Windows
+            ExtendClientAreaToDecorationsHint = true;
+            var headerBorder = this.FindControl<Border>("HeaderBorder");
+            if (headerBorder != null)
+            {
+                // Add 35px top margin to sit below the native OS text/icon area,
+                // and 140px right margin so our 'Save' button doesn't overlap the minimize/close buttons.
+                headerBorder.Padding = new Avalonia.Thickness(20, 35, 140, 15);
+            }
+        }
+
         var settings = EtherTransfer.Core.SettingsManager.Load();
         if (string.IsNullOrWhiteSpace(settings.CustomDeviceName))
         {
