@@ -554,6 +554,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _deviceService.Dispose();
         _transferService.Dispose();
+        _linkMonitor.Dispose();
         base.OnClosed(e);
     }
 
