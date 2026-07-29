@@ -85,6 +85,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _linkMonitor.StateChanged += OnLinkStateChanged;
         _linkMonitor.Start();
 
+        // Force UI to pick up the initial state
+        OnPropertyChanged(nameof(LinkState));
+        OnPropertyChanged(nameof(IsNoCable));
+        OnPropertyChanged(nameof(IsConfiguring));
+        OnPropertyChanged(nameof(IsConfigError));
+        OnPropertyChanged(nameof(IsReady));
+        OnPropertyChanged(nameof(LinkErrorMessage));
+
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
