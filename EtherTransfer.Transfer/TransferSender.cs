@@ -19,9 +19,9 @@ public class TransferProgressEventArgs : EventArgs
 public class TransferSender
 {
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
 
-    private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Sender] {msg}");
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "sender.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
     public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
     {

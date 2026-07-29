@@ -5,6 +5,9 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using EtherTransfer.Core;
+using EtherTransfer.Core.Models;
 
 namespace EtherTransfer.Network.NetworkInterfaces;
 
@@ -14,15 +17,19 @@ namespace EtherTransfer.Network.NetworkInterfaces;
 /// </summary>
 public static class EthernetConfigurator
 {
+    private static readonly object _lock = new();
+
     // Track what we changed so we can undo it
     private static readonly List<ConfigChange> _changes = new();
-    private static readonly Dictionary<string, DateTime> _lastConfigAttempt = new();
+
+    private enum ConfigStatus { Pending, Success, Failed }
+    private static readonly Dictionary<string, (DateTime AttemptTime, ConfigStatus Status)> _configState = new();
 
     private record ConfigChange(string Type, string ConnectionName, string InterfaceName, string? OriginalMethod);
 
-    public static async Task<List<string>> EnsureEthernetReadyAsync(bool isRebind = false)
+    public static async Task<List<StructuredLogMessage>> EnsureEthernetReadyAsync(bool isRebind = false)
     {
-        var log = new List<string>();
+        var log = new List<StructuredLogMessage>();
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
@@ -31,36 +38,36 @@ public static class EthernetConfigurator
 
         if (!isRebind)
         {
-            log.Add("Linux detected — checking Ethernet interfaces...");
+            log.Add(new StructuredLogMessage("ethernet.check", "Linux detected — checking Ethernet interfaces...", LogLevel.Info));
         }
 
         var interfaces = NetworkInterface.GetAllNetworkInterfaces()
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
                          ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211)
+            .ToList();
 
-        foreach (var ni in interfaces)
+        var configTasks = interfaces.Select(async currentNi =>
         {
-            var currentNi = ni;
+            var taskLog = new List<StructuredLogMessage>();
             var name = currentNi.Name.ToLowerInvariant();
             var desc = currentNi.Description.ToLowerInvariant();
 
             if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-                continue;
+                return taskLog;
             if (name.StartsWith("docker") || name.StartsWith("br-") || name.StartsWith("veth") ||
                 name.StartsWith("virbr") || name.StartsWith("tun") || name.StartsWith("tap"))
-                continue;
+                return taskLog;
 
             var hasIpv4 = currentNi.GetIPProperties().UnicastAddresses
                 .Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork);
 
             if (!hasIpv4)
             {
-                // Give NetworkManager up to 6 seconds to finish its DHCP/link-local handshake natively.
-                // This prevents the app from starting up with 0 listeners and immediately restarting when NM finishes.
-                for (int i = 0; i < 12; i++)
+                // Give NetworkManager time to finish its DHCP/link-local handshake natively.
+                for (int i = 0; i < NetworkConfig.Default.IPWaitLoopMaxAttempts; i++)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(NetworkConfig.Default.IPWaitLoopDelay);
                     
                     var updatedNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == currentNi.Id);
                     if (updatedNi != null && updatedNi.GetIPProperties().UnicastAddresses.Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork))
@@ -79,27 +86,59 @@ public static class EthernetConfigurator
                     var ip = currentNi.GetIPProperties().UnicastAddresses
                         .First(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
                         .Address.ToString();
-                    log.Add($"[Ethernet] {currentNi.Name}: Already has IP {ip}");
+                    taskLog.Add(new StructuredLogMessage("ethernet.ready", $"[Ethernet] {currentNi.Name}: Already has IP {ip}", LogLevel.Info));
                 }
-                continue;
+                return taskLog;
             }
 
-            if (_lastConfigAttempt.TryGetValue(currentNi.Name, out var lastAttempt))
+            bool shouldAttempt = false;
+            lock (_lock)
             {
-                if ((DateTime.Now - lastAttempt).TotalSeconds < 15)
+                if (_configState.TryGetValue(currentNi.Name, out var state))
                 {
-                    log.Add($"[Ethernet] {currentNi.Name}: Waiting for OS to assign IP (NetworkManager is working...)");
-                    continue;
+                    if ((DateTime.Now - state.AttemptTime) < NetworkConfig.Default.ConfigRetryCooldown)
+                    {
+                        if (state.Status == ConfigStatus.Pending || state.Status == ConfigStatus.Success)
+                        {
+                            taskLog.Add(new StructuredLogMessage("ethernet.pending", $"[Ethernet] {currentNi.Name}: Waiting for OS to assign IP (NetworkManager is working...)", LogLevel.Info));
+                        }
+                        else
+                        {
+                            taskLog.Add(new StructuredLogMessage("ethernet.failed", $"[Ethernet] {currentNi.Name}: Configuration failed recently. Waiting for cooldown.", LogLevel.Warning));
+                        }
+                        return taskLog; // Skip attempt
+                    }
+                }
+                // Mark as pending
+                _configState[currentNi.Name] = (DateTime.Now, ConfigStatus.Pending);
+                shouldAttempt = true;
+            }
+
+            if (shouldAttempt)
+            {
+                taskLog.Add(new StructuredLogMessage("ethernet.configuring", $"[Ethernet] {currentNi.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...", LogLevel.Info));
+
+                var success = TryConfigureWithNmcli(currentNi.Name, taskLog);
+                
+                lock (_lock)
+                {
+                    _configState[currentNi.Name] = (DateTime.Now, success ? ConfigStatus.Success : ConfigStatus.Failed);
+                }
+
+                if (!success)
+                {
+                    taskLog.Add(new StructuredLogMessage("ethernet.config.error", $"[Ethernet] {currentNi.Name}: NetworkManager is required for auto-configuration on this interface, but nmcli failed.", LogLevel.Error));
                 }
             }
 
-            _lastConfigAttempt[currentNi.Name] = DateTime.Now;
-            log.Add($"[Ethernet] {currentNi.Name}: Connected but has no IP address. Configuring Link-Local (auto-discovery) IP...");
+            return taskLog;
+        });
 
-            if (TryConfigureWithNmcli(currentNi.Name, log))
-                continue;
-
-            TryConfigureManually(currentNi.Name, log);
+        // Run interface IP-wait loops concurrently
+        var taskLogs = await Task.WhenAll(configTasks);
+        foreach (var taskLog in taskLogs)
+        {
+            log.AddRange(taskLog);
         }
 
         return log;
@@ -109,23 +148,31 @@ public static class EthernetConfigurator
     /// Restores all Ethernet interfaces to their original configuration.
     /// Call this when the app is shutting down.
     /// </summary>
-    public static List<string> RestoreOriginalConfig()
+    public static List<StructuredLogMessage> RestoreOriginalConfig()
     {
-        var log = new List<string>();
+        var log = new List<StructuredLogMessage>();
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || _changes.Count == 0)
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return log;
 
-        log.Add("Restoring original Ethernet configuration...");
+        List<ConfigChange> changesCopy;
+        lock (_lock)
+        {
+            if (_changes.Count == 0) return log;
+            changesCopy = _changes.ToList();
+            _changes.Clear();
+        }
 
-        foreach (var change in _changes)
+        log.Add(new StructuredLogMessage("ethernet.restore", "Restoring original Ethernet configuration...", LogLevel.Info));
+
+        foreach (var change in changesCopy)
         {
             try
             {
                 switch (change.Type)
                 {
                     case "device_modified":
-                        log.Add($"   Reapplying saved profile to {change.InterfaceName}...");
+                        log.Add(new StructuredLogMessage("ethernet.restore.device", $"   Reapplying saved profile to {change.InterfaceName}...", LogLevel.Info));
                         // Run in background so it doesn't block UI shutdown if NM hangs on DHCP
                         try
                         {
@@ -138,24 +185,16 @@ public static class EthernetConfigurator
                             });
                         }
                         catch { }
-                        log.Add($"   Successfully reapplied in background");
-                        break;
-
-                    case "manual_ip":
-                        // We manually added an IP — remove it
-                        log.Add($"   Flushing manual IP from {change.InterfaceName}...");
-                        RunCommand("ip", $"addr flush dev {change.InterfaceName} scope link");
-                        log.Add($"   Successfully flushed");
+                        log.Add(new StructuredLogMessage("ethernet.restore.success", $"   Successfully reapplied in background", LogLevel.Info));
                         break;
                 }
             }
             catch (Exception ex)
             {
-                log.Add($"   Restore failed for {change.ConnectionName}: {ex.Message}");
+                log.Add(new StructuredLogMessage("ethernet.restore.error", $"   Restore failed for {change.ConnectionName}: {ex.Message}", LogLevel.Error));
             }
         }
 
-        _changes.Clear();
         return log;
     }
 
@@ -164,13 +203,21 @@ public static class EthernetConfigurator
     /// </summary>
     public static void AuditInterfaces()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || _changes.Count == 0)
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             return;
 
-        var allInterfaces = NetworkInterface.GetAllNetworkInterfaces();
         var changesToRestore = new List<ConfigChange>();
+        var originalChanges = new List<ConfigChange>();
 
-        foreach (var change in _changes.ToList())
+        lock (_lock)
+        {
+            if (_changes.Count == 0) return;
+            originalChanges = _changes.ToList();
+        }
+
+        var allInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+
+        foreach (var change in originalChanges)
         {
             var ni = allInterfaces.FirstOrDefault(i => i.Name == change.InterfaceName);
             // If interface doesn't exist, or is down, or cable is unplugged
@@ -182,20 +229,25 @@ public static class EthernetConfigurator
 
         if (changesToRestore.Count > 0)
         {
-            // Temporarily replace the global tracking list with only the ones that dropped
-            var originalChanges = _changes.ToList();
-            _changes.Clear();
-            _changes.AddRange(changesToRestore);
+            lock (_lock)
+            {
+                // Temporarily replace the global tracking list with only the ones that dropped
+                _changes.Clear();
+                _changes.AddRange(changesToRestore);
+            }
 
             RestoreOriginalConfig();
 
-            // Put back the ones that are still active
-            var activeChanges = originalChanges.Except(changesToRestore).ToList();
-            _changes.AddRange(activeChanges);
+            lock (_lock)
+            {
+                // Put back the ones that are still active
+                var activeChanges = originalChanges.Except(changesToRestore).ToList();
+                _changes.AddRange(activeChanges);
+            }
         }
     }
 
-    private static bool TryConfigureWithNmcli(string ifaceName, List<string> log)
+    private static bool TryConfigureWithNmcli(string ifaceName, List<StructuredLogMessage> log)
     {
         try
         {
@@ -209,48 +261,22 @@ public static class EthernetConfigurator
             var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
             if (devModResult.exitCode == 0)
             {
-                _changes.Add(new ConfigChange("device_modified", "", ifaceName, null));
+                lock (_lock)
+                {
+                    _changes.Add(new ConfigChange("device_modified", "", ifaceName, null));
+                }
                 return true;
-            }
-            return false;
-        }
-        catch (Exception ex)
-        {
-            log.Add($"   nmcli error: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static void TryConfigureManually(string ifaceName, List<string> log)
-    {
-        try
-        {
-            var rng = new Random();
-            var ip = $"169.254.{rng.Next(1, 255)}.{rng.Next(1, 255)}";
-            log.Add($"   Assigning {ip}/16 to {ifaceName}...");
-
-            var result = RunCommand("ip", $"addr add {ip}/16 dev {ifaceName}");
-            if (result.exitCode == 0)
-            {
-                _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
             }
             else
             {
-                var sudoResult = RunCommand("sudo", $"-n ip addr add {ip}/16 dev {ifaceName}");
-                if (sudoResult.exitCode == 0)
-                {
-                    _changes.Add(new ConfigChange("manual_ip", "", ifaceName, null));
-                }
-                else
-                {
-                    _changes.Add(new ConfigChange("failed", "", ifaceName, null));
-                }
+                log.Add(new StructuredLogMessage("nmcli.error", $"   nmcli returned exit code {devModResult.exitCode}: {devModResult.output}", LogLevel.Error));
+                return false;
             }
         }
         catch (Exception ex)
         {
-            log.Add($"   Manual config error: {ex.Message}");
-            _changes.Add(new ConfigChange("failed", "", ifaceName, null));
+            log.Add(new StructuredLogMessage("nmcli.error", $"   nmcli error: {ex.Message}", LogLevel.Error));
+            return false;
         }
     }
 
@@ -274,7 +300,13 @@ public static class EthernetConfigurator
 
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
-            process.WaitForExit(10000);
+            
+            bool exited = process.WaitForExit(NetworkConfig.Default.ProcessTimeoutMs);
+            if (!exited)
+            {
+                try { process.Kill(); } catch { }
+                return (-1, $"Process timed out after {NetworkConfig.Default.ProcessTimeoutMs}ms");
+            }
 
             return (process.ExitCode, string.IsNullOrEmpty(output) ? error : output);
         }

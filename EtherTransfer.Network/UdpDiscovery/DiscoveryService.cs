@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using EtherTransfer.Core;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Network.NetworkInterfaces;
 
@@ -33,15 +34,17 @@ public class DiscoveryService : IDisposable
     private CancellationTokenSource? _cts;
     private UdpClient? _globalListener;
     private string _computerName = string.Empty;
+    private readonly string _sessionId = Guid.NewGuid().ToString();
+    private readonly NetworkConfig _config = NetworkConfig.Default;
 
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
 
     // Debug log for the UI
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
 
-    private void Log(string msg)
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "discovery.log")
     {
-        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] {msg}");
+        DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
     }
 
     public async Task StartAsync(string computerName, int tcpPort, bool isRebind = false)
@@ -51,37 +54,38 @@ public class DiscoveryService : IDisposable
 
         if (!isRebind)
         {
-            Log($"Starting discovery as '{computerName}' on port {DiscoveryPort}");
+            Log($"Starting discovery as '{computerName}' on port {_config.DiscoveryPort}");
         }
 
-        // Auto-configure Ethernet on Linux (assign link-local IP if missing)
-        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync(isRebind);
-        foreach (var line in configLog)
-        {
-            Log(line);
-        }
-
-        // Global listener on 0.0.0.0:50000 to receive ALL broadcast packets
+        // Global listener on 0.0.0.0:<DiscoveryPort> to receive ALL broadcast packets
         try
         {
             _globalListener = new UdpClient();
             _globalListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            _globalListener.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
+            _globalListener.Client.Bind(new IPEndPoint(IPAddress.Any, _config.DiscoveryPort));
             
             if (!isRebind)
             {
-                Log("Listener bound to 0.0.0.0:" + DiscoveryPort);
+                Log("Listener bound to 0.0.0.0:" + _config.DiscoveryPort);
             }
             
             _ = Task.Run(() => ListenAsync(_globalListener, _cts.Token));
         }
         catch (Exception ex)
         {
-            Log($"FAILED to bind listener: {ex.Message}");
+            Log($"FAILED to bind listener: {ex.Message}", LogLevel.Error, "discovery.bind.error");
         }
 
         // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
+
+        // Auto-configure Ethernet on Linux (assign link-local IP if missing)
+        // This is no longer blocking the listener bind!
+        var configLog = await EthernetConfigurator.EnsureEthernetReadyAsync(isRebind);
+        foreach (var logMsg in configLog)
+        {
+            DebugLog?.Invoke(this, logMsg);
+        }
     }
 
     public void UpdateComputerName(string newName)
@@ -116,6 +120,7 @@ public class DiscoveryService : IDisposable
                 ComputerName = _computerName,
                 TcpPort = 0,
                 Id = AppId,
+                SessionId = _sessionId,
                 OS = GetCurrentOS()
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
@@ -128,38 +133,18 @@ public class DiscoveryService : IDisposable
                     using var sender = new UdpClient();
                     sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
                     sender.EnableBroadcast = true;
-                    var target = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
+                    var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                     sender.Send(payload, payload.Length, target);
                 }
                 catch { }
             }
 
-            try
-            {
-                using var globalSender = new UdpClient();
-                globalSender.EnableBroadcast = true;
-                var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
-                globalSender.Send(payload, payload.Length, globalTarget);
-            }
-            catch { }
         }
         catch { }
     }
 
     private async Task BroadcastLoopAsync(int tcpPort, CancellationToken ct)
     {
-        // One persistent sender for the global 255.255.255.255 broadcast
-        UdpClient? globalSender = null;
-        try
-        {
-            globalSender = new UdpClient();
-            globalSender.EnableBroadcast = true;
-        }
-        catch (Exception ex)
-        {
-            Log($"Failed to create global sender: {ex.Message}");
-        }
-
         try
         {
             while (!ct.IsCancellationRequested)
@@ -174,6 +159,7 @@ public class DiscoveryService : IDisposable
                     ComputerName = _computerName,
                     TcpPort = tcpPort,
                     Id = AppId,
+                    SessionId = _sessionId,
                     OS = GetCurrentOS()
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
@@ -186,37 +172,19 @@ public class DiscoveryService : IDisposable
                         using var sender = new UdpClient();
                         sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
                         sender.EnableBroadcast = true;
-                        var target = new IPEndPoint(netIf.BroadcastAddress, DiscoveryPort);
+                        var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
                     }
                     catch (Exception ex)
                     {
-                        Log($"Send failed on {netIf.LocalAddress}: {ex.Message}");
+                        Log($"Send failed on {netIf.LocalAddress}: {ex.Message}", LogLevel.Warning, "discovery.send.failed");
                     }
                 }
 
-                // Strategy 2: Also send global 255.255.255.255 broadcast as fallback
-                if (globalSender != null)
-                {
-                    try
-                    {
-                        var globalTarget = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
-                        await globalSender.SendAsync(payload, payload.Length, globalTarget);
-                    }
-                    catch (Exception)
-                    {
-                        // Some Linux networks reject 255.255.255.255 entirely, this is harmless if subnet broadcasts worked.
-                    }
-                }
-
-                await Task.Delay(2000, ct);
+                await Task.Delay(_config.BroadcastIntervalMs, ct);
             }
         }
         catch (OperationCanceledException) { }
-        finally
-        {
-            globalSender?.Dispose();
-        }
     }
 
     private async Task ListenAsync(UdpClient listener, CancellationToken ct)
@@ -234,11 +202,20 @@ public class DiscoveryService : IDisposable
 
                     if (message != null && (message.Type == "HELLO" || message.Type == "BYE") && message.Id == AppId)
                     {
-                        PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
-                    }
-                    else
-                    {
-                        // Ignore silently
+                        if (message.SessionId != _sessionId)
+                        {
+                            // Enterprise Rule: Strictly verify the packet originated from a known Ethernet subnet.
+                            // This drops any discovery packets that leaked in via Wi-Fi adapters.
+                            var sourceIpStr = result.RemoteEndPoint.Address.ToString();
+                            if (NetworkHelper.IsIpInActiveSubnets(sourceIpStr))
+                            {
+                                PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
+                            }
+                            else
+                            {
+                                // Log($"Dropped packet from {sourceIpStr}: Not on an active Ethernet subnet", LogLevel.Debug, "discovery.listen.filtered");
+                            }
+                        }
                     }
                 }
                 catch (JsonException)
@@ -248,7 +225,7 @@ public class DiscoveryService : IDisposable
             }
         }
         catch (OperationCanceledException) { }
-        catch (SocketException ex) { Log($"Socket error: {ex.Message}"); }
+        catch (SocketException ex) { Log($"Socket error: {ex.Message}", LogLevel.Error, "discovery.listen.error"); }
         catch (ObjectDisposedException) { }
     }
 
@@ -262,9 +239,9 @@ public class DiscoveryService : IDisposable
 
             // Restore original Ethernet config on Linux
             var restoreLog = EthernetConfigurator.RestoreOriginalConfig();
-            foreach (var line in restoreLog)
+            foreach (var logMsg in restoreLog)
             {
-                Log(line);
+                DebugLog?.Invoke(this, logMsg);
             }
         }
     }

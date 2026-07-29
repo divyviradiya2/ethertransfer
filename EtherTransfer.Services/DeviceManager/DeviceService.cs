@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.NetworkInformation;
+using EtherTransfer.Core;
 using EtherTransfer.Core.Models;
 using EtherTransfer.Network.UdpDiscovery;
 using EtherTransfer.Network.NetworkInterfaces;
@@ -27,7 +28,12 @@ public class DeviceService : IDisposable
 
     public event EventHandler? DevicesChanged;
     public event EventHandler? NetworkChanged;
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
+
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "device.log")
+    {
+        DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
+    }
 
     public DeviceService()
     {
@@ -49,6 +55,13 @@ public class DeviceService : IDisposable
         // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
         _lastKnownIps = GetCurrentLocalIps();
+        
+        // Initial diagnostic log
+        var diags = NetworkHelper.DiagnoseInterfaces();
+        foreach (var diag in diags)
+        {
+            Log(diag, LogLevel.Info, "network.diagnostic");
+        }
     }
 
     private void OnNetworkAddressChanged(object? sender, EventArgs e)
@@ -72,12 +85,40 @@ public class DeviceService : IDisposable
                 if (token.IsCancellationRequested) return;
 
                 var currentIps = GetCurrentLocalIps();
-                if (_lastKnownIps.SetEquals(currentIps))
+                bool ipSetChanged = !_lastKnownIps.SetEquals(currentIps);
+                _lastKnownIps = currentIps;
+
+                // Evict devices that are no longer reachable via active subnets
+                var removedAny = false;
+                foreach (var kvp in _devices)
+                {
+                    if (!NetworkHelper.IsIpInActiveSubnets(kvp.Value.Address))
+                    {
+                        if (_devices.TryRemove(kvp.Key, out var removed))
+                        {
+                            Log($"EVICTED (Network unreachable): {removed.Name} at {removed.Address}", LogLevel.Warning, "device.evicted.unreachable");
+                            removedAny = true;
+                        }
+                    }
+                }
+
+                if (removedAny)
+                {
+                    DevicesChanged?.Invoke(this, EventArgs.Empty);
+                }
+
+                if (!ipSetChanged)
                 {
                     // Ignore spurious OS routing changes if our IPv4 addresses haven't changed
                     return;
                 }
-                _lastKnownIps = currentIps;
+
+                // Log diagnostics
+                var diags = NetworkHelper.DiagnoseInterfaces();
+                foreach (var diag in diags)
+                {
+                    Log(diag, LogLevel.Info, "network.diagnostic");
+                }
 
                 NetworkChanged?.Invoke(this, EventArgs.Empty);
 
@@ -105,7 +146,7 @@ public class DeviceService : IDisposable
     public IEnumerable<DiscoveredDevice> GetActiveDevices()
     {
         // Group by Name to deduplicate devices broadcasting from multiple network interfaces 
-        // (e.g. Wi-Fi and Ethernet simultaneously). Pick the most recently seen IP address.
+        // (e.g. connected to multiple Ethernet networks simultaneously). Pick the most recently seen IP address.
         return _devices.Values
             .GroupBy(d => d.Name)
             .Select(g => g.OrderByDescending(d => d.LastSeen).First())
@@ -117,6 +158,13 @@ public class DeviceService : IDisposable
         var ips = new HashSet<string>();
         foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
         {
+            var name = ni.Name.ToLowerInvariant();
+            var desc = ni.Description.ToLowerInvariant();
+            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+            {
+                continue;
+            }
+
             foreach (var addr in ni.GetIPProperties().UnicastAddresses)
             {
                 if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
@@ -132,32 +180,40 @@ public class DeviceService : IDisposable
     {
         var sourceIp = e.SourceAddress.ToString();
 
-        // Dynamically check local IPs each time — critical on Linux where the
-        // link-local IP is assigned AFTER startup by EthernetConfigurator.
-        if (GetCurrentLocalIps().Contains(sourceIp))
+        // Use cached IPs to avoid re-querying OS on every packet
+        if (_lastKnownIps.Contains(sourceIp))
         {
             return;
+        }
+        
+        var sessionId = e.Message.SessionId;
+        if (string.IsNullOrEmpty(sessionId)) 
+        {
+            // Fallback for old versions
+            sessionId = sourceIp;
         }
 
         var updated = false;
 
         if (e.Message.Type == "BYE")
         {
-            if (_devices.TryRemove(sourceIp, out var removed))
+            if (_devices.TryRemove(sessionId, out var removed))
             {
-                DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] DEVICE WENT OFFLINE: {removed.Name} at {sourceIp}");
+                Log($"DEVICE WENT OFFLINE: {removed.Name} at {sourceIp}", LogLevel.Info, "device.offline");
                 DevicesChanged?.Invoke(this, EventArgs.Empty);
             }
             return;
         }
         var isNew = false;
-        _devices.AddOrUpdate(sourceIp,
+        
+        _devices.AddOrUpdate(sessionId,
             _ =>
             {
                 updated = true;
                 isNew = true;
                 return new DiscoveredDevice
                 {
+                    SessionId = sessionId,
                     Name = e.Message.ComputerName,
                     Address = sourceIp,
                     OS = e.Message.OS,
@@ -167,10 +223,15 @@ public class DeviceService : IDisposable
             (_, existing) =>
             {
                 existing.LastSeen = DateTime.UtcNow;
-                if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS)
+                if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS || existing.Address != sourceIp)
                 {
+                    if (existing.Address != sourceIp)
+                    {
+                        Log($"DEVICE IP CHANGED: {existing.Name} moved from {existing.Address} to {sourceIp}", LogLevel.Info, "device.ip_changed");
+                    }
                     existing.Name = e.Message.ComputerName;
                     existing.OS = e.Message.OS;
+                    existing.Address = sourceIp;
                     updated = true;
                 }
                 return existing;
@@ -178,7 +239,7 @@ public class DeviceService : IDisposable
 
         if (isNew)
         {
-            DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] NEW DEVICE: {e.Message.ComputerName} at {sourceIp}");
+            Log($"NEW DEVICE: {e.Message.ComputerName} at {sourceIp}", LogLevel.Info, "device.new");
         }
 
         if (updated)
@@ -194,11 +255,7 @@ public class DeviceService : IDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 var now = DateTime.UtcNow;
-                // Increased from 10s to 45s. During extremely heavy TCP file transfers that saturate 
-                // the NIC, UDP broadcast packets are frequently dropped by network switch buffers.
-                // 45 seconds ensures that even with 95% UDP packet loss, the device stays active.
-                // Graceful closures will still be instant thanks to the "BYE" broadcast packet.
-                var staleThreshold = TimeSpan.FromSeconds(45);
+                var staleThreshold = NetworkConfig.Default.PeerStaleThreshold;
                 var removedAny = false;
 
                 var keysToRemove = _devices.Where(kvp => now - kvp.Value.LastSeen > staleThreshold).Select(kvp => kvp.Key).ToList();
@@ -206,7 +263,7 @@ public class DeviceService : IDisposable
                 {
                     if (_devices.TryRemove(key, out var removed))
                     {
-                        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] REMOVED stale: {removed.Name} at {key}");
+                        Log($"REMOVED stale: {removed.Name} at {removed.Address}", LogLevel.Info, "device.removed.stale");
                         removedAny = true;
                     }
                 }

@@ -97,7 +97,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 var ethInterfaces = EtherTransfer.Network.NetworkInterfaces.NetworkHelper.GetEthernetInterfaces().ToList();
                 if (ethInterfaces.Count == 0)
                 {
-                    OnDebugLog(this, "Physical link lost! Aborting active transfer instantly.");
+                    OnDebugLog(this, new StructuredLogMessage("network.lost", "Physical link lost! Aborting active transfer instantly.", LogLevel.Error));
                     _activeDialog.Close();
 
                     var errorDialog = new ErrorDialog("Connection lost (Ethernet cable disconnected).");
@@ -113,7 +113,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (_activeDialog != null && _activeDialog.IsVisible && !e.success)
             {
-                OnDebugLog(this, $"Transfer stopped: {e.error}");
+                OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {e.error}", LogLevel.Error));
                 _activeDialog.Close();
 
                 var errorDialog = new ErrorDialog(e.error ?? "Transfer failed due to a network error.");
@@ -138,50 +138,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 SelectedDevice = DiscoveredDevices[0];
             }
+            // Preserve selection by stable identity (SessionId) across IP changes
+            else if (SelectedDevice != null)
+            {
+                var liveDevice = DiscoveredDevices.FirstOrDefault(d => d.SessionId == SelectedDevice.SessionId);
+                if (liveDevice != null && liveDevice != SelectedDevice)
+                {
+                    SelectedDevice = liveDevice;
+                }
+            }
         });
     }
 
-    private void OnDebugLog(object? sender, string message)
+    private void OnDebugLog(object? sender, StructuredLogMessage logMsg)
     {
         Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var cleanedMessage = message.Trim();
+            var cleanedMessage = logMsg.Message.Trim();
 
             string color = "#A6ADC8"; // Default text (Catppuccin Subtext0)
 
-            if (cleanedMessage.Contains("error", StringComparison.OrdinalIgnoreCase) ||
-                cleanedMessage.Contains("fail", StringComparison.OrdinalIgnoreCase) ||
-                cleanedMessage.Contains("abort", StringComparison.OrdinalIgnoreCase) ||
-                cleanedMessage.Contains("lost", StringComparison.OrdinalIgnoreCase) ||
-                cleanedMessage.Contains("exception", StringComparison.OrdinalIgnoreCase))
+            if (logMsg.Level == LogLevel.Error)
             {
                 color = "#F38BA8"; // Red
             }
-            else if (cleanedMessage.Contains("warn", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("skip", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("no ethernet", StringComparison.OrdinalIgnoreCase))
+            else if (logMsg.Level == LogLevel.Warning)
             {
                 color = "#F9E2AF"; // Yellow
             }
-            else if (cleanedMessage.Contains("success", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("complete", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("accept", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("restored", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("configured", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("new device", StringComparison.OrdinalIgnoreCase))
+            else if (logMsg.EventId.StartsWith("device.new") || logMsg.EventId.StartsWith("ethernet.ready"))
             {
                 color = "#A6E3A1"; // Green
             }
-            else if (cleanedMessage.Contains("settled", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("scanning", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("listening", StringComparison.OrdinalIgnoreCase) ||
-                     cleanedMessage.Contains("offline", StringComparison.OrdinalIgnoreCase))
+            else if (logMsg.Level == LogLevel.Info)
             {
-                color = "#89B4FA"; // Blue
-            }
-            else if (cleanedMessage.Contains("network interface", StringComparison.OrdinalIgnoreCase))
-            {
-                color = "#CBA6F7"; // Purple
+                if (cleanedMessage.Contains("settled", StringComparison.OrdinalIgnoreCase) ||
+                    cleanedMessage.Contains("scanning", StringComparison.OrdinalIgnoreCase) ||
+                    cleanedMessage.Contains("listening", StringComparison.OrdinalIgnoreCase) ||
+                    cleanedMessage.Contains("offline", StringComparison.OrdinalIgnoreCase))
+                {
+                    color = "#89B4FA"; // Blue
+                }
+                else if (cleanedMessage.Contains("network interface", StringComparison.OrdinalIgnoreCase))
+                {
+                    color = "#CBA6F7"; // Purple
+                }
             }
 
             DebugMessages.Add(new LogMessage { Text = cleanedMessage, Color = color });
@@ -227,7 +228,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         SelectedPayloads.Clear();
         UpdateSelectionUI();
-        OnDebugLog(this, "Cleared selection.");
+        OnDebugLog(this, new StructuredLogMessage("ui.selection.cleared", "Cleared selection.", LogLevel.Info));
     }
 
     private void RemovePayload_Click(object? sender, RoutedEventArgs e)
@@ -239,7 +240,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 SelectedPayloads.Remove(item);
                 UpdateSelectionUI();
-                OnDebugLog(this, $"Removed {item.Name} from selection.");
+                OnDebugLog(this, new StructuredLogMessage("ui.selection.removed", $"Removed {item.Name} from selection.", LogLevel.Info));
             }
         }
     }
@@ -248,7 +249,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (SelectedDevice == null || SelectedPayloads.Count == 0) return;
 
-        var targetIp = SelectedDevice.Address;
+        // Resolve target IP at send time against the live table using stable identity
+        var liveDevice = _deviceService.GetActiveDevices().FirstOrDefault(d => d.SessionId == SelectedDevice.SessionId);
+        if (liveDevice == null)
+        {
+            var msg = "Selected device is no longer reachable on the network.";
+            OnDebugLog(this, new StructuredLogMessage("transfer.failed", msg, LogLevel.Error));
+            var errorDialog = new ErrorDialog(msg);
+            _ = errorDialog.ShowDialog(this);
+            return;
+        }
+
+        var targetIp = liveDevice.Address;
+        if (targetIp != SelectedDevice.Address)
+        {
+            OnDebugLog(this, new StructuredLogMessage("transfer.ip_resolved", $"Resolved fresh IP {targetIp} for {liveDevice.Name} before sending.", LogLevel.Info));
+        }
+
         var targetPort = 55000;
 
         var session = new TransferSession();
@@ -282,11 +299,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             // Auto-clear selection after successful transfer
             SelectedPayloads.Clear();
             UpdateSelectionUI();
-            OnDebugLog(this, "Transfer finished successfully. Selection cleared.");
+            OnDebugLog(this, new StructuredLogMessage("transfer.success", "Transfer finished successfully. Selection cleared.", LogLevel.Info));
         }
         catch (OperationCanceledException)
         {
-            OnDebugLog(this, "Transfer cancelled by user.");
+            OnDebugLog(this, new StructuredLogMessage("transfer.cancelled", "Transfer cancelled by user.", LogLevel.Warning));
             dialog.Close();
         }
         catch (Exception ex)
@@ -295,7 +312,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException)
                 msg = "Connection lost (Ethernet cable disconnected or receiver aborted).";
 
-            OnDebugLog(this, $"Transfer failed: {msg}");
+            OnDebugLog(this, new StructuredLogMessage("transfer.error", $"Transfer failed: {msg}", LogLevel.Error));
             dialog.Close();
 
             var errorDialog = new ErrorDialog(msg);
@@ -331,11 +348,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             if (paths.Count == 0)
             {
-                OnDebugLog(this, "Failed to resolve local paths for selected files.");
+                OnDebugLog(this, new StructuredLogMessage("ui.error", "Failed to resolve local paths for selected files.", LogLevel.Error));
                 return;
             }
 
-            OnDebugLog(this, $"Scanning {paths.Count} items in parallel...");
+            OnDebugLog(this, new StructuredLogMessage("ui.scanning", $"Scanning {paths.Count} items in parallel...", LogLevel.Info));
 
             var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
             var scanDialog = new ScanDialog(scanTasksList);
@@ -399,11 +416,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
                 if (paths.Count == 0)
                 {
-                    OnDebugLog(this, "Failed to resolve local path for selected folders. Are these network or virtual drives?");
+                    OnDebugLog(this, new StructuredLogMessage("ui.error", "Failed to resolve local path for selected folders. Are these network or virtual drives?", LogLevel.Warning));
                     return;
                 }
 
-                OnDebugLog(this, $"Scanning {paths.Count} root folder(s) in parallel...");
+                OnDebugLog(this, new StructuredLogMessage("ui.scanning", $"Scanning {paths.Count} root folder(s) in parallel...", LogLevel.Info));
 
                 var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
                 var scanDialog = new ScanDialog(scanTasksList);
@@ -441,7 +458,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            OnDebugLog(this, $"Folder Picker Crash: {ex.Message}\n{ex.StackTrace}");
+            OnDebugLog(this, new StructuredLogMessage("ui.picker_crash", $"Folder Picker Crash: {ex.Message}\n{ex.StackTrace}", LogLevel.Error));
         }
     }
 
@@ -499,7 +516,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         EtherTransfer.Core.SettingsManager.Save(settings);
 
         _deviceService.UpdateComputerName(CustomDeviceName);
-        OnDebugLog(this, $"Saved and broadcasted new name: {CustomDeviceName}");
+        OnDebugLog(this, new StructuredLogMessage("ui.name_saved", $"Saved and broadcasted new name: {CustomDeviceName}", LogLevel.Info));
     }
 
     protected override void OnClosed(EventArgs e)

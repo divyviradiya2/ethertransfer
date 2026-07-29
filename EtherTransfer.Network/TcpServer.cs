@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using EtherTransfer.Core.Models;
 
 namespace EtherTransfer.Network;
 
@@ -16,12 +17,11 @@ public class TcpServer : IDisposable
     // The handler is responsible for taking ownership of the TcpClient and eventually disposing it.
     public Action<TcpClient>? OnClientConnected { get; set; }
 
-    // Debug log event
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
 
-    private void Log(string msg)
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "tcpserver.log")
     {
-        DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [TcpServer] {msg}");
+        DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
     }
 
     public TcpServer(int port)

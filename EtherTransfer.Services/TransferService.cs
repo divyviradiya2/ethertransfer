@@ -14,14 +14,14 @@ public class TransferService : IDisposable
     private readonly CancellationTokenSource _cts;
     private readonly string _computerName;
 
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<(bool success, string? error)>? TransferFinished;
 
     // Delegate to ask the UI for permission
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
 
-    private void Log(string msg) => DebugLog?.Invoke(this, $"[TransferService] {msg}");
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "transfer.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
     public TransferService(string computerName, int tcpPort)
     {

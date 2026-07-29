@@ -118,4 +118,54 @@ public static class NetworkHelper
 
         return results;
     }
+
+    /// <summary>
+    /// Checks if a given IP address is reachable via any of our active Ethernet subnets.
+    /// Useful for quickly evicting peers when a network link drops.
+    /// </summary>
+    public static bool IsIpInActiveSubnets(string ipAddress)
+    {
+        if (!IPAddress.TryParse(ipAddress, out var targetIp)) return false;
+        if (targetIp.AddressFamily != AddressFamily.InterNetwork) return false;
+
+        var targetBytes = targetIp.GetAddressBytes();
+
+        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+
+        foreach (var ni in interfaces)
+        {
+            var name = ni.Name.ToLowerInvariant();
+            var desc = ni.Description.ToLowerInvariant();
+            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
+            {
+                continue;
+            }
+
+            foreach (var ip in ni.GetIPProperties().UnicastAddresses)
+            {
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                {
+                    var maskBytes = ip.IPv4Mask.GetAddressBytes();
+                    var localBytes = ip.Address.GetAddressBytes();
+
+                    if (maskBytes.Length == 4 && localBytes.Length == 4)
+                    {
+                        bool matches = true;
+                        for (int i = 0; i < 4; i++)
+                        {
+                            if ((localBytes[i] & maskBytes[i]) != (targetBytes[i] & maskBytes[i]))
+                            {
+                                matches = false;
+                                break;
+                            }
+                        }
+                        if (matches) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

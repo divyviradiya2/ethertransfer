@@ -26,10 +26,10 @@ public class TransferReceiver
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
 
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
-    public event EventHandler<string>? DebugLog;
+    public event EventHandler<StructuredLogMessage>? DebugLog;
     public event EventHandler<(bool success, string? error)>? TransferFinished;
 
-    private void Log(string msg) => DebugLog?.Invoke(this, $"[{DateTime.Now:HH:mm:ss}] [Receiver] {msg}");
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "receiver.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
     public async Task HandleClientAsync(TcpClient client, CancellationToken ct)
     {
