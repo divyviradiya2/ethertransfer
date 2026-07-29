@@ -134,9 +134,12 @@ public class DiscoveryService : IDisposable
             {
                 try
                 {
-                    using var sender = new UdpClient();
+                    using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
                     sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                    sender.EnableBroadcast = true;
+                    if (netIf.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        sender.EnableBroadcast = true;
+                    }
                     var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                     sender.Send(payload, payload.Length, target);
                 }
@@ -173,9 +176,12 @@ public class DiscoveryService : IDisposable
                 {
                     try
                     {
-                        using var sender = new UdpClient();
+                        using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
                         sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                        sender.EnableBroadcast = true;
+                        if (netIf.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            sender.EnableBroadcast = true;
+                        }
                         var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
                     }
