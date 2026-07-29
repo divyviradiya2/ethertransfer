@@ -136,7 +136,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            _ = Dispatcher.UIThread.InvokeAsync(() =>
             {
                 var msg = $"Fatal error: Unable to bind to UDP discovery port 50000. Is another application using it?\n\n{ex.Message}";
                 OnDebugLog(this, new StructuredLogMessage("startup.fatal", msg, LogLevel.Error));
@@ -149,7 +149,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnLinkStateChanged(object? sender, EthernetLinkState newState)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             OnPropertyChanged(nameof(LinkState));
             OnPropertyChanged(nameof(IsNoCable));
@@ -179,7 +179,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnTransferFinished(object? sender, (bool success, string? error) e)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (_activeDialog != null && _activeDialog.IsVisible && !e.success)
             {
@@ -194,7 +194,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnDevicesChanged(object? sender, EventArgs e)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             var activeDevices = _deviceService.GetActiveDevices();
             DiscoveredDevices.Clear();
@@ -222,7 +222,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OnDebugLog(object? sender, StructuredLogMessage logMsg)
     {
-        Dispatcher.UIThread.InvokeAsync(() =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             var cleanedMessage = logMsg.Message.Trim();
 
@@ -431,16 +431,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var scanTasks = paths.Select(p =>
             {
                 var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
-                Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
+                _ = Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
 
                 var progress = new Progress<int>(count =>
                 {
-                    Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
+                    _ = Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
                 });
 
                 return _transferService.ScanItemAsync(p, progress).ContinueWith(t =>
                 {
-                    Dispatcher.UIThread.InvokeAsync(() =>
+                    _ = Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         vm.IsComplete = true;
                     });
@@ -499,16 +499,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 var scanTasks = paths.Select(p =>
                 {
                     var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
-                    Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
+                    _ = Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
 
                     var progress = new Progress<int>(count =>
                     {
-                        Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
+                        _ = Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
                     });
 
                     return _transferService.ScanItemAsync(p, progress).ContinueWith(t =>
                     {
-                        Dispatcher.UIThread.InvokeAsync(() =>
+                        _ = Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             vm.IsComplete = true;
                         });
@@ -538,14 +538,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         ct.Register(() =>
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            _ = Dispatcher.UIThread.InvokeAsync(() =>
             {
                 _activeDialog?.Close();
                 tcs.TrySetResult((false, "", default));
             });
         });
 
-        Dispatcher.UIThread.InvokeAsync(async () =>
+        _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
             string sizeStr = $"{request.TotalSize / 1024 / 1024} MB";
             string text;
