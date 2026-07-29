@@ -250,15 +250,25 @@ public class EthernetLinkMonitor : IDisposable
         {
             try
             {
-                Process.Start(new ProcessStartInfo
+                Console.WriteLine($"[EtherTransfer] Tearing down link-local config for {ifaceName}...");
+                using var p = Process.Start(new ProcessStartInfo
                 {
                     FileName = "nmcli",
                     Arguments = $"device reapply {ifaceName}",
                     CreateNoWindow = true,
                     UseShellExecute = false
                 });
+                
+                // CRITICAL: We must block and wait for this to exit. 
+                // If this is running during an app shutdown, firing and forgetting 
+                // will cause the OS to kill the nmcli child process before it finishes!
+                p?.WaitForExit(3000); 
+                Console.WriteLine($"[EtherTransfer] Teardown complete for {ifaceName}.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EtherTransfer] Teardown failed for {ifaceName}: {ex.Message}");
+            }
         }
     }
 
