@@ -486,3 +486,4 @@ $RECYCLE.BIN/
 
 # Release scripts
 build-windows-release.ps1
+build-linux-release.sh
