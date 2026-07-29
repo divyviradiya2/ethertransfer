@@ -5,6 +5,12 @@
     <Nullable>enable</Nullable>
     <AssemblyName>EtherTransfer</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Company>DS Labs</Company>
+    <Product>EtherTransfer</Product>
+    <Description>Lightning-fast, cross-platform file and folder transfer application for direct Ethernet connections.</Description>
+    <Copyright>Copyright © 2026 DS Labs</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
