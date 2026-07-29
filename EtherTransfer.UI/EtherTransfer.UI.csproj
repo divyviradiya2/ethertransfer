@@ -11,11 +11,6 @@
     <Product>EtherTransfer</Product>
     <Description>Lightning-fast, cross-platform file and folder transfer application for direct Ethernet connections.</Description>
     <Copyright>Copyright © 2026 DS Labs</Copyright>
-    
-    <!-- Ultra-fast startup optimizations -->
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <TieredCompilation>true</TieredCompilation>
-    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
   </PropertyGroup>
 
   <ItemGroup>

@@ -35,7 +35,7 @@
     <Grid RowDefinitions="Auto,*,Auto">
         
         <!-- HEADER / TOOLBAR -->
-        <Border x:Name="HeaderBorder" Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,15">
+        <Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,15">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
                     <TextBlock Text="EtherTransfer" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center"/>
