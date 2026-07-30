@@ -13,7 +13,7 @@ DisableProgramGroupPage=yes
 
 ; Output Settings
 OutputDir=.\publish\installer
-OutputBaseFilename=EtherTransfer_Setup_x64
+OutputBaseFilename=EtherTransfer_Setup_x86
 SetupIconFile=.\EtherTransfer.UI\Assets\logo.ico
 
 ; HIGHEST COMPRESSION RATIO SETTINGS
@@ -21,9 +21,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAAlgorithm=1
 
-; Architecture (64-bit only)
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+; Architecture (32-bit by default when no architectures are restricted)
+; Removed ArchitecturesAllowed and ArchitecturesInstallIn64BitMode
 
 ; Require admin rights to install to Program Files
 PrivilegesRequired=admin

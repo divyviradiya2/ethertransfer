@@ -1,0 +1,33 @@
+name: Build Linux x86
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  release:
+    types: [created]
+
+jobs:
+  build-linux-x86:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        
+    - name: Publish App (Linux x86)
+      run: dotnet publish EtherTransfer.UI/EtherTransfer.UI.csproj -c Release -r linux-x86 --self-contained true -o ./publish
+      
+    - name: Create Archive (Linux x86)
+      run: tar -czvf EtherTransfer-linux-x86.tar.gz -C ./publish .
+      
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: EtherTransfer-linux-x86
+        path: EtherTransfer-linux-x86.tar.gz
