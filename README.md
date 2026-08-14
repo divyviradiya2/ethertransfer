@@ -42,6 +42,18 @@ EtherTransfer is structured into four main components:
 
 ## Getting Started
 
+### Linux One-Line Installer
+To install EtherTransfer on Linux effortlessly, simply run the following command in your terminal:
+```bash
+curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash
+```
+
+### Linux One-Line Uninstaller
+To completely remove EtherTransfer from your Linux system, run:
+```bash
+curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/uninstall_linux.sh | sudo bash
+```
+
 ### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
 
