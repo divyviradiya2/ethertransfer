@@ -18,7 +18,7 @@ public class TransferService : IDisposable
 
     public event EventHandler<StructuredLogMessage>? DebugLog;
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
-    public event EventHandler<(bool success, string? error)>? TransferFinished;
+    public event EventHandler<TransferResult>? TransferFinished;
 
     // Delegate to ask the UI for permission
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
@@ -51,18 +51,18 @@ public class TransferService : IDisposable
         var receiver = new TransferReceiver();
         receiver.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
         receiver.ProgressUpdated += (_, e) => ProgressUpdated?.Invoke(this, e);
-        receiver.TransferFinished += (_, e) => TransferFinished?.Invoke(this, e);
         receiver.OnIncomingTransfer = OnIncomingTransfer;
 
-        await receiver.HandleClientAsync(client, _cts.Token);
+        var result = await receiver.HandleClientAsync(client, _cts.Token);
+        TransferFinished?.Invoke(this, result);
     }
 
-    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
+    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         var sender = new TransferSender();
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
 
-        return sender.ScanItemAsync(path, progress);
+        return sender.ScanItemAsync(path, progress, ct);
     }
 
     public async Task TransmitSessionAsync(string targetIp, int targetPort, TransferSession session, CancellationToken userCt = default)
@@ -74,16 +74,18 @@ public class TransferService : IDisposable
         // Run send in background task so UI doesn't block
         await Task.Run(async () =>
         {
+            TransferResult result;
             try
             {
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, userCt);
-                await sender.TransmitSessionAsync(targetIp, targetPort, _computerName, session, linkedCts.Token);
+                result = await sender.TransmitSessionAsync(targetIp, targetPort, _computerName, session, linkedCts.Token);
             }
             catch (Exception ex)
             {
                 Log($"Send failed: {ex.Message}");
-                throw;
+                result = new TransferResult { Success = false, ErrorMessage = ex.Message };
             }
+            TransferFinished?.Invoke(this, result);
         }, userCt);
     }
 

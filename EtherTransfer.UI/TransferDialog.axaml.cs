@@ -45,28 +45,77 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsSenderMode));
             OnPropertyChanged(nameof(IsReceiverMode));
             OnPropertyChanged(nameof(IsProgressMode));
+            OnPropertyChanged(nameof(IsFullSuccessMode));
         }
     }
+
+    private bool _isPartialSuccessMode;
+    public bool IsPartialSuccessMode
+    {
+        get => _isPartialSuccessMode;
+        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); }
+    }
+
+    public bool IsFullSuccessMode => IsSuccessMode && !IsPartialSuccessMode;
 
     private string _transferFileName = "";
     public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
 
+    private string _transferItemCountText = "";
+    public string TransferItemCountText { get => _transferItemCountText; set { _transferItemCountText = value; OnPropertyChanged(); } }
+
     private long _transferTotalBytes;
-    public long TransferTotalBytes
-    {
-        get => _transferTotalBytes;
-        set
-        {
-            _transferTotalBytes = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(TransferTotalMegabytes));
-        }
+    public long TransferTotalBytes 
+    { 
+        get => _transferTotalBytes; 
+        set 
+        { 
+            _transferTotalBytes = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(TransferProgressText)); 
+            OnPropertyChanged(nameof(TransferPercentageText)); 
+            OnPropertyChanged(nameof(TransferFinalSizeText)); 
+        } 
     }
 
-    public double TransferTotalMegabytes => _transferTotalBytes / 1024.0 / 1024.0;
+    private string _transferFinalSizeText = "";
+    public string TransferFinalSizeText 
+    { 
+        get => string.IsNullOrEmpty(_transferFinalSizeText) ? EtherTransfer.Core.FormatHelper.FormatSize(_transferTotalBytes) : _transferFinalSizeText; 
+        set { _transferFinalSizeText = value; OnPropertyChanged(); } 
+    }
+
+    private string _completedElementsList = "";
+    public string CompletedElementsList { get => _completedElementsList; set { _completedElementsList = value; OnPropertyChanged(); } }
+
+    public void SetCompletedElements(System.Collections.Generic.List<string> elements)
+    {
+        CompletedElementsList = string.Join("\n", elements);
+    }
 
     private long _transferSentBytes;
-    public long TransferSentBytes { get => _transferSentBytes; set { _transferSentBytes = value; OnPropertyChanged(); } }
+    public long TransferSentBytes 
+    { 
+        get => _transferSentBytes; 
+        set 
+        { 
+            _transferSentBytes = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(TransferProgressText)); 
+            OnPropertyChanged(nameof(TransferPercentageText)); 
+        } 
+    }
+
+    public string TransferPercentageText
+    {
+        get
+        {
+            if (_transferTotalBytes == 0) return "0%";
+            double percent = (double)_transferSentBytes / _transferTotalBytes * 100;
+            if (percent > 100) percent = 100;
+            return $"{percent:F0}%";
+        }
+    }
 
     private string _transferProgressText = "";
     public string TransferProgressText { get => _transferProgressText; set { _transferProgressText = value; OnPropertyChanged(); } }
@@ -106,12 +155,13 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     }
 
     // Factory method for Receiver Mode
-    public static TransferDialog CreateReceiver(string requestText, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
+    public static TransferDialog CreateReceiver(string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
     {
         var dialog = new TransferDialog
         {
             IsSenderMode = false,
             IncomingRequestText = requestText,
+            TransferTotalBytes = totalBytes,
             _receiverTcs = tcs,
             _receiverCancelCts = cancelCts,
             SavePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
@@ -131,8 +181,33 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         Close();
     }
 
-    private void Accept_Click(object? sender, RoutedEventArgs e)
+    private async void Accept_Click(object? sender, RoutedEventArgs e)
     {
+        try
+        {
+            string dir = SavePath;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            
+            var driveInfo = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir)) ?? dir);
+            if (driveInfo.AvailableFreeSpace < TransferTotalBytes)
+            {
+                var neededStr = EtherTransfer.Core.FormatHelper.FormatSize(TransferTotalBytes);
+                var freeStr = EtherTransfer.Core.FormatHelper.FormatSize(driveInfo.AvailableFreeSpace);
+                
+                var errorDialog = new ErrorDialog($"Not enough free space on the selected disk.\n\nRequired: {neededStr}\nAvailable: {freeStr}");
+                await errorDialog.ShowDialog(this);
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Fallback if drive check fails (e.g. permission issues or unknown path format)
+            System.Diagnostics.Debug.WriteLine($"Drive check failed: {ex.Message}");
+        }
+
         // Don't close! Just return the path so the transfer starts.
         // We will switch to progress mode automatically when the first ProgressUpdated event fires.
         _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
@@ -149,12 +224,11 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             if (!IsProgressMode) IsProgressMode = true;
 
             TransferFileName = e.CurrentFile;
+            TransferItemCountText = $"({e.CurrentElementIndex}/{e.TotalElements})";
             TransferTotalBytes = e.TotalBytes;
             TransferSentBytes = e.BytesSent;
 
-            double mbSent = e.BytesSent / 1024.0 / 1024.0;
-            double mbTotal = e.TotalBytes / 1024.0 / 1024.0;
-            TransferProgressText = $"{mbSent:F1} MB / {mbTotal:F1} MB";
+            TransferProgressText = $"{EtherTransfer.Core.FormatHelper.FormatSize(e.BytesSent)} / {EtherTransfer.Core.FormatHelper.FormatSize(e.TotalBytes)}";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
 
             if (e.BytesSent >= e.TotalBytes && !_successQueued)
@@ -190,6 +264,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
                 SavePath = path;
             }
         }
+    }
+
+    public void CancelTransfer()
+    {
+        _senderCts?.Cancel();
+        _receiverCancelCts?.Cancel();
     }
 
     protected override void OnClosed(EventArgs e)

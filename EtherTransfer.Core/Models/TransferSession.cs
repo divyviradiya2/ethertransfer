@@ -7,6 +7,7 @@ public class FileSelectionItem
 {
     public string AbsolutePath { get; set; } = string.Empty;
     public string RelativePath { get; set; } = string.Empty;
+    public string RootName { get; set; } = string.Empty; // The top-level folder or file name the user selected
     public long Size { get; set; }
 }
 

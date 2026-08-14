@@ -44,6 +44,7 @@ public class TransferResponseMessage : BaseProtocolMessage
 public class FileItemMetadata
 {
     public string RelativePath { get; set; } = string.Empty;
+    public string RootName { get; set; } = string.Empty;
     public long Size { get; set; }
 }
 

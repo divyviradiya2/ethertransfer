@@ -27,12 +27,12 @@ public class TransferReceiver
 
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<StructuredLogMessage>? DebugLog;
-    public event EventHandler<(bool success, string? error)>? TransferFinished;
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "receiver.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
-    public async Task HandleClientAsync(TcpClient client, CancellationToken ct)
+    public async Task<TransferResult> HandleClientAsync(TcpClient client, CancellationToken appCt)
     {
+        var result = new TransferResult();
         var remoteEp = client.Client.RemoteEndPoint?.ToString();
         Log($"Handling incoming connection from {remoteEp}");
 
@@ -43,7 +43,7 @@ public class TransferReceiver
                 var stream = client.GetStream();
 
                 // 1. Wait for Request
-                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, ct);
+                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, appCt);
                 if (request == null)
                     throw new Exception("Did not receive TransferRequest.");
 
@@ -54,7 +54,7 @@ public class TransferReceiver
                     throw new Exception("No UI handler attached for incoming transfers.");
 
                 using var disconnectCts = new CancellationTokenSource();
-                using var uiCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                using var uiCts = CancellationTokenSource.CreateLinkedTokenSource(appCt);
 
                 var uiTask = OnIncomingTransfer(request, uiCts.Token);
 
@@ -79,13 +79,14 @@ public class TransferReceiver
                 {
                     uiCts.Cancel();
                     Log("Sender disconnected before request was accepted.");
-                    return;
+                    result.ErrorMessage = "Sender disconnected.";
+                    return result;
                 }
 
                 disconnectCts.Cancel();
                 var (accepted, savePath, cancelToken) = await uiTask;
 
-                using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(ct, cancelToken);
+                using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(appCt, cancelToken);
                 var transferCt = linkedCt.Token;
 
                 // 3. Send Response
@@ -99,7 +100,8 @@ public class TransferReceiver
                 if (!accepted)
                 {
                     Log("Transfer declined by user.");
-                    return;
+                    result.ErrorMessage = "User declined.";
+                    return result;
                 }
 
                 Directory.CreateDirectory(savePath);
@@ -112,146 +114,175 @@ public class TransferReceiver
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var buffer = new byte[1024 * 1024];
 
-                while (!transferCt.IsCancellationRequested)
+                int totalElements = request.PayloadFolderCount + request.PayloadFileCount;
+                result.TotalElements = totalElements;
+                int currentElementIndex = 0;
+                string? currentRootName = null;
+
+                try
                 {
-                    var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt);
-                    if (markerJson == null) break;
-
-                    var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
-                    if (baseMsg == null) break;
-
-                    if (baseMsg.Type == "TRANSFER_END")
-                        break;
-
-                    if (baseMsg.Type == "FILE_SKIP")
+                    while (true)
                     {
-                        var skipMsg = JsonSerializer.Deserialize<FileSkipMessage>(markerJson);
-                        if (skipMsg != null)
-                            Log($"Sender skipped: {skipMsg.RelativePath} — {skipMsg.Reason}");
-                        filesSkipped++;
-                        continue;
-                    }
+                        transferCt.ThrowIfCancellationRequested();
 
-                    if (baseMsg.Type != "FILE_BEGIN")
-                        continue;
+                        var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt);
+                        if (markerJson == null) break;
 
-                    // FILE_BEGIN — read metadata
-                    var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt);
-                    if (fileMeta == null) break;
+                        var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
+                        if (baseMsg == null) break;
 
-                    // === PATH SECURITY ===
-                    var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
-                    if (safePath == null)
-                    {
-                        Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
-                        await DrainBytesAsync(stream, fileMeta.Size, buffer, transferCt);
-                        filesSkipped++;
-                        continue;
-                    }
+                        if (baseMsg.Type == "TRANSFER_END")
+                            break;
 
-                    // === COLLISION RESOLUTION ===
-                    safePath = PathSanitizer.ResolveCollision(safePath);
-
-                    var dirPath = Path.GetDirectoryName(safePath);
-                    if (dirPath != null) Directory.CreateDirectory(dirPath);
-
-                    try
-                    {
-                        using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
-
-                        long fileReceived = 0;
-
-                        var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-                        var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
-
-                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        if (baseMsg.Type == "FILE_SKIP")
                         {
-                            CurrentFile = fileMeta.RelativePath,
-                            BytesSent = totalReceived,
-                            TotalBytes = request.TotalSize,
-                            SpeedMbPerSec = initialSpeed
-                        });
-
-                        var lastUpdate = watch.ElapsedMilliseconds;
-
-                        using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(transferCt);
-
-                        while (fileReceived < fileMeta.Size)
-                        {
-                            watchdogCts.CancelAfter(15000); // 15 seconds to receive 1MB
-
-                            int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-
-                            try
-                            {
-                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
-                                    throw new IOException("Connection lost while reading file data.");
-                            }
-                            catch (OperationCanceledException) when (!transferCt.IsCancellationRequested)
-                            {
-                                throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
-                            }
-
-                            await fs.WriteAsync(buffer, 0, toRead, transferCt);
-
-                            fileReceived += toRead;
-                            totalReceived += toRead;
-
-                            var currentElapsed = watch.ElapsedMilliseconds;
-                            if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
-                            {
-                                lastUpdate = currentElapsed;
-                                var elapsedSec = watch.Elapsed.TotalSeconds;
-                                var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
-
-                                ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
-                                {
-                                    CurrentFile = fileMeta.RelativePath,
-                                    BytesSent = totalReceived,
-                                    TotalBytes = request.TotalSize,
-                                    SpeedMbPerSec = speed
-                                });
-                            }
+                            var skipMsg = JsonSerializer.Deserialize<FileSkipMessage>(markerJson);
+                            if (skipMsg != null)
+                                Log($"Sender skipped: {skipMsg.RelativePath} — {skipMsg.Reason}");
+                            filesSkipped++;
+                            continue;
                         }
 
-                        filesReceived++;
-                    }
-                    catch (Exception ex)
-                    {
-                        Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
+                        if (baseMsg.Type != "FILE_BEGIN")
+                            continue;
 
-                        // Clean up partially received file
+                        // FILE_BEGIN — read metadata
+                        var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt);
+                        if (fileMeta == null) break;
+                    
+                        if (fileMeta.RootName != currentRootName)
+                        {
+                            if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+                            {
+                                result.CompletedElementNames.Add(currentRootName);
+                            }
+                            currentRootName = fileMeta.RootName;
+                            currentElementIndex++;
+                        }
+
+                        // === PATH SECURITY ===
+                        var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
+                        if (safePath == null)
+                        {
+                            Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
+                            await DrainBytesAsync(stream, fileMeta.Size, buffer, transferCt);
+                            filesSkipped++;
+                            continue;
+                        }
+
+                        // === COLLISION RESOLUTION ===
+                        safePath = PathSanitizer.ResolveCollision(safePath);
+
+                        var dirPath = Path.GetDirectoryName(safePath);
+                        if (dirPath != null) Directory.CreateDirectory(dirPath);
+
                         try
                         {
-                            if (File.Exists(safePath))
-                                File.Delete(safePath);
+                            using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+
+                            long fileReceived = 0;
+
+                            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
+                            var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+
+                            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                            {
+                                CurrentFile = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName,
+                                BytesSent = totalReceived,
+                                TotalBytes = request.TotalSize,
+                                SpeedMbPerSec = initialSpeed,
+                                CurrentElementIndex = currentElementIndex,
+                                TotalElements = totalElements
+                            });
+
+                            var lastUpdate = watch.ElapsedMilliseconds;
+
+                            using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(transferCt);
+
+                            while (fileReceived < fileMeta.Size)
+                            {
+                                watchdogCts.CancelAfter(15000); // 15 seconds to receive 1MB
+
+                                int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
+
+                                try
+                                {
+                                    if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
+                                        throw new IOException("Connection lost while reading file data.");
+                                }
+                                catch (OperationCanceledException) when (!transferCt.IsCancellationRequested)
+                                {
+                                    throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
+                                }
+
+                                await fs.WriteAsync(buffer, 0, toRead, transferCt);
+
+                                fileReceived += toRead;
+                                totalReceived += toRead;
+
+                                var currentElapsed = watch.ElapsedMilliseconds;
+                                if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
+                                {
+                                    lastUpdate = currentElapsed;
+                                    var elapsedSec = watch.Elapsed.TotalSeconds;
+                                    var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
+
+                                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                                    {
+                                        CurrentFile = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName,
+                                        BytesSent = totalReceived,
+                                        TotalBytes = request.TotalSize,
+                                        SpeedMbPerSec = speed,
+                                        CurrentElementIndex = currentElementIndex,
+                                        TotalElements = totalElements
+                                    });
+                                }
+                            }
+
+                            filesReceived++;
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
 
-                        if (ex is OperationCanceledException)
-                            throw;
+                            // Clean up partially received file
+                            try
+                            {
+                                if (File.Exists(safePath))
+                                    File.Delete(safePath);
+                            }
+                            catch { }
+
+                            if (ex is OperationCanceledException)
+                                throw;
+                        }
                     }
-                }
 
-                watch.Stop();
-                Log($"Transfer complete! {totalReceived / 1024 / 1024} MB in {watch.Elapsed.TotalSeconds:F1}s — {filesReceived} received, {filesSkipped} skipped.");
-                TransferFinished?.Invoke(this, (true, null));
+                    if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+                    {
+                        result.CompletedElementNames.Add(currentRootName);
+                    }
+                
+                    result.Success = true;
+                    watch.Stop();
+                    var summary = $"Transfer complete! Received {totalReceived / 1024 / 1024} MB ({filesReceived} files) in {watch.Elapsed.TotalSeconds:F1}s.";
+                    Log(summary);
+                }
+                catch (Exception ex)
+                {
+                    result.Success = false;
+                    result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+                }
             }
-        }
-        catch (OperationCanceledException)
-        {
-            Log("Transfer cancelled.");
-            TransferFinished?.Invoke(this, (false, "Transfer cancelled by user."));
         }
         catch (Exception ex)
         {
-            var msg = ex.Message;
-            if (ex is IOException || ex is SocketException)
-                msg = "Connection lost (Ethernet cable disconnected or sender aborted).";
-
-            Log($"Error handling connection: {msg}");
-            TransferFinished?.Invoke(this, (false, msg));
+            result.Success = false;
+            result.ErrorMessage = ex is System.IO.IOException || ex is System.Net.Sockets.SocketException 
+                ? "Connection lost (Ethernet cable disconnected or sender aborted)." 
+                : ex.Message;
         }
+        return result;
     }
 
     private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)

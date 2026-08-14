@@ -14,6 +14,8 @@ public class TransferProgressEventArgs : EventArgs
     public long BytesSent { get; set; }
     public long TotalBytes { get; set; }
     public double SpeedMbPerSec { get; set; }
+    public int CurrentElementIndex { get; set; }
+    public int TotalElements { get; set; }
 }
 
 public class TransferSender
@@ -23,7 +25,7 @@ public class TransferSender
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "sender.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
-    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null)
+    public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         return Task.Run(() =>
         {
@@ -39,7 +41,7 @@ public class TransferSender
                     var fi = new FileInfo(path);
                     payload.Name = fi.Name;
                     payload.Type = PayloadItemType.File;
-                    payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, Size = fi.Length });
+                    payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, RootName = fi.Name, Size = fi.Length });
                 }
                 else if (Directory.Exists(path))
                 {
@@ -56,29 +58,21 @@ public class TransferSender
                     };
 
                     int count = 0;
-                    foreach (var fileInfo in baseDir.EnumerateFiles("*", options))
+                    foreach (var file in Directory.EnumerateFiles(path, "*", options))
                     {
-                        try
-                        {
-                            string relPath = fileInfo.FullName.Substring(parentDir.Length);
-                            if (relPath.StartsWith(Path.DirectorySeparatorChar.ToString()) || relPath.StartsWith(Path.AltDirectorySeparatorChar.ToString()))
-                            {
-                                relPath = relPath.Substring(1);
-                            }
-                            relPath = relPath.Replace('\\', '/');
-
-                            payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = fileInfo.FullName, RelativePath = relPath, Size = fileInfo.Length });
-
-                            count++;
-                            if (count % 100 == 0)
-                            {
-                                progress?.Report(count);
-                            }
-                        }
-                        catch { }
+                        ct.ThrowIfCancellationRequested();
+                        var fi = new FileInfo(file);
+                        payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = file, RelativePath = Path.GetRelativePath(parentDir, file).Replace('\\', '/'), RootName = baseDir.Name, Size = fi.Length });
+                        count++;
+                        if (count % 100 == 0) progress?.Report(count);
                     }
-                    progress?.Report(count); // Final report
+                    progress?.Report(count);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                payload.DeepScannedFiles.Clear();
+                throw;
             }
             catch (Exception ex)
             {
@@ -90,9 +84,14 @@ public class TransferSender
         });
     }
 
-    public async Task TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
+    public async Task<TransferResult> TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
     {
-        if (session.Files.Count == 0) return;
+        var result = new TransferResult { TotalElements = session.PayloadFolderCount + session.PayloadFileCount };
+        if (session.Files.Count == 0)
+        {
+            result.Success = true;
+            return result;
+        }
 
         Log($"Connecting to {targetIp}:{targetPort}...");
         using var client = new TcpClient();
@@ -152,9 +151,25 @@ public class TransferSender
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var buffer = new byte[1024 * 1024]; // 1 MB read buffer
 
-        foreach (var item in session.Files)
+        int totalElements = session.PayloadFolderCount + session.PayloadFileCount;
+        int currentElementIndex = 0;
+        string? currentRootName = null;
+
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            foreach (var item in session.Files)
+            {
+                if (item.RootName != currentRootName)
+                {
+                    if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+                    {
+                        result.CompletedElementNames.Add(currentRootName);
+                    }
+                    currentRootName = item.RootName;
+                    currentElementIndex++;
+                }
+
+                ct.ThrowIfCancellationRequested();
 
             // Attempt to open the file — handle locks, deletions, permission issues gracefully
             FileStream? fs;
@@ -194,6 +209,7 @@ public class TransferSender
                 var meta = new FileItemMetadata
                 {
                     RelativePath = item.RelativePath,
+                    RootName = item.RootName,
                     Size = actualSize
                 };
                 await ProtocolHelper.SendMessageAsync(stream, meta, ct);
@@ -206,10 +222,12 @@ public class TransferSender
 
                 ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                 {
-                    CurrentFile = item.RelativePath,
+                    CurrentFile = item.RootName,
                     BytesSent = totalSent,
                     TotalBytes = session.TotalSize,
-                    SpeedMbPerSec = initialSpeed
+                    SpeedMbPerSec = initialSpeed,
+                    CurrentElementIndex = currentElementIndex,
+                    TotalElements = totalElements
                 });
 
                 var lastUpdate = watch.ElapsedMilliseconds;
@@ -240,10 +258,12 @@ public class TransferSender
 
                         ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                         {
-                            CurrentFile = item.RelativePath,
+                            CurrentFile = item.RootName,
                             BytesSent = totalSent,
                             TotalBytes = session.TotalSize,
-                            SpeedMbPerSec = speed
+                            SpeedMbPerSec = speed,
+                            CurrentElementIndex = currentElementIndex,
+                            TotalElements = totalElements
                         });
                     }
                 }
@@ -251,16 +271,31 @@ public class TransferSender
                 filesSent++;
             }
         }
+            
+            if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+            {
+                result.CompletedElementNames.Add(currentRootName);
+            }
 
-        // 4. End of Transfer
-        var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
-        await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
+            // 4. End of Transfer
+            var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
+            await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
+
+            result.Success = true;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+        }
 
         watch.Stop();
         var summary = $"Transfer complete! Sent {totalSent / 1024 / 1024} MB ({filesSent} files) in {watch.Elapsed.TotalSeconds:F1}s.";
         if (filesSkipped > 0)
             summary += $" ({filesSkipped} skipped)";
         Log(summary);
+        
+        return result;
     }
 
     private static async Task SendFileSkip(NetworkStream stream, string relativePath, string reason, CancellationToken ct)

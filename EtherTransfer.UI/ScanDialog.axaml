@@ -39,6 +39,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+            
+            <Button Grid.Row="2" Content="Cancel Scan" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Margin="0,20,0,0" Padding="20,8"/>
         </Grid>
     </Border>
 </Window>

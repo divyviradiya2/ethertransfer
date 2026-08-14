@@ -45,7 +45,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public bool HasSelectedFiles => SelectedPayloads.Count > 0;
 
     public string SelectionSummaryText => HasSelectedFiles
-        ? $"Total: {SelectedPayloads.Count} items ({SelectedPayloads.Sum(p => p.TotalSize) / 1024 / 1024} MB)"
+        ? $"Total: {SelectedPayloads.Count} items ({EtherTransfer.Core.FormatHelper.FormatSize(SelectedPayloads.Sum(p => p.TotalSize))})"
+        : "";
+
+    public string TotalSelectionSizeText => HasSelectedFiles
+        ? $"Total Size: {EtherTransfer.Core.FormatHelper.FormatSize(SelectedPayloads.Sum(p => p.TotalSize))}"
         : "";
 
     public bool CanSend => HasSelection && HasSelectedFiles;
@@ -166,7 +170,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (newState != EthernetLinkState.Ready && _activeDialog != null && _activeDialog.IsVisible)
             {
                 OnDebugLog(this, new StructuredLogMessage("network.lost", $"Link state changed to {newState}. Aborting active transfer.", LogLevel.Error));
-                _activeDialog.Close();
+                _activeDialog.CancelTransfer();
 
                 var errorDialog = new ErrorDialog($"Connection lost ({newState}).");
                 _ = errorDialog.ShowDialog(this);
@@ -181,17 +185,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
 
 
-    private void OnTransferFinished(object? sender, (bool success, string? error) e)
+    private void OnTransferFinished(object? sender, EtherTransfer.Core.Models.TransferResult result)
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_activeDialog != null && _activeDialog.IsVisible && !e.success)
+            if (_activeDialog != null && _activeDialog.IsVisible)
             {
-                OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {e.error}", LogLevel.Error));
-                _activeDialog.Close();
+                if (result.Success || result.CompletedElementsCount > 0)
+                {
+                    _activeDialog.IsSuccessMode = true;
+                    // For partial success, we can customize the text later
+                    if (!result.Success)
+                    {
+                        _activeDialog.TransferFinalSizeText = $"Partial Success. Completed {result.CompletedElementsCount}/{result.TotalElements} items.";
+                    }
+                    _activeDialog.SetCompletedElements(result.CompletedElementNames);
+                }
+                else
+                {
+                    OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {result.ErrorMessage}", LogLevel.Error));
+                    _activeDialog.Close();
 
-                var errorDialog = new ErrorDialog(e.error ?? "Transfer failed due to a network error.");
-                _ = errorDialog.ShowDialog(this);
+                    if (result.ErrorMessage != "Transfer cancelled." && result.ErrorMessage != "User declined.")
+                    {
+                        var errorDialog = new ErrorDialog(result.ErrorMessage ?? "Transfer failed due to a network error.");
+                        _ = errorDialog.ShowDialog(this);
+                    }
+                }
             }
         });
     }
@@ -297,6 +317,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(HasSelectedFiles));
         OnPropertyChanged(nameof(SelectionSummaryText));
+        OnPropertyChanged(nameof(TotalSelectionSizeText));
         OnPropertyChanged(nameof(CanSend));
     }
 
@@ -371,28 +392,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             await _transferService.TransmitSessionAsync(targetIp, targetPort, session, cts.Token);
-
-            // Auto-clear selection after successful transfer
-            SelectedPayloads.Clear();
-            UpdateSelectionUI();
-            OnDebugLog(this, new StructuredLogMessage("transfer.success", "Transfer finished successfully. Selection cleared.", LogLevel.Info));
-        }
-        catch (OperationCanceledException)
-        {
-            OnDebugLog(this, new StructuredLogMessage("transfer.cancelled", "Transfer cancelled by user.", LogLevel.Warning));
-            dialog.Close();
-        }
-        catch (Exception ex)
-        {
-            var msg = ex.Message;
-            if (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException)
-                msg = "Connection lost (Ethernet cable disconnected or receiver aborted).";
-
-            OnDebugLog(this, new StructuredLogMessage("transfer.error", $"Transfer failed: {msg}", LogLevel.Error));
-            dialog.Close();
-
-            var errorDialog = new ErrorDialog(msg);
-            _ = errorDialog.ShowDialog(this);
         }
         finally
         {
@@ -430,36 +429,40 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             OnDebugLog(this, new StructuredLogMessage("ui.scanning", $"Scanning {paths.Count} items in parallel...", LogLevel.Info));
 
+            var cts = new CancellationTokenSource();
             var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
-            var scanDialog = new ScanDialog(scanTasksList);
+            var scanDialog = new ScanDialog(scanTasksList, cts);
             _ = scanDialog.ShowDialog(this);
 
-            var scanTasks = paths.Select(p =>
-            {
-                var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
-                _ = Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
-
-                var progress = new Progress<int>(count =>
+                var scanTasks = paths.Select(p =>
                 {
-                    _ = Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
-                });
+                    var vm = new ScanProgressViewModel { FolderName = System.IO.Path.GetFileName(p) ?? p };
+                    _ = Dispatcher.UIThread.InvokeAsync(() => scanTasksList.Add(vm));
 
-                return _transferService.ScanItemAsync(p, progress).ContinueWith(t =>
-                {
-                    _ = Dispatcher.UIThread.InvokeAsync(() =>
+                    var progress = new Progress<int>(count =>
                     {
-                        vm.IsComplete = true;
+                        _ = Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
                     });
-                    return t.Result;
+
+                    return _transferService.ScanItemAsync(p, progress, cts.Token).ContinueWith(t =>
+                    {
+                        _ = Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            vm.IsComplete = true;
+                        });
+                        return t.IsCanceled || t.IsFaulted ? null : t.Result;
+                    });
                 });
-            });
 
             var payloads = await Task.WhenAll(scanTasks);
             scanDialog.Close();
 
             foreach (var payload in payloads)
             {
-                SelectedPayloads.Add(payload);
+                if (payload != null)
+                {
+                    SelectedPayloads.Add(payload);
+                }
             }
             UpdateSelectionUI();
         }
@@ -498,8 +501,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
                 OnDebugLog(this, new StructuredLogMessage("ui.scanning", $"Scanning {paths.Count} root folder(s) in parallel...", LogLevel.Info));
 
+                var cts = new CancellationTokenSource();
                 var scanTasksList = new ObservableCollection<ScanProgressViewModel>();
-                var scanDialog = new ScanDialog(scanTasksList);
+                var scanDialog = new ScanDialog(scanTasksList, cts);
                 _ = scanDialog.ShowDialog(this);
 
                 var scanTasks = paths.Select(p =>
@@ -512,13 +516,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         _ = Dispatcher.UIThread.InvokeAsync(() => vm.FilesFound = count);
                     });
 
-                    return _transferService.ScanItemAsync(p, progress).ContinueWith(t =>
+                    return _transferService.ScanItemAsync(p, progress, cts.Token).ContinueWith(t =>
                     {
                         _ = Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             vm.IsComplete = true;
                         });
-                        return t.Result;
+                        return t.IsCanceled || t.IsFaulted ? null : t.Result;
                     });
                 });
 
@@ -527,7 +531,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
                 foreach (var payload in payloads)
                 {
-                    SelectedPayloads.Add(payload);
+                    if (payload != null)
+                    {
+                        SelectedPayloads.Add(payload);
+                    }
                 }
                 UpdateSelectionUI();
             }
@@ -553,7 +560,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
-            string sizeStr = $"{request.TotalSize / 1024 / 1024} MB";
+            string sizeStr = EtherTransfer.Core.FormatHelper.FormatSize(request.TotalSize);
             string text;
 
             if (request.PayloadFolderCount > 0 && request.PayloadFileCount > 0)
@@ -569,8 +576,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 text = $"{request.SenderName} wants to send {request.PayloadFileCount} file(s) ({sizeStr}).";
             }
 
-            var dialogCts = new CancellationTokenSource();
-            var dialog = TransferDialog.CreateReceiver(text, tcs, dialogCts);
+            var cancelCts = new CancellationTokenSource();
+            var dialog = TransferDialog.CreateReceiver(text, request.TotalSize, tcs, cancelCts);
             _activeDialog = dialog;
             await dialog.ShowDialog(this);
             _activeDialog = null;
