@@ -19,10 +19,8 @@ echo "========================================="
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
     ET_ARCH="x64"
-elif [ "$ARCH" = "i386" ] || [ "$ARCH" = "i686" ]; then
-    ET_ARCH="x86"
 else
-    echo "[-] Unsupported architecture: $ARCH"
+    echo "[-] Unsupported architecture: $ARCH. Only x86_64 (64-bit) is supported."
     exit 1
 fi
 echo "[+] Detected Architecture: $ARCH ($ET_ARCH)"

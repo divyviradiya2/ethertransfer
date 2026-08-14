@@ -19,8 +19,10 @@ jobs:
     - name: Publish App (Windows x86)
       run: dotnet publish EtherTransfer.UI/EtherTransfer.UI.csproj -c Release -r win-x86 --self-contained true -o ./publish
       
-    - name: Compile Inno Setup Script (x86)
-      uses: minicrm/setup-inno-setup@v1
+    - name: Install Inno Setup
+      run: |
+        choco install innosetup
+        echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
       
     - name: Build Installer (x86)
       run: ISCC.exe EtherTransfer_x86.iss
