@@ -6,8 +6,9 @@
         Title="Scanning"
         Width="400" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
-        WindowDecorations="BorderOnly"
-        Background="{DynamicResource AppBackground}"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
         Foreground="{DynamicResource AppForeground}"
         CanResize="False">
     

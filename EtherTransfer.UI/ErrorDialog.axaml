@@ -5,21 +5,25 @@
         Width="450" Height="200"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        Background="#1E1E1E">
-    <Grid RowDefinitions="*, Auto" Margin="20">
-        <TextBlock Name="MessageText" 
-                   Foreground="#FF6B6B"
-                   TextWrapping="Wrap" 
-                   VerticalAlignment="Center" 
-                   HorizontalAlignment="Center" 
-                   TextAlignment="Center"
-                   FontSize="16" />
-        <Button Grid.Row="1" 
-                Content="OK" 
-                Click="Ok_Click" 
-                HorizontalAlignment="Center" 
-                HorizontalContentAlignment="Center"
-                Width="100" 
-                Margin="0,20,0,0" />
-    </Grid>
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+    <Border Background="#1E1E1E" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+        <Grid RowDefinitions="*, Auto" Margin="20">
+            <TextBlock Name="MessageText" 
+                       Foreground="#FF6B6B"
+                       TextWrapping="Wrap" 
+                       VerticalAlignment="Center" 
+                       HorizontalAlignment="Center" 
+                       TextAlignment="Center"
+                       FontSize="16" />
+            <Button Grid.Row="1" 
+                    Content="OK" 
+                    Click="Ok_Click" 
+                    HorizontalAlignment="Center" 
+                    HorizontalContentAlignment="Center"
+                    Width="100" 
+                    Margin="0,20,0,0" />
+        </Grid>
+    </Border>
 </Window>
