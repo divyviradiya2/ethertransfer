@@ -19,11 +19,8 @@ jobs:
     - name: Publish App (Linux x64)
       run: dotnet publish EtherTransfer.UI/EtherTransfer.UI.csproj -c Release -r linux-x64 --self-contained true -o ./publish
       
-    - name: Create Archive (Linux x64)
-      run: tar -czvf EtherTransfer-linux-x64.tar.gz -C ./publish .
-      
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: EtherTransfer-linux-x64
-        path: EtherTransfer-linux-x64.tar.gz
+        path: ./publish

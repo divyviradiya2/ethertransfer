@@ -26,16 +26,16 @@ fi
 echo "[+] Detected Architecture: $ARCH ($ET_ARCH)"
 
 # 2. Download from GitHub Releases
-# Note: Ensure you upload your tar.gz files to your GitHub Releases so this URL works!
-DOWNLOAD_URL="https://github.com/divyviradiya/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.tar.gz"
+# Note: Ensure you upload your zip files to your GitHub Releases so this URL works!
+DOWNLOAD_URL="https://github.com/divyviradiya/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
 
 echo "[+] Downloading EtherTransfer..."
 TMP_DIR=$(mktemp -d)
-wget -q --show-progress "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.tar.gz"
+wget -q --show-progress "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
 
-if [ ! -s "$TMP_DIR/ethertransfer.tar.gz" ]; then
+if [ ! -s "$TMP_DIR/ethertransfer.zip" ]; then
     echo "[-] Failed to download EtherTransfer."
-    echo "[-] Please ensure you have created a GitHub Release and uploaded the .tar.gz artifacts!"
+    echo "[-] Please ensure you have created a GitHub Release and uploaded the .zip artifacts!"
     rm -rf "$TMP_DIR"
     exit 1
 fi
@@ -44,7 +44,7 @@ fi
 INSTALL_DIR="/opt/ethertransfer"
 echo "[+] Extracting files to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
-tar -xzf "$TMP_DIR/ethertransfer.tar.gz" -C "$INSTALL_DIR"
+unzip -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
 chmod +x "$INSTALL_DIR/EtherTransfer"
 
 # 3. Dynamic Universal Firewall Configuration
