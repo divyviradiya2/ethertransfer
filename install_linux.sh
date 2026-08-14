@@ -42,9 +42,15 @@ fi
 
 # Extract to standard Linux /opt directory
 INSTALL_DIR="/opt/ethertransfer"
-echo "[+] Extracting files to $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-unzip -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
+
+if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
+    echo "[+] Existing installation found. Updating app files and verifying configuration..."
+else
+    echo "[+] Extracting files to $INSTALL_DIR..."
+    mkdir -p "$INSTALL_DIR"
+fi
+
+unzip -o -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
 chmod +x "$INSTALL_DIR/EtherTransfer"
 
 # 3. Dynamic Universal Firewall Configuration
