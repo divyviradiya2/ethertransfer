@@ -11,9 +11,9 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-echo "========================================="
-echo "  EtherTransfer Enterprise Installer     "
-echo "========================================="
+echo "=============================="
+echo "  EtherTransfer Installer  "
+echo "=============================="
 
 # 1. Detect System Architecture
 ARCH=$(uname -m)
