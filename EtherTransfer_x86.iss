@@ -31,7 +31,7 @@ PrivilegesRequired=admin
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 ; Main executable
@@ -46,5 +46,11 @@ Name: "{group}\EtherTransfer"; Filename: "{app}\EtherTransfer.exe"
 Name: "{autodesktop}\EtherTransfer"; Filename: "{app}\EtherTransfer.exe"; Tasks: desktopicon
 
 [Run]
+; Add Firewall Rule for Private and Public networks (Silent)
+Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""EtherTransfer"" dir=in action=allow program=""{app}\EtherTransfer.exe"" enable=yes profile=private,public"; Flags: runhidden
 ; Launch after install
 Filename: "{app}\EtherTransfer.exe"; Description: "{cm:LaunchProgram,EtherTransfer}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+; Remove Firewall Rule on uninstall (Silent)
+Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""EtherTransfer"" program=""{app}\EtherTransfer.exe"""; Flags: runhidden

@@ -50,7 +50,9 @@ public static class WindowsNetworkInterfaceDetector
 
             if (desc.Contains("virtual") || desc.Contains("pseudo") || desc.Contains("vpn") ||
                 desc.Contains("tailscale") || desc.Contains("wireguard") || desc.Contains("tap-") ||
-                desc.Contains("hyper-v") || desc.Contains("wan miniport"))
+                desc.Contains("hyper-v") || desc.Contains("wan miniport") ||
+                desc.Contains("wfp ") || desc.Contains("qos ") || desc.Contains("filter") ||
+                name.Contains("wfp ") || name.Contains("qos ") || name.Contains("filter"))
             {
                 isVirtual = true;
                 isPhysical = false;

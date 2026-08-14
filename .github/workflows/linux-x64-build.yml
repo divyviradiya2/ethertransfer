@@ -2,11 +2,7 @@ name: Build Linux x64
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
-  release:
-    types: [created]
 
 jobs:
   build-linux-x64:
