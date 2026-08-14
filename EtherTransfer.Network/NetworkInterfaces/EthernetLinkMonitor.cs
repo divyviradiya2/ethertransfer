@@ -100,7 +100,7 @@ public class EthernetLinkMonitor : IDisposable
                 return;
             }
 
-            var hasIpv4 = upInterfaces.Any(i => i.HasIpv4Address);
+            var hasIpv4 = upInterfaces.Any(i => i.Ipv4Addresses.Count > 0);
 
             if (hasIpv4)
             {
@@ -194,7 +194,7 @@ public class EthernetLinkMonitor : IDisposable
         lock (_lock)
         {
             var interfaces = _networkProvider.GetEthernetInterfaces()
-                .Where(i => i.OperationalStatus == OperationalStatus.Up && !i.HasIpv4Address)
+                .Where(i => i.OperationalStatus == OperationalStatus.Up && i.Ipv4Addresses.Count == 0)
                 .ToList();
             interfacesToConfig.AddRange(interfaces.Select(i => i.Name));
         }

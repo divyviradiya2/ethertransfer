@@ -28,7 +28,7 @@ flowchart LR
 - **True Plug-and-Play**: Connect two machines via Ethernet and they automatically discover each other using UDP broadcasts (No router or DHCP required).
 - **Blazing Fast**: Optimized TCP streaming maximizes Ethernet throughput (1Gbps/10Gbps/etc.).
 - **Cross-Platform**: Built with .NET 10 and Avalonia UI, supporting Windows, macOS, and Linux.
-- **Robust Networking**: Features dynamic port binding, IPv6 support, link-state monitoring, and connection-drop watchdogs.
+- **Robust Networking**: Features dynamic port binding, link-state monitoring, and connection-drop watchdogs.
 - **Deep Folder Structures**: Recursively scans and recreates entire directory trees accurately.
 - **Sandbox Security**: Built-in path sanitization prevents malicious directory traversal attacks (e.g. `../../Windows/System32`).
 

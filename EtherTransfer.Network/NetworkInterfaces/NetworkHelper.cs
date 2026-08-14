@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 
 namespace EtherTransfer.Network.NetworkInterfaces;
 
@@ -22,25 +21,21 @@ public class InterfaceAddressInfo
 public static class NetworkHelper
 {
     /// <summary>
-    /// Returns all non-wireless, non-loopback interfaces that have a valid IPv4 address and subnet mask.
+    /// Returns all physical Ethernet interfaces that have a valid IPv4 address and subnet mask.
     /// </summary>
     public static IEnumerable<InterfaceAddressInfo> GetEthernetInterfaces()
     {
-        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
+        var interfaces = CrossPlatformNetworkDetector.GetInterfaces()
+            .Where(ni => ni.IsEthernet && ni.IsPhysical && ni.OperationalStatus == OperationalStatus.Up);
 
         foreach (var ni in interfaces)
         {
-            var name = ni.Name.ToLowerInvariant();
-            var desc = ni.Description.ToLowerInvariant();
-            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-            {
-                continue;
-            }
+            // We still need the original NetworkInterface to get subnet masks
+            // NetworkInterfaceInfo doesn't store subnet mask, so we re-fetch IP properties.
+            var origNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == ni.Id);
+            if (origNi == null) continue;
 
-            var ipProps = ni.GetIPProperties();
+            var ipProps = origNi.GetIPProperties();
             foreach (var ip in ipProps.UnicastAddresses)
             {
                 if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
@@ -62,14 +57,6 @@ public static class NetworkHelper
                         }
                     }
                 }
-                else if (ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                {
-                    // For IPv6, broadcast does not exist in the same way, but we can return the local address 
-                    // and use multicast (FF02::1) as the 'broadcast' target equivalent if needed by the caller,
-                    // but for UDP discovery binding, returning the local address is the primary goal.
-                    // The multicast address is standard for all-nodes link-local.
-                    yield return new InterfaceAddressInfo(ip.Address, IPAddress.Parse("ff02::1"));
-                }
             }
         }
     }
@@ -82,28 +69,14 @@ public static class NetworkHelper
     {
         var results = new List<string>();
 
-        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Wireless80211);
+        var interfaces = CrossPlatformNetworkDetector.GetInterfaces()
+            .Where(ni => ni.IsEthernet && ni.IsPhysical);
 
         foreach (var ni in interfaces)
         {
-            var name = ni.Name.ToLowerInvariant();
-            var desc = ni.Description.ToLowerInvariant();
-            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-                continue;
-
-            // Skip virtual/WAN miniport adapters on Windows
-            if (name.Contains("local area connection") || desc.Contains("wan miniport") ||
-                desc.Contains("filter") || desc.Contains("scheduler"))
-                continue;
-
             if (ni.OperationalStatus == OperationalStatus.Up)
             {
-                var ipv4Addrs = ni.GetIPProperties().UnicastAddresses
-                    .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
-                    .Select(a => a.Address.ToString())
-                    .ToList();
+                var ipv4Addrs = ni.Ipv4Addresses.Select(a => a.ToString()).ToList();
 
                 if (ipv4Addrs.Count > 0)
                 {
@@ -116,11 +89,7 @@ public static class NetworkHelper
             }
             else if (ni.OperationalStatus == OperationalStatus.Down)
             {
-                // Only mention the main Ethernet adapter, not all the virtual stuff
-                if (name == "ethernet" || name.StartsWith("enp") || name.StartsWith("eth") || name.StartsWith("eno"))
-                {
-                    results.Add($"❌ {ni.Name}: Cable not connected");
-                }
+                results.Add($"❌ {ni.Name}: Cable not connected");
             }
         }
 
@@ -134,26 +103,21 @@ public static class NetworkHelper
     public static bool IsIpInActiveSubnets(string ipAddress)
     {
         if (!IPAddress.TryParse(ipAddress, out var targetIp)) return false;
+        if (targetIp.AddressFamily != AddressFamily.InterNetwork) return false; // Only support IPv4
 
         var targetBytes = targetIp.GetAddressBytes();
-        bool isIpv6 = targetIp.AddressFamily == AddressFamily.InterNetworkV6;
 
-        var interfaces = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
-                         ni.NetworkInterfaceType != NetworkInterfaceType.Loopback);
+        var interfaces = CrossPlatformNetworkDetector.GetInterfaces()
+            .Where(ni => ni.IsEthernet && ni.IsPhysical && ni.OperationalStatus == OperationalStatus.Up);
 
         foreach (var ni in interfaces)
         {
-            var name = ni.Name.ToLowerInvariant();
-            var desc = ni.Description.ToLowerInvariant();
-            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-            {
-                continue;
-            }
+            var origNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == ni.Id);
+            if (origNi == null) continue;
 
-            foreach (var ip in ni.GetIPProperties().UnicastAddresses)
+            foreach (var ip in origNi.GetIPProperties().UnicastAddresses)
             {
-                if (!isIpv6 && ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
                 {
                     var maskBytes = ip.IPv4Mask.GetAddressBytes();
                     var localBytes = ip.Address.GetAddressBytes();
@@ -167,44 +131,6 @@ public static class NetworkHelper
                             {
                                 matches = false;
                                 break;
-                            }
-                        }
-                        if (matches) return true;
-                    }
-                }
-                else if (isIpv6 && ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                {
-                    // For IPv6, we can do a simple prefix match based on the PrefixLength.
-                    // For link-local (fe80::/10), it's reachable on the same interface.
-                    // Simplified: assume reachable if we have an IPv6 address on this interface 
-                    // and the scope matches or it's on the same subnet.
-                    if (targetIp.IsIPv6LinkLocal && ip.Address.IsIPv6LinkLocal)
-                    {
-                        return true; 
-                    }
-                    
-                    // Simple full subnet check based on prefix length
-                    int prefixBits = ip.PrefixLength;
-                    var localBytes = ip.Address.GetAddressBytes();
-                    if (localBytes.Length == 16 && targetBytes.Length == 16)
-                    {
-                        bool matches = true;
-                        for (int i = 0; i < 16; i++)
-                        {
-                            if (prefixBits >= 8)
-                            {
-                                if (localBytes[i] != targetBytes[i]) { matches = false; break; }
-                                prefixBits -= 8;
-                            }
-                            else if (prefixBits > 0)
-                            {
-                                byte mask = (byte)(0xFF << (8 - prefixBits));
-                                if ((localBytes[i] & mask) != (targetBytes[i] & mask)) { matches = false; break; }
-                                prefixBits = 0;
-                            }
-                            else
-                            {
-                                break; // Checked all prefix bits
                             }
                         }
                         if (matches) return true;

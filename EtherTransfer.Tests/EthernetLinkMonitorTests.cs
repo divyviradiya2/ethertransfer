@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using EtherTransfer.Network.NetworkInterfaces;
@@ -10,9 +11,9 @@ namespace EtherTransfer.Tests;
 
 public class InMemoryNetworkProvider : INetworkInterfaceProvider
 {
-    public List<EthernetInterfaceState> Interfaces { get; set; } = new();
+    public List<NetworkInterfaceInfo> Interfaces { get; set; } = new();
 
-    public IEnumerable<EthernetInterfaceState> GetEthernetInterfaces()
+    public IEnumerable<NetworkInterfaceInfo> GetEthernetInterfaces()
     {
         return Interfaces.ToList();
     }
@@ -24,6 +25,23 @@ public class EthernetLinkMonitorTests
     private InMemoryNetworkProvider _provider;
     private EthernetLinkMonitor _monitor;
     private List<EthernetLinkState> _stateChanges;
+
+    private NetworkInterfaceInfo CreateDummyInterface(string name, OperationalStatus status, bool hasIpv4)
+    {
+        return new NetworkInterfaceInfo(
+            Id: name,
+            Name: name,
+            Description: name + " desc",
+            InterfaceType: NetworkInterfaceType.Ethernet,
+            OperationalStatus: status,
+            IsPhysical: true,
+            IsEthernet: true,
+            IsWifi: false,
+            IsVirtual: false,
+            MacAddress: new byte[] { 0, 1, 2, 3, 4, 5 },
+            Ipv4Addresses: hasIpv4 ? new List<IPAddress> { IPAddress.Parse("192.168.1.10") } : new List<IPAddress>()
+        );
+    }
 
     [SetUp]
     public void Setup()
@@ -45,7 +63,7 @@ public class EthernetLinkMonitorTests
     public async Task Scenario1_UnplugWhileConfiguring_TransitionsToNoCableInstantly()
     {
         // 1. Arrange: Up but no IP -> Configuring
-        _provider.Interfaces.Add(new EthernetInterfaceState("eth0", "eth0", "eth0 desc", OperationalStatus.Up, false));
+        _provider.Interfaces.Add(CreateDummyInterface("eth0", OperationalStatus.Up, false));
         _monitor.Start();
         
         Assert.That(_monitor.CurrentState, Is.EqualTo(EthernetLinkState.Configuring));
@@ -66,7 +84,7 @@ public class EthernetLinkMonitorTests
     public async Task Scenario3_ReplugFromNoCable_AutomaticallyEntersConfiguring()
     {
         // Start NoCable
-        _provider.Interfaces.Add(new EthernetInterfaceState("eth0", "eth0", "eth0 desc", OperationalStatus.Down, false));
+        _provider.Interfaces.Add(CreateDummyInterface("eth0", OperationalStatus.Down, false));
         _monitor.Start();
         Assert.That(_monitor.CurrentState, Is.EqualTo(EthernetLinkState.NoCable));
 
@@ -81,7 +99,7 @@ public class EthernetLinkMonitorTests
     [Test]
     public async Task Scenario5_ForceConfigAttemptToFail_TransitionsToConfigErrorExactlyOnce()
     {
-        _provider.Interfaces.Add(new EthernetInterfaceState("eth0", "eth0", "eth0 desc", OperationalStatus.Up, false));
+        _provider.Interfaces.Add(CreateDummyInterface("eth0", OperationalStatus.Up, false));
         // Using a 500ms timeout from Setup()
         _monitor.Start();
         Assert.That(_monitor.CurrentState, Is.EqualTo(EthernetLinkState.Configuring));
@@ -103,7 +121,7 @@ public class EthernetLinkMonitorTests
     [Test]
     public async Task Scenario6_RapidUnplugReplugInsideDebounceWindow_EndsInMatchingState()
     {
-        _provider.Interfaces.Add(new EthernetInterfaceState("eth0", "eth0", "eth0 desc", OperationalStatus.Up, false));
+        _provider.Interfaces.Add(CreateDummyInterface("eth0", OperationalStatus.Up, false));
         _monitor.Start();
         Assert.That(_monitor.CurrentState, Is.EqualTo(EthernetLinkState.Configuring));
 
@@ -112,7 +130,7 @@ public class EthernetLinkMonitorTests
         
         // Rapid replug before the 250ms debounce finishes
         await Task.Delay(50);
-        _provider.Interfaces[0] = _provider.Interfaces[0] with { OperationalStatus = OperationalStatus.Up, HasIpv4Address = true }; // It got an IP!
+        _provider.Interfaces[0] = _provider.Interfaces[0] with { OperationalStatus = OperationalStatus.Up, Ipv4Addresses = new List<IPAddress> { IPAddress.Parse("192.168.1.10") } }; // It got an IP!
         
         await Task.Delay(200); // Let poll loop catch up
 

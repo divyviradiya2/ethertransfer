@@ -78,9 +78,17 @@ public class DeviceService : IDisposable
                 await Task.Delay(1000, token);
                 if (token.IsCancellationRequested) return;
 
+                bool vpnStateChanged = false;
+                bool oldVpnState = HasActiveVpn;
+                
                 var currentIps = GetCurrentLocalIps();
                 bool ipSetChanged = !_lastKnownIps.SetEquals(currentIps);
                 _lastKnownIps = currentIps;
+                
+                if (oldVpnState != HasActiveVpn)
+                {
+                    vpnStateChanged = true;
+                }
 
                 // Evict devices that are no longer reachable via active subnets
                 var removedAny = false;
@@ -101,9 +109,9 @@ public class DeviceService : IDisposable
                     DevicesChanged?.Invoke(this, EventArgs.Empty);
                 }
 
-                if (!ipSetChanged)
+                if (!ipSetChanged && !vpnStateChanged)
                 {
-                    // Ignore spurious OS routing changes if our IPv4 addresses haven't changed
+                    // Ignore spurious OS routing changes if our IPv4 addresses and VPN state haven't changed
                     return;
                 }
 
@@ -147,24 +155,40 @@ public class DeviceService : IDisposable
             .ToList();
     }
 
-    private static HashSet<string> GetCurrentLocalIps()
+    public bool HasActiveVpn { get; private set; }
+
+    private HashSet<string> GetCurrentLocalIps()
     {
         var ips = new HashSet<string>();
-        foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-        {
-            var name = ni.Name.ToLowerInvariant();
-            var desc = ni.Description.ToLowerInvariant();
-            if (name.Contains("wi-fi") || name.Contains("wlan") || name.StartsWith("wl") || desc.Contains("wireless"))
-            {
-                continue;
-            }
+        var interfaces = CrossPlatformNetworkDetector.GetInterfaces().ToList();
+        
+        bool vpnActive = interfaces.Any(n => 
+            n.IsVirtual && 
+            n.OperationalStatus == OperationalStatus.Up && 
+            (n.Description.Contains("cisco", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("anyconnect", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("globalprotect", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("zscaler", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("fortinet", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("pulse secure", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("checkpoint", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("sonicwall", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("f5", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("big-ip", StringComparison.OrdinalIgnoreCase) ||
+             n.Description.Contains("netmotion", StringComparison.OrdinalIgnoreCase)));
 
-            foreach (var addr in ni.GetIPProperties().UnicastAddresses)
+        if (vpnActive && !HasActiveVpn)
+        {
+            Log("A Corporate VPN is currently active. If you cannot see other devices, your IT administrator may be blocking local network discovery.", LogLevel.Warning, "network.vpn_warning");
+        }
+        
+        HasActiveVpn = vpnActive;
+
+        foreach (var ni in interfaces.Where(n => n.IsEthernet && n.IsPhysical))
+        {
+            foreach (var addr in ni.Ipv4Addresses)
             {
-                if (addr.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                {
-                    ips.Add(addr.Address.ToString());
-                }
+                ips.Add(addr.ToString());
             }
         }
         return ips;

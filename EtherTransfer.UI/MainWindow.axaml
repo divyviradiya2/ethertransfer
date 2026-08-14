@@ -80,22 +80,34 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         
-                        <StackPanel IsVisible="{Binding !DiscoveredDevices.Count}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
-                            <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
-                                <Grid ColumnDefinitions="Auto,*">
-                                    <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
-                                        <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
-                                        <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <StackPanel Spacing="10" Margin="10,0">
-                                <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <!-- Empty States (when no devices found) -->
+                        <Panel IsVisible="{Binding !DiscoveredDevices.Count}">
+                            
+                            <!-- VPN Blocked State -->
+                            <StackPanel IsVisible="{Binding HasActiveVpn}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20,40,20,20">
+                                <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="#F9E2AF"/>
+                                <TextBlock Text="VPN Blocking Discovery" FontSize="16" Foreground="#F9E2AF" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                <TextBlock Text="A Corporate VPN is active. Your IT administrator is likely blocking local network discovery. Please disconnect the VPN." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                             </StackPanel>
-                        </StackPanel>
+
+                            <!-- Normal Skeleton Loader -->
+                            <StackPanel IsVisible="{Binding !HasActiveVpn}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
+                                <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
+                                    <Grid ColumnDefinitions="Auto,*">
+                                        <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                                            <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                                            <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel Spacing="10" Margin="10,0">
+                                    <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Panel>
                     </StackPanel>
 
                     <!-- No Cable State -->

@@ -4,4 +4,5 @@
   <Project Path="EtherTransfer.Services/EtherTransfer.Services.csproj" />
   <Project Path="EtherTransfer.Transfer/EtherTransfer.Transfer.csproj" />
   <Project Path="EtherTransfer.UI/EtherTransfer.UI.csproj" />
+  <Project Path="EtherTransfer.Tests/EtherTransfer.Tests.csproj" />
 </Solution>

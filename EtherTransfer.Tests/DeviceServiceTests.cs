@@ -16,10 +16,10 @@ namespace EtherTransfer.Tests
         private DeviceService _deviceService;
 
         [SetUp]
-        public void Setup()
+        public async Task Setup()
         {
             _deviceService = new DeviceService();
-            _deviceService.Start("TestComputer", 50000);
+            await _deviceService.StartAsync("TestComputer", 50000);
         }
 
         [TearDown]

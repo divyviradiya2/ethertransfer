@@ -61,6 +61,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly EthernetLinkMonitor _linkMonitor;
     public EthernetLinkState LinkState => _linkMonitor.CurrentState;
     public string? LinkErrorMessage => _linkMonitor.LastErrorMessage;
+    public bool HasActiveVpn => _deviceService != null && _deviceService.HasActiveVpn;
 
     public bool IsNoCable => LinkState == EthernetLinkState.NoCable;
     public bool IsConfiguring => LinkState == EthernetLinkState.Configuring;
@@ -122,6 +123,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
+        _deviceService.NetworkChanged += (_, _) => _ = Dispatcher.UIThread.InvokeAsync(() => OnPropertyChanged(nameof(HasActiveVpn)));
         _deviceService.DebugLog += OnDebugLog;
         
         // Start Discovery asynchronously to catch bind errors
@@ -133,6 +135,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             await _deviceService.StartAsync(CustomDeviceName, actualTcpPort);
+            _ = Dispatcher.UIThread.InvokeAsync(() => OnPropertyChanged(nameof(HasActiveVpn)));
         }
         catch (Exception ex)
         {
@@ -157,6 +160,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsConfigError));
             OnPropertyChanged(nameof(IsReady));
             OnPropertyChanged(nameof(LinkErrorMessage));
+            OnPropertyChanged(nameof(HasActiveVpn));
 
             // If we transition away from Ready while a transfer is active, abort it instantly.
             if (newState != EthernetLinkState.Ready && _activeDialog != null && _activeDialog.IsVisible)
@@ -217,6 +221,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     SelectedDevice = liveDevice;
                 }
             }
+            
+            OnPropertyChanged(nameof(HasActiveVpn));
         });
     }
 
