@@ -27,7 +27,7 @@ echo "[+] Detected Architecture: $ARCH ($ET_ARCH)"
 
 # 2. Download from GitHub Releases
 # Note: Ensure you upload your zip files to your GitHub Releases so this URL works!
-DOWNLOAD_URL="https://github.com/divyviradiya/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
+DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
 
 echo "[+] Downloading EtherTransfer..."
 TMP_DIR=$(mktemp -d)
@@ -98,7 +98,7 @@ fi
 # 5. Desktop Application Registration
 echo "[+] Registering Desktop Application..."
 # Download the raw icon directly from the GitHub repository
-ICON_URL="https://raw.githubusercontent.com/divyviradiya/ethertransfer/master/EtherTransfer.UI/Assets/logo.ico"
+ICON_URL="https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/EtherTransfer.UI/Assets/logo.ico"
 ICON_DIR="/usr/share/pixmaps"
 wget -q "$ICON_URL" -O "$ICON_DIR/ethertransfer.ico"
 
