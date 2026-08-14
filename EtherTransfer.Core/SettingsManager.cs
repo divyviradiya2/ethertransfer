@@ -11,7 +11,8 @@ public class AppSettings
 
 public static class SettingsManager
 {
-    private static readonly string SettingsFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+    private static readonly string SettingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EtherTransfer");
+    private static readonly string SettingsFile = Path.Combine(SettingsFolder, "settings.json");
     private static AppSettings? _cachedSettings;
 
     public static AppSettings Load()
@@ -43,6 +44,10 @@ public static class SettingsManager
         _cachedSettings = settings;
         try
         {
+            if (!Directory.Exists(SettingsFolder))
+            {
+                Directory.CreateDirectory(SettingsFolder);
+            }
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsFile, json);
         }
