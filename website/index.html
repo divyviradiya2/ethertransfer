@@ -51,12 +51,19 @@
                 </div>
                 
                 <div class="hero-visual">
-                    <div class="concept-diagram">
+                    <!-- Desktop Diagram -->
+                    <div class="concept-diagram desktop-diagram">
                         
                         <!-- Left PC -->
                         <div class="concept-pc">
                             <div class="pc-monitor">
-                                <div class="mock-screen"></div>
+                                <div class="mock-screen">
+                                    <div class="mock-toolbar"></div>
+                                    <div class="mock-files">
+                                        <div class="m-file"></div><div class="m-file"></div><div class="m-file"></div>
+                                    </div>
+                                    <div class="mock-progress"><div class="m-bar"></div></div>
+                                </div>
                             </div>
                             <div class="pc-base"></div>
                             <span class="pc-label">Sender PC</span>
@@ -82,12 +89,55 @@
                         <!-- Right PC -->
                         <div class="concept-pc">
                             <div class="pc-monitor">
-                                <div class="mock-screen"></div>
+                                <div class="mock-screen">
+                                    <div class="mock-toolbar"></div>
+                                    <div class="mock-files">
+                                        <div class="m-file"></div><div class="m-file"></div><div class="m-file"></div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="pc-base"></div>
                             <span class="pc-label">Receiver PC</span>
                         </div>
 
+                    </div>
+                    
+                    <!-- Mobile Diagram Replica -->
+                    <div class="concept-diagram mobile-diagram">
+                        <div class="concept-pc">
+                            <div class="pc-monitor">
+                                <div class="mock-screen">
+                                    <div class="mock-toolbar"></div>
+                                    <div class="mock-files">
+                                        <div class="m-file"></div><div class="m-file"></div><div class="m-file"></div>
+                                    </div>
+                                    <div class="mock-progress"><div class="m-bar"></div></div>
+                                </div>
+                            </div>
+                            <div class="pc-base"></div>
+                            <span class="pc-label">Sender PC</span>
+                        </div>
+
+                        <!-- Mobile Vertical Cable -->
+                        <div class="mobile-cable-container">
+                            <div class="mobile-wire"></div>
+                            <div class="mobile-packet mp1"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+                            <div class="mobile-packet mp2"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg></div>
+                            <div class="mobile-packet mp3"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg></div>
+                        </div>
+
+                        <div class="concept-pc">
+                            <div class="pc-monitor">
+                                <div class="mock-screen">
+                                    <div class="mock-toolbar"></div>
+                                    <div class="mock-files">
+                                        <div class="m-file"></div><div class="m-file"></div><div class="m-file"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pc-base"></div>
+                            <span class="pc-label">Receiver PC</span>
+                        </div>
                     </div>
                 </div>
 
@@ -162,7 +212,7 @@
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
-                                <div class="diagram">
+                                <div class="diagram desktop-diagram">
                                     <div class="node-icon">
                                         <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                                     </div>
@@ -174,6 +224,17 @@
                                         <div class="packet p2"></div>
                                         <div class="packet p3"></div>
                                         <div class="connection-label">Ethernet Cable</div>
+                                    </div>
+                                    <div class="node-icon">
+                                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    </div>
+                                </div>
+                                <div class="diagram mobile-diagram">
+                                    <div class="node-icon">
+                                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    </div>
+                                    <div class="mobile-cable-container step1-cable">
+                                        <div class="mobile-wire step1-wire"></div>
                                     </div>
                                     <div class="node-icon">
                                         <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>

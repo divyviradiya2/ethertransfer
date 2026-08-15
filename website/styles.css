@@ -457,6 +457,62 @@ html {
     min-width: 150px;
 }
 
+/* Mobile Replica CSS */
+.mobile-diagram {
+    display: none !important;
+}
+
+.mobile-cable-container {
+    height: 60px;
+    width: 32px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.mobile-wire {
+    width: 6px;
+    height: 100%;
+    background-color: var(--border-color);
+}
+
+.step1-cable {
+    height: 40px;
+    width: 100%;
+}
+.step1-wire {
+    width: 4px;
+    height: 100%;
+}
+
+.mobile-packet {
+    position: absolute;
+    left: 50%;
+    margin-left: -12px;
+    width: 24px;
+    height: 24px;
+    background-color: var(--bg-panel);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    box-shadow: 0 -4px 0 4px var(--bg-panel), 0 4px 0 4px var(--bg-panel);
+    
+    transform: translate3d(0, -40px, 0);
+    animation: shootPacketMobile 2s infinite linear;
+    will-change: transform;
+}
+.mp1 { animation-delay: 0s; }
+.mp2 { animation-delay: 0.6s; }
+.mp3 { animation-delay: 1.2s; }
+
+@keyframes shootPacketMobile {
+    0% { transform: translate3d(0, -40px, 0); }
+    100% { transform: translate3d(0, 80px, 0); }
+}
+
 .cable {
     position: absolute;
     top: 50%;
@@ -1130,44 +1186,28 @@ html {
 }
 
 @media (max-width: 768px) {
-    /* Horizontal Scale-Down for Hero Diagram (No Layout-Breaking Rotations) */
-    .concept-diagram {
-        padding: 1.5rem 0.5rem;
-        gap: 0.5rem;
+    /* Toggle Mobile Replicas */
+    .desktop-diagram {
+        display: none !important;
     }
-    .pc-monitor {
-        width: 110px;
-        height: 75px;
-    }
-    .pc-base {
-        width: 40px;
-        height: 8px;
-    }
-    .pc-label {
-        font-size: 0.75rem;
-    }
-    .concept-link {
-        margin: 0;
-        min-width: 40px;
-    }
-    .cable-track {
-        margin: 0 -0.5rem 0.5rem -0.5rem;
-        height: 24px;
-    }
-    .link-info, .link-speed {
-        display: none;
+    .mobile-diagram {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center;
+        padding: 2rem 1rem !important;
+        gap: 0 !important;
     }
     
-    /* Horizontal Scale-Down for Step 1 Visual Guide */
-    .diagram {
-        gap: 0.5rem;
+    .mobile-diagram .concept-pc {
+        margin: 0;
     }
-    .node-icon {
-        width: 50px;
-        height: 50px;
+    .mobile-diagram .pc-monitor {
+        width: 140px !important;
+        height: 100px !important;
     }
-    .connection-path {
-        min-width: 40px;
+    .mobile-diagram .pc-base {
+        width: 50px !important;
+        height: 10px !important;
     }
     
     /* Touch Target Button Stacking */
