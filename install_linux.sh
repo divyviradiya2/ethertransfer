@@ -31,11 +31,37 @@ DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/dow
 
 echo "[+] Downloading EtherTransfer..."
 TMP_DIR=$(mktemp -d)
-wget -q --show-progress "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
 
-if [ ! -s "$TMP_DIR/ethertransfer.zip" ]; then
-    echo "[-] Failed to download EtherTransfer."
-    echo "[-] Please ensure you have created a GitHub Release and uploaded the .zip artifacts!"
+MAX_RETRIES=3
+RETRY_COUNT=0
+DOWNLOAD_SUCCESS=false
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if command -v curl > /dev/null; then
+        # Use --connect-timeout to fail fast if GitHub is hanging
+        curl -L --progress-bar --connect-timeout 15 "$DOWNLOAD_URL" -o "$TMP_DIR/ethertransfer.zip"
+    elif command -v wget > /dev/null; then
+        wget -q --show-progress --timeout=15 --tries=1 "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
+    else
+        echo "[-] Neither curl nor wget is installed. Cannot download."
+        rm -rf "$TMP_DIR"
+        exit 1
+    fi
+
+    # Check if the file exists and is not empty
+    if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
+        DOWNLOAD_SUCCESS=true
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT+1))
+        echo "[-] Download interrupted or stalled. Retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+        sleep 2
+    fi
+done
+
+if [ "$DOWNLOAD_SUCCESS" = false ]; then
+    echo "[-] Failed to download EtherTransfer after $MAX_RETRIES attempts."
+    echo "[-] Please ensure you have created a GitHub Release, uploaded the .zip artifacts, and check your internet!"
     rm -rf "$TMP_DIR"
     exit 1
 fi
