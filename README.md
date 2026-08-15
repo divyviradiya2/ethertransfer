@@ -10,9 +10,9 @@
       <p><b>Lightning-fast, direct PC-to-PC file transfers, no router required.</b></p>
       <p>A cross-platform application designed for maximum reliability and enterprise-level robustness over direct Ethernet connections.</p>
       <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet" alt=".NET 10" /></a>
-      <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Windows-x64%20%2F%20x86-0078D4?style=flat-square&logo=windows" alt="Windows" /></a>
-      <a href="https://ubuntu.com/"><img src="https://img.shields.io/badge/Linux-Supported-E95420?style=flat-square&logo=linux" alt="Linux" /></a>
-      <a href="https://apple.com/"><img src="https://img.shields.io/badge/macOS-Supported-000000?style=flat-square&logo=apple" alt="macOS" /></a>
+      <img src="https://img.shields.io/badge/Windows-x64%20%2F%20x86-0078D4?style=flat-square&logo=windows" alt="Windows" />
+      <img src="https://img.shields.io/badge/Linux-Supported-E95420?style=flat-square&logo=linux" alt="Linux" />
+      <img src="https://img.shields.io/badge/macOS-Supported-000000?style=flat-square&logo=apple" alt="macOS" />
       <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" alt="MIT License" /></a>
       <br><br>
       <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe"><img src="https://img.shields.io/badge/Download-Windows%2064--bit-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download 64-bit" /></a>
