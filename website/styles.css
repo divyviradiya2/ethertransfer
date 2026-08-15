@@ -35,7 +35,6 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.2s, color 0.2s;
-    overflow-x: hidden;
 }
 
 /* Typography */
@@ -136,7 +135,6 @@ p {
 html {
     scroll-behavior: smooth;
     font-size: 90%; /* Reduces global scale by 10% */
-    overflow-x: hidden;
 }
 
 [data-theme="dark"] .invert-on-dark {
@@ -183,7 +181,6 @@ html {
     gap: 4rem;
     align-items: center;
     padding: 4rem 0 8rem;
-    max-width: 100vw;
 }
 
 .hero-subtitle {
@@ -455,62 +452,6 @@ html {
     align-items: center;
     justify-content: center;
     min-width: 150px;
-}
-
-/* Mobile Replica CSS */
-.mobile-diagram {
-    display: none !important;
-}
-
-.mobile-cable-container {
-    height: 60px;
-    width: 32px;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    margin: 1.5rem 0;
-}
-
-.mobile-wire {
-    width: 6px;
-    height: 100%;
-    background-color: var(--border-color);
-}
-
-.step1-cable {
-    height: 40px;
-    width: 100%;
-}
-.step1-wire {
-    width: 4px;
-    height: 100%;
-}
-
-.mobile-packet {
-    position: absolute;
-    left: 50%;
-    margin-left: -12px;
-    width: 24px;
-    height: 24px;
-    background-color: var(--bg-panel);
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    box-shadow: 0 -4px 0 4px var(--bg-panel), 0 4px 0 4px var(--bg-panel);
-    
-    transform: translate3d(0, -40px, 0);
-    animation: shootPacketMobile 2s infinite linear;
-    will-change: transform;
-}
-.mp1 { animation-delay: 0s; }
-.mp2 { animation-delay: 0.6s; }
-.mp3 { animation-delay: 1.2s; }
-
-@keyframes shootPacketMobile {
-    0% { transform: translate3d(0, -40px, 0); }
-    100% { transform: translate3d(0, 80px, 0); }
 }
 
 .cable {
@@ -1186,61 +1127,15 @@ html {
 }
 
 @media (max-width: 768px) {
-    /* Toggle Mobile Replicas */
-    .desktop-diagram {
-        display: none !important;
-    }
-    .mobile-diagram {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center;
-        padding: 2rem 1rem !important;
-        gap: 0 !important;
-    }
-    
-    .mobile-diagram .concept-pc {
-        margin: 0;
-    }
-    .mobile-diagram .pc-monitor {
-        width: 140px !important;
-        height: 100px !important;
-    }
-    .mobile-diagram .pc-base {
-        width: 50px !important;
-        height: 10px !important;
-    }
-    
-    /* Touch Target Button Stacking */
-    .action-row {
+    .concept-diagram {
         flex-direction: column;
-        width: 100%;
-        gap: 1rem;
+        padding: 2rem;
     }
-    .action-row > a,
-    .action-row > button {
-        width: 100%;
-        justify-content: center;
+    .concept-link {
+        transform: rotate(90deg);
+        margin: 4rem 0;
     }
-    .dl-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-    .dl-actions > a {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Nav & Header Collapse */
-    .nav-container {
-        flex-wrap: wrap;
-        gap: 1rem;
-        justify-content: center;
-    }
-    .nav-actions {
-        border-left: none;
-        padding-left: 0;
-        margin-left: 0;
-        width: 100%;
-        justify-content: center;
+    .link-info, .link-speed {
+        display: none;
     }
 }
