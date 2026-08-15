@@ -115,6 +115,7 @@ public class TransferSender
         }
 
         var stream = client.GetStream();
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
         var request = new TransferRequestMessage
         {
@@ -127,7 +128,7 @@ public class TransferSender
         };
 
         // 1. Send Request
-        await ProtocolHelper.SendMessageAsync(stream, request, ct);
+        await ProtocolHelper.SendMessageAsync(stream, request, ct, 2000);
 
         // 2. Wait for Response
         Log("Waiting for receiver to accept...");
@@ -204,7 +205,7 @@ public class TransferSender
                 var actualSize = fs.Length;
 
                 var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
-                await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct);
+                await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct, 2000);
 
                 var meta = new FileItemMetadata
                 {
@@ -212,7 +213,7 @@ public class TransferSender
                     RootName = item.RootName,
                     Size = actualSize
                 };
-                await ProtocolHelper.SendMessageAsync(stream, meta, ct);
+                await ProtocolHelper.SendMessageAsync(stream, meta, ct, 2000);
 
                 int read;
                 long fileSent = 0;
@@ -236,7 +237,7 @@ public class TransferSender
 
                 while ((read = await fs.ReadAsync(buffer, ct)) > 0)
                 {
-                    watchdogCts.CancelAfter(15000); // 15 seconds to write 1MB before considering connection dead
+                    watchdogCts.CancelAfter(5000); // 5 seconds to write 1MB before considering connection dead
                     try
                     {
                         await stream.WriteAsync(buffer, 0, read, watchdogCts.Token);
@@ -279,7 +280,7 @@ public class TransferSender
 
             // 4. End of Transfer
             var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
-            await ProtocolHelper.SendMessageAsync(stream, endMsg, ct);
+            await ProtocolHelper.SendMessageAsync(stream, endMsg, ct, 2000);
 
             result.Success = true;
         }
@@ -305,6 +306,6 @@ public class TransferSender
             RelativePath = relativePath,
             Reason = reason
         };
-        await ProtocolHelper.SendMessageAsync(stream, skipMsg, ct);
+        await ProtocolHelper.SendMessageAsync(stream, skipMsg, ct, 2000);
     }
 }

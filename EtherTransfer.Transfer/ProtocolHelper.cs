@@ -15,24 +15,39 @@ namespace EtherTransfer.Transfer;
 public static class ProtocolHelper
 {
     // Write a JSON metadata message to the stream
-    public static async Task SendMessageAsync<T>(NetworkStream stream, T message, CancellationToken ct) where T : class
+    public static async Task SendMessageAsync<T>(NetworkStream stream, T message, CancellationToken ct, int timeoutMs = -1) where T : class
     {
         var json = JsonSerializer.Serialize(message);
         var bytes = Encoding.UTF8.GetBytes(json);
 
         // Protocol: 4 bytes length prefix, followed by UTF8 JSON payload
         var lengthPrefix = BitConverter.GetBytes(bytes.Length);
-        await stream.WriteAsync(lengthPrefix, 0, 4, ct);
-        await stream.WriteAsync(bytes, 0, bytes.Length, ct);
-        await stream.FlushAsync(ct);
+        
+        using var watchdogCts = timeoutMs > 0 ? CancellationTokenSource.CreateLinkedTokenSource(ct) : null;
+        
+        try
+        {
+            if (watchdogCts != null) watchdogCts.CancelAfter(timeoutMs);
+            await stream.WriteAsync(lengthPrefix, 0, 4, watchdogCts?.Token ?? ct);
+            
+            if (watchdogCts != null) watchdogCts.CancelAfter(timeoutMs);
+            await stream.WriteAsync(bytes, 0, bytes.Length, watchdogCts?.Token ?? ct);
+            
+            if (watchdogCts != null) watchdogCts.CancelAfter(timeoutMs);
+            await stream.FlushAsync(watchdogCts?.Token ?? ct);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
+        }
     }
 
     // Read a JSON metadata message from the stream
-    public static async Task<T?> ReceiveMessageAsync<T>(NetworkStream stream, CancellationToken ct) where T : class
+    public static async Task<T?> ReceiveMessageAsync<T>(NetworkStream stream, CancellationToken ct, int timeoutMs = -1) where T : class
     {
         // Read 4 bytes length prefix
         var lengthBuffer = new byte[4];
-        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct))
+        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
             return null;
 
         var length = BitConverter.ToInt32(lengthBuffer, 0);
@@ -40,7 +55,7 @@ public static class ProtocolHelper
             throw new InvalidDataException($"Invalid metadata length: {length}");
 
         var payloadBuffer = new byte[length];
-        if (!await ReadExactAsync(stream, payloadBuffer, length, ct))
+        if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
             return null;
 
         var json = Encoding.UTF8.GetString(payloadBuffer);
@@ -48,12 +63,25 @@ public static class ProtocolHelper
     }
 
     // Read exactly N bytes from the stream, handling partial reads
-    public static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int count, CancellationToken ct)
+    public static async Task<bool> ReadExactAsync(NetworkStream stream, byte[] buffer, int count, CancellationToken ct, int timeoutMs = -1)
     {
         int totalRead = 0;
+        using var watchdogCts = timeoutMs > 0 ? CancellationTokenSource.CreateLinkedTokenSource(ct) : null;
+        
         while (totalRead < count)
         {
-            int read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), ct);
+            if (watchdogCts != null) watchdogCts.CancelAfter(timeoutMs);
+            
+            int read;
+            try
+            {
+                read = await stream.ReadAsync(buffer.AsMemory(totalRead, count - totalRead), watchdogCts?.Token ?? ct);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
+            }
+            
             if (read == 0) return false; // Connection closed
             totalRead += read;
         }
@@ -64,10 +92,10 @@ public static class ProtocolHelper
     /// Reads a length-prefixed JSON message from the stream and returns the raw JSON string.
     /// This allows the caller to inspect the "Type" field before deserializing to the correct type.
     /// </summary>
-    public static async Task<string?> ReceiveRawJsonAsync(NetworkStream stream, CancellationToken ct)
+    public static async Task<string?> ReceiveRawJsonAsync(NetworkStream stream, CancellationToken ct, int timeoutMs = -1)
     {
         var lengthBuffer = new byte[4];
-        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct))
+        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
             return null;
 
         var length = BitConverter.ToInt32(lengthBuffer, 0);
@@ -75,7 +103,7 @@ public static class ProtocolHelper
             throw new InvalidDataException($"Invalid metadata length: {length}");
 
         var payloadBuffer = new byte[length];
-        if (!await ReadExactAsync(stream, payloadBuffer, length, ct))
+        if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
             return null;
 
         return Encoding.UTF8.GetString(payloadBuffer);

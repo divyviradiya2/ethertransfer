@@ -41,9 +41,10 @@ public class TransferReceiver
             using (client)
             {
                 var stream = client.GetStream();
+                client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
                 // 1. Wait for Request
-                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, appCt);
+                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, appCt, 2000);
                 if (request == null)
                     throw new Exception("Did not receive TransferRequest.");
 
@@ -95,7 +96,7 @@ public class TransferReceiver
                     Accepted = accepted,
                     Reason = accepted ? "" : "User declined."
                 };
-                await ProtocolHelper.SendMessageAsync(stream, response, transferCt);
+                await ProtocolHelper.SendMessageAsync(stream, response, transferCt, 2000);
 
                 if (!accepted)
                 {
@@ -125,7 +126,7 @@ public class TransferReceiver
                     {
                         transferCt.ThrowIfCancellationRequested();
 
-                        var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt);
+                        var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt, 5000);
                         if (markerJson == null) break;
 
                         var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
@@ -147,7 +148,7 @@ public class TransferReceiver
                             continue;
 
                         // FILE_BEGIN — read metadata
-                        var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt);
+                        var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt, 2000);
                         if (fileMeta == null) break;
                     
                         if (fileMeta.RootName != currentRootName)
@@ -197,23 +198,12 @@ public class TransferReceiver
 
                             var lastUpdate = watch.ElapsedMilliseconds;
 
-                            using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(transferCt);
-
                             while (fileReceived < fileMeta.Size)
                             {
-                                watchdogCts.CancelAfter(15000); // 15 seconds to receive 1MB
-
                                 int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
 
-                                try
-                                {
-                                    if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
-                                        throw new IOException("Connection lost while reading file data.");
-                                }
-                                catch (OperationCanceledException) when (!transferCt.IsCancellationRequested)
-                                {
-                                    throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
-                                }
+                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, transferCt, 5000))
+                                    throw new IOException("Connection lost while reading file data.");
 
                                 await fs.WriteAsync(buffer, 0, toRead, transferCt);
 
@@ -288,22 +278,13 @@ public class TransferReceiver
     private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)
     {
         long drained = 0;
-        using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         
         while (drained < count)
         {
-            watchdogCts.CancelAfter(15000); // 15 seconds timeout per chunk
             int toRead = (int)Math.Min(buffer.Length, count - drained);
             
-            try
-            {
-                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, watchdogCts.Token))
-                    throw new IOException("Connection lost while draining skipped file data.");
-            }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-            {
-                throw new IOException("Connection timed out while draining skipped file data.");
-            }
+            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct, 5000))
+                throw new IOException("Connection lost while draining skipped file data.");
             
             drained += toRead;
         }
