@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherTransfer | Lightning Fast Local File Transfer</title>
+    <meta name="description" content="Enterprise-grade local file transfer application for direct Ethernet connections. No internet required.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="logo-group">
+                <img src="assets/logo.png" alt="EtherTransfer Logo" class="logo">
+                <span class="brand-name">EtherTransfer</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#how-it-works">How it Works</a>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Theme">
+                    <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" class="nav-link-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Direct file transfer over Ethernet.</h1>
+                <p class="hero-subtitle">A simple, open-source utility to transfer files between two computers using a standard Ethernet cable. No internet, router, or configuration required.</p>
+                
+                <div class="cta-group">
+                    <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest" class="btn btn-primary" id="primary-download-btn">
+                        <span class="btn-icon">↓</span> Download Now
+                    </a>
+                    <a href="#how-it-works" class="btn btn-secondary">Documentation</a>
+                </div>
+                <p class="os-text" id="os-text">Supports Windows and Linux.</p>
+            </div>
+            <div class="hero-image-wrapper">
+                <div class="mockup-window">
+                    <div class="mockup-header">
+                        <span class="dot close"></span>
+                        <span class="dot min"></span>
+                        <span class="dot max"></span>
+                        <span class="mockup-title">EtherTransfer</span>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="pulse-ring"></div>
+                        <img src="assets/logo.png" alt="EtherTransfer App Icon" class="mockup-icon">
+                        <p class="mockup-status">Awaiting connection...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Project Overview</h2>
+                <p>EtherTransfer was built to solve the simple problem of moving large datasets between local machines without relying on external drives or cloud storage.</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3>Direct Connection</h3>
+                    <p>Bypasses the internet and local routers. Speeds are limited only by your hardware—meaning your Network Interface Cards (NICs) and the category of your Ethernet cable.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Local Network Only</h3>
+                    <p>All data is transmitted via direct TCP connections. There are no telemetry servers, accounts, or third-party tracking. It works entirely offline.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h3>Cross-Platform</h3>
+                    <p>Written in C# with Avalonia UI. You can send files natively between Windows and Linux machines without worrying about file system formats (like NTFS vs ext4).</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📁</div>
+                    <h3>Directory Preservation</h3>
+                    <p>Supports dragging and dropping multiple nested directories. The application recreates the exact folder structure on the receiving machine.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="steps-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Usage Guide</h2>
+            </div>
+            
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Hardware</h3>
+                    <p>Plug an Ethernet cable directly into the network ports of both computers. Ensure both network adapters are enabled.</p>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Launch</h3>
+                    <p>Open EtherTransfer on both machines. They broadcast UDP packets to automatically discover each other on the link-local network.</p>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Transfer</h3>
+                    <p>Select your files on the sender machine. The receiver will get a prompt to accept the incoming TCP transfer.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <div class="logo-group">
+                    <img src="assets/logo.png" alt="EtherTransfer Logo" class="logo logo-small">
+                    <span class="brand-name">EtherTransfer</span>
+                </div>
+                <p class="footer-desc">An open-source utility for local file transfers.</p>
+            </div>
+            <div class="footer-right">
+                <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank">Source Code</a>
+                <a href="https://github.com/divyviradiya2/ethertransfer/releases" target="_blank">Releases</a>
+                <a href="https://github.com/divyviradiya2/ethertransfer/issues" target="_blank">Issues</a>
+            </div>
+        </div>
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026. Released under the MIT License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
