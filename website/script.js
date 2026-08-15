@@ -3,49 +3,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const osText = document.getElementById('os-text');
     const primaryBtn = document.getElementById('primary-download-btn');
     
-    // Default GitHub Release URL
-    const releaseUrl = 'https://github.com/divyviradiya2/ethertransfer/releases/latest';
-
     let userOS = "Unknown OS";
-    let icon = "↓";
-    let downloadPath = "";
 
     // Simple OS string detection
     if (navigator.userAgent.indexOf("Win") != -1) {
         userOS = "Windows";
-        downloadPath = "/download/EtherTransfer_Setup_x64.exe"; // Update with actual generic asset name if known
     } else if (navigator.userAgent.indexOf("Linux") != -1) {
         userOS = "Linux";
-        downloadPath = "/download/EtherTransfer-linux-x64.zip";
     } else if (navigator.userAgent.indexOf("Mac") != -1) {
         userOS = "MacOS";
-        // Not officially supported yet, default to releases page
     }
 
     // Update UI based on detected OS
     if (userOS === "Windows" || userOS === "Linux") {
-        primaryBtn.innerHTML = `<span class="btn-icon">${icon}</span> Download for ${userOS}`;
-        // If we want to directly link to the file, we can construct the url:
-        // primaryBtn.href = releaseUrl + downloadPath; 
-        // For safety, pointing to the latest release page is usually best unless you have a hardcoded URL scheme.
-        
-        osText.textContent = `Auto-detected ${userOS}. Also available for other platforms.`;
+        primaryBtn.textContent = `Download for ${userOS}`;
+        osText.textContent = `Auto-detected ${userOS}`;
     } else {
-        primaryBtn.innerHTML = `<span class="btn-icon">${icon}</span> Download EtherTransfer`;
+        primaryBtn.textContent = `Download Release`;
+        osText.textContent = `Supports Windows & Linux`;
     }
-    
-    // Smooth scroll for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
 
     // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -71,4 +47,39 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('theme', 'dark');
         }
     });
+
+    // Privacy Modal Logic
+    const privacyModal = document.getElementById('privacyModal');
+    const privacyOpenBtn = document.getElementById('privacyOpenBtn');
+    const privacyCloseBtn = document.getElementById('privacyCloseBtn');
+
+    if (privacyModal && privacyOpenBtn && privacyCloseBtn) {
+        privacyOpenBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            privacyModal.showModal();
+            document.body.style.overflow = 'hidden'; // Disable background scroll
+        });
+
+        privacyCloseBtn.addEventListener('click', () => {
+            privacyModal.close();
+        });
+
+        // The native 'close' event fires when closed via button OR Esc key
+        privacyModal.addEventListener('close', () => {
+            document.body.style.overflow = ''; // Restore background scroll
+        });
+        
+        // Close modal when clicking outside of it
+        privacyModal.addEventListener('click', (e) => {
+            const dialogDimensions = privacyModal.getBoundingClientRect();
+            if (
+                e.clientX < dialogDimensions.left ||
+                e.clientX > dialogDimensions.right ||
+                e.clientY < dialogDimensions.top ||
+                e.clientY > dialogDimensions.bottom
+            ) {
+                privacyModal.close();
+            }
+        });
+    }
 });

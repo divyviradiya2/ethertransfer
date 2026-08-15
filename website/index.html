@@ -1,150 +1,372 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EtherTransfer | Lightning Fast Local File Transfer</title>
-    <meta name="description" content="Enterprise-grade local file transfer application for direct Ethernet connections. No internet required.">
+    <title>EtherTransfer | Local File Transfer Utility</title>
+    <meta name="description" content="An open-source utility for direct local file transfers over Ethernet.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container nav-container">
-            <div class="logo-group">
-                <img src="assets/logo.png" alt="EtherTransfer Logo" class="logo">
+    <header class="top-nav">
+        <div class="nav-container">
+            <div class="brand">
+                <img src="assets/logo.png" alt="Logo" class="logo">
                 <span class="brand-name">EtherTransfer</span>
             </div>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How it Works</a>
-                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Theme">
-                    <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                    <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                </button>
-                <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" class="nav-link-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                    GitHub
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <header class="hero">
-        <div class="container hero-container">
-            <div class="hero-content">
-                <h1 class="hero-title">Direct file transfer over Ethernet.</h1>
-                <p class="hero-subtitle">A simple, open-source utility to transfer files between two computers using a standard Ethernet cable. No internet, router, or configuration required.</p>
-                
-                <div class="cta-group">
-                    <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest" class="btn btn-primary" id="primary-download-btn">
-                        <span class="btn-icon">↓</span> Download Now
-                    </a>
-                    <a href="#how-it-works" class="btn btn-secondary">Documentation</a>
+            <div class="nav-controls">
+                <div class="nav-links">
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#guide" class="nav-link">Guide</a>
+                    <a href="#downloads" class="nav-link">All Downloads</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" class="nav-link">GitHub</a>
                 </div>
-                <p class="os-text" id="os-text">Supports Windows and Linux.</p>
-            </div>
-            <div class="hero-image-wrapper">
-                <div class="mockup-window">
-                    <div class="mockup-header">
-                        <span class="dot close"></span>
-                        <span class="dot min"></span>
-                        <span class="dot max"></span>
-                        <span class="mockup-title">EtherTransfer</span>
-                    </div>
-                    <div class="mockup-body">
-                        <div class="pulse-ring"></div>
-                        <img src="assets/logo.png" alt="EtherTransfer App Icon" class="mockup-icon">
-                        <p class="mockup-status">Awaiting connection...</p>
-                    </div>
+                <div class="nav-actions">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Theme">
+                        <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </button>
+                    <a href="#downloads" class="btn-primary small-btn">Download</a>
                 </div>
             </div>
         </div>
     </header>
 
-    <section id="features" class="features-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Project Overview</h2>
-                <p>EtherTransfer was built to solve the simple problem of moving large datasets between local machines without relying on external drives or cloud storage.</p>
-            </div>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🔌</div>
-                    <h3>Direct Connection</h3>
-                    <p>Bypasses the internet and local routers. Speeds are limited only by your hardware—meaning your Network Interface Cards (NICs) and the category of your Ethernet cable.</p>
+    <div class="site-wrapper">
+        <main>
+            <!-- Hero Section -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h1>Transfer large files and folders between two PCs via Ethernet cable.</h1>
+                    <p class="hero-subtitle">No router required. EtherTransfer is a simple, open-source utility designed to move massive datasets directly between computers. No internet or network configuration needed.</p>
+                    
+                    <div class="action-row">
+                        <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest" class="btn-primary" id="primary-download-btn">Download Release</a>
+                        <span class="os-text" id="os-text">Supports Windows & Linux</span>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Local Network Only</h3>
-                    <p>All data is transmitted via direct TCP connections. There are no telemetry servers, accounts, or third-party tracking. It works entirely offline.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">💻</div>
-                    <h3>Cross-Platform</h3>
-                    <p>Written in C# with Avalonia UI. You can send files natively between Windows and Linux machines without worrying about file system formats (like NTFS vs ext4).</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📁</div>
-                    <h3>Directory Preservation</h3>
-                    <p>Supports dragging and dropping multiple nested directories. The application recreates the exact folder structure on the receiving machine.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+                
+                <div class="hero-visual">
+                    <div class="concept-diagram">
+                        
+                        <!-- Left PC -->
+                        <div class="concept-pc">
+                            <div class="pc-monitor">
+                                <div class="mock-screen"></div>
+                            </div>
+                            <div class="pc-base"></div>
+                            <span class="pc-label">Sender PC</span>
+                        </div>
 
-    <section id="how-it-works" class="steps-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Usage Guide</h2>
-            </div>
-            
-            <div class="steps-container">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h3>Hardware</h3>
-                    <p>Plug an Ethernet cable directly into the network ports of both computers. Ensure both network adapters are enabled.</p>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h3>Launch</h3>
-                    <p>Open EtherTransfer on both machines. They broadcast UDP packets to automatically discover each other on the link-local network.</p>
-                </div>
-                <div class="step-connector"></div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h3>Transfer</h3>
-                    <p>Select your files on the sender machine. The receiver will get a prompt to accept the incoming TCP transfer.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+                        <!-- Ethernet Connection -->
+                        <div class="concept-link">
+                            <div class="link-info">Direct Ethernet Cable</div>
+                            <div class="cable-track">
+                                <div class="cable-wire"></div>
+                                <div class="data-packet p1">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                                </div>
+                                <div class="data-packet p2">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
+                                </div>
+                                <div class="data-packet p3">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                                </div>
+                            </div>
+                        </div>
 
-    <footer class="footer">
-        <div class="container footer-container">
-            <div class="footer-left">
-                <div class="logo-group">
-                    <img src="assets/logo.png" alt="EtherTransfer Logo" class="logo logo-small">
-                    <span class="brand-name">EtherTransfer</span>
+                        <!-- Right PC -->
+                        <div class="concept-pc">
+                            <div class="pc-monitor">
+                                <div class="mock-screen"></div>
+                            </div>
+                            <div class="pc-base"></div>
+                            <span class="pc-label">Receiver PC</span>
+                        </div>
+
+                    </div>
                 </div>
-                <p class="footer-desc">An open-source utility for local file transfers.</p>
+
+            </section>
+
+            <!-- Features List -->
+            <section id="features" class="features-section">
+                <h2>Why EtherTransfer?</h2>
+                <div class="features-list">
+                    <div class="feature-row">
+                        <div class="feature-label">
+                            <div class="f-icon">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            </div>
+                            <h3>Zero Configuration</h3>
+                        </div>
+                        <div class="feature-desc">
+                            <p>Just plug in an Ethernet cable and open the app on both computers. There are no IP addresses to type, no settings to tweak, and no routers required.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-row">
+                        <div class="feature-label">
+                            <div class="f-icon">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            </div>
+                            <h3>100% Offline</h3>
+                        </div>
+                        <div class="feature-desc">
+                            <p>All files go directly through the cable from one computer to the other. It works completely offline, meaning you don't need an internet connection.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-row">
+                        <div class="feature-label">
+                            <div class="f-icon">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <h3>Keeps Folders Intact</h3>
+                        </div>
+                        <div class="feature-desc">
+                            <p>Transfer entire folders full of files at once. The app keeps everything perfectly organized exactly the way it was, without you needing to zip anything first.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-row">
+                        <div class="feature-label">
+                            <div class="f-icon">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            </div>
+                            <h3>Windows & Linux</h3>
+                        </div>
+                        <div class="feature-desc">
+                            <p>Easily send files between different operating systems. The app automatically handles all the technical differences behind the scenes.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Usage Section -->
+            <section id="guide" class="usage-section">
+                <h2>Visual Guide</h2>
+                
+                <div class="visual-steps">
+                    
+                    <!-- Step 1 -->
+                    <div class="visual-step">
+                        <div class="step-text">
+                            <div class="step-badge">Step 1</div>
+                            <h3>Connect the Ethernet Cable</h3>
+                            <p>Plug a standard Ethernet cable directly into the network ports of both the sending and receiving computers. No crossover cable or router is needed.</p>
+                        </div>
+                        <div class="step-visual">
+                            <div class="visual-box">
+                                <div class="diagram">
+                                    <div class="node-icon">
+                                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    </div>
+                                    <div class="connection-path">
+                                        <div class="connector left"></div>
+                                        <div class="cable"></div>
+                                        <div class="connector right"></div>
+                                        <div class="packet p1"></div>
+                                        <div class="packet p2"></div>
+                                        <div class="packet p3"></div>
+                                        <div class="connection-label">Ethernet Cable</div>
+                                    </div>
+                                    <div class="node-icon">
+                                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="visual-step reverse">
+                        <div class="step-text">
+                            <div class="step-badge">Step 2</div>
+                            <h3>Launch & Discover</h3>
+                            <p>Launch EtherTransfer on both PCs. They will automatically find each other and populate the "Discovered Devices" list.</p>
+                        </div>
+                        <div class="step-visual">
+                            <div class="visual-box">
+                                <div class="ui-mockup main-window">
+                                    <div class="ui-header">
+                                        <div class="ui-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                                        <div class="ui-title">EtherTransfer</div>
+                                    </div>
+                                    <div class="ui-body split">
+                                        <div class="ui-sidebar">
+                                            <div class="ui-sidebar-title">Discovered Devices</div>
+                                            <div class="ui-device-item active">
+                                                <div class="device-icon"></div>
+                                                <div class="device-info">
+                                                    <div class="d-name">Receiver-PC</div>
+                                                    <div class="d-ip">169.254.12.5</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="ui-main">
+                                            <div class="ui-main-header">
+                                                <div class="ui-main-title">Files to Transfer</div>
+                                                <div class="ui-btn-group">
+                                                    <div class="ui-btn">Add Folder</div>
+                                                    <div class="ui-btn">Add Files</div>
+                                                </div>
+                                            </div>
+                                            <div class="ui-file-area">
+                                                <div class="ui-file-item">📄 project_data.zip</div>
+                                                <div class="ui-file-item">🎬 video_render.mp4</div>
+                                            </div>
+                                            <div class="ui-main-footer">
+                                                <div class="ui-btn primary full">Send to Device</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="visual-step">
+                        <div class="step-text">
+                            <div class="step-badge">Step 3</div>
+                            <h3>Acceptance Dialog</h3>
+                            <p>When you click Send, the receiving computer instantly gets an Incoming Transfer request. They can review the file size and choose where to save it before accepting.</p>
+                        </div>
+                        <div class="step-visual">
+                            <div class="visual-box">
+                                <div class="ui-mockup dialog">
+                                    <div class="ui-header"><div class="ui-title">Transfer Window</div></div>
+                                    <div class="ui-body dialog-body">
+                                        <div class="d-title">Incoming Transfer</div>
+                                        <div class="d-desc">Sender-PC wants to send 2 files (4.2 GB).</div>
+                                        <div class="d-save-row">
+                                            <div class="d-save-input">C:\Downloads</div>
+                                            <div class="ui-btn">Change</div>
+                                        </div>
+                                        <div class="d-actions">
+                                            <div class="ui-btn">Decline</div>
+                                            <div class="ui-btn primary">Accept</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="visual-step reverse">
+                        <div class="step-text">
+                            <div class="step-badge">Step 4</div>
+                            <h3>Transfer Progress</h3>
+                            <p>Once accepted, the transfer begins immediately. You'll see real-time progress, transfer speed, and remaining data as your files stream directly across the cable.</p>
+                        </div>
+                        <div class="step-visual">
+                            <div class="visual-box">
+                                <div class="ui-mockup dialog">
+                                    <div class="ui-header"><div class="ui-title">Transfer Window</div></div>
+                                    <div class="ui-body dialog-body">
+                                        <div class="d-title">Transferring</div>
+                                        <div class="d-desc">video_render.mp4 (1/2)</div>
+                                        <div class="d-progress-bar"><div class="d-progress-fill"></div></div>
+                                        <div class="d-stats">
+                                            <span>450 MB / 4.2 GB</span>
+                                            <span class="d-accent">12%</span>
+                                            <span>850 MB/s</span>
+                                        </div>
+                                        <div class="ui-btn danger mt-2">Cancel</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Downloads Section -->
+            <section id="downloads" class="downloads-section">
+                <div class="downloads-header">
+                    <h2>Get EtherTransfer</h2>
+                    <p>Choose your platform below to download the latest version.</p>
+                </div>
+                
+                <div class="downloads-grid">
+                    <!-- Windows -->
+                    <div class="download-card">
+                        <div class="os-icon">
+                            <img src="assets/windows.png" alt="Windows" width="32" height="32" class="os-asset invert-on-dark">
+                        </div>
+                        <h3>Windows</h3>
+                        <p>Available for Windows 10 and 11. Choose the version that matches your system architecture.</p>
+                        <div class="dl-actions">
+                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-win-x64.exe" class="btn-primary dl-btn">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                64-bit Installer
+                            </a>
+                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-win-x86.exe" class="ui-btn dl-btn-alt">
+                                32-bit Installer
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Linux -->
+                    <div class="download-card">
+                        <div class="os-icon">
+                            <img src="assets/linux.png" alt="Linux" width="32" height="32" class="os-asset">
+                        </div>
+                        <h3>Linux</h3>
+                        <p>One unified script automatically handles installation across all major Linux distributions.</p>
+                        <div class="code-box">
+                            <code>curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/main/install_linux.sh | bash</code>
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/main/install_linux.sh | bash'); const btn = this; btn.innerText = 'Copied!'; setTimeout(() => btn.innerText = 'Copy', 2000);">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="brand">
+                        <img src="assets/logo.png" alt="Logo" class="logo">
+                        <span class="brand-name">EtherTransfer</span>
+                    </div>
+                    <p class="copyright">Developed by Divy Viradiya (DS Labs).</p>
+                    <p class="copyright">Open source under the <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/LICENSE" target="_blank" class="text-link">MIT License</a>.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#" id="privacyOpenBtn">Privacy & System</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer">Source Code</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer/issues">Report Issue</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest">Download</a>
+                </div>
             </div>
-            <div class="footer-right">
-                <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank">Source Code</a>
-                <a href="https://github.com/divyviradiya2/ethertransfer/releases" target="_blank">Releases</a>
-                <a href="https://github.com/divyviradiya2/ethertransfer/issues" target="_blank">Issues</a>
+        </footer>
+
+        <dialog id="privacyModal" class="privacy-modal">
+            <div class="modal-header">
+                <h3>Privacy & System Policy</h3>
+                <button id="privacyCloseBtn" class="close-modal" aria-label="Close dialog">&times;</button>
             </div>
-        </div>
-        <div class="container">
-            <div class="footer-bottom">
-                <p>&copy; 2026. Released under the MIT License.</p>
+            <div class="modal-body">
+                <p>EtherTransfer operates 100% offline. However, the installer modifies specific system settings to allow seamless computer-to-computer transfers.</p>
+                
+                <h4>Network & Firewall</h4>
+                <p>The installer automatically whitelists EtherTransfer in the Windows Defender Firewall. On Linux, it detects and modifies UFW, Firewalld, or iptables to open Port 8840 (TCP/UDP) for peer discovery.</p>
+                
+                <h4>System Dependencies</h4>
+                <p>On Linux, the script automatically uses your package manager (apt, dnf, pacman, etc.) to install the <code>network-manager</code> package if it is missing, as it is required for monitoring interface connectivity.</p>
+                
+                <h4>Zero Telemetry Guarantee</h4>
+                <p>EtherTransfer does not include background tracking services, telemetry agents, or startup analytics hooks. Absolutely no data ever leaves your local network.</p>
             </div>
-        </div>
-    </footer>
+        </dialog>
+    </div>
 
     <script src="script.js"></script>
 </body>
