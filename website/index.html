@@ -3,13 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EtherTransfer | Transfer Large Files Via Ethernet Cable</title>
-    <meta name="description" content="An open-source utility for direct local file transfers over Ethernet.">
+    <title>EtherTransfer | Direct PC-to-PC File Transfer via Ethernet Cable (100% Offline, Zero-Config)</title>
+    <meta name="description" content="Transfer massive files and entire folders directly between two PCs using an Ethernet cable. 100% offline, zero configuration, no router or internet required. Free & open-source for Windows & Linux.">
+    <meta name="keywords" content="EtherTransfer, ethernet file transfer, direct pc to pc file transfer, transfer files pc to pc ethernet cable, lan cable file transfer without router, transfer files from pc to pc without internet, offline computer to computer transfer, direct ethernet file transfer windows 11, transfer large files laptop to laptop, crossover cable alternative, open source lan transfer, fast pc file sharing">
+    <meta name="author" content="Divy Viradiya (DS Labs)">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="https://divyviradiya2.github.io/ethertransfer/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://divyviradiya2.github.io/ethertransfer/">
+    <meta property="og:title" content="EtherTransfer | Direct PC-to-PC File Transfer via Ethernet Cable">
+    <meta property="og:description" content="Move massive files and folder trees directly between two PCs at full Ethernet speed. 100% offline, zero setup, no router or internet needed.">
+    <meta property="og:image" content="https://divyviradiya2.github.io/ethertransfer/assets/logo.png">
+    <meta property="og:site_name" content="EtherTransfer">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://divyviradiya2.github.io/ethertransfer/">
+    <meta name="twitter:title" content="EtherTransfer | Direct PC-to-PC File Transfer via Ethernet Cable">
+    <meta name="twitter:description" content="Transfer massive files directly between two computers via Ethernet cable. 100% offline, no router, free & open-source.">
+    <meta name="twitter:image" content="https://divyviradiya2.github.io/ethertransfer/assets/logo.png">
+    <meta name="theme-color" content="#2563eb">
+
     <link rel="icon" type="image/png" href="assets/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Structured Data: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "EtherTransfer",
+      "operatingSystem": "Windows 10, Windows 11, Linux",
+      "applicationCategory": "UtilitiesApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "EtherTransfer is an open-source utility for high-speed, direct PC-to-PC file and folder transfers over an Ethernet cable without a router, internet, or manual network configuration.",
+      "softwareVersion": "1.0.0",
+      "downloadUrl": "https://github.com/divyviradiya2/ethertransfer/releases/latest",
+      "url": "https://divyviradiya2.github.io/ethertransfer/",
+      "image": "https://divyviradiya2.github.io/ethertransfer/assets/logo.png",
+      "author": {
+        "@type": "Person",
+        "name": "Divy Viradiya",
+        "url": "https://github.com/divyviradiya2"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "DS Labs",
+        "url": "https://github.com/divyviradiya2/ethertransfer"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I transfer large files directly between two PCs using an Ethernet cable?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Plug a standard Ethernet (LAN) cable directly into both computers and open EtherTransfer on both machines. The app automatically discovers the connected PC using link-local discovery without needing a router, switch, or manual IP configuration. Select your files or folders and click Send to transfer at full Gigabit speeds."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a crossover cable or will a regular Ethernet cable work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. Modern network interface cards (NICs) support Auto-MDI/MDIX, which automatically switches the send and receive pins. You do not need a special crossover cable."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does EtherTransfer work completely offline without internet or Wi-Fi?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. EtherTransfer is 100% offline. Data travels exclusively through the physical Ethernet wire from PC to PC. No internet connection, Wi-Fi router, cloud servers, or external telemetry are involved, making it ideal for air-gapped systems and sensitive data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I transfer files between Windows and Linux computers?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. EtherTransfer provides seamless cross-platform compatibility between Windows (10 & 11) and Linux distributions (Ubuntu, Debian, Fedora, Arch, CentOS). Directory paths and file metadata are automatically normalized during the transfer."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How fast is direct Ethernet file transfer compared to Wi-Fi or USB?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Direct Gigabit Ethernet achieves transfer speeds of 115 MB/s to 125 MB/s (~1 Gbps), and 10GbE reaches over 1,000 MB/s. A 100 GB dataset transfers in roughly 13 minutes on Gigabit Ethernet, compared to over 1.5 hours on typical Wi-Fi and 4+ hours on cloud storage."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to configure static IP addresses or change network adapter settings?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. EtherTransfer uses automatic peer discovery over link-local IPv4 addresses (APIPA 169.254.x.x). There are zero IP addresses to configure, zero network adapter settings to change, and zero router port forwards required."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Structured Data: HowTo -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to Transfer Large Files Between Two Computers via Ethernet Cable",
+      "description": "Step-by-step guide to transferring massive datasets and intact folder trees directly between two PCs using an Ethernet cable with EtherTransfer.",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Connect the Ethernet Cable",
+          "text": "Connect a standard RJ-45 Ethernet cable directly between the LAN network ports of Computer A and Computer B.",
+          "position": 1
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Launch EtherTransfer on Both Machines",
+          "text": "Open EtherTransfer on both PCs. The computers automatically discover each other in the Discovered Devices list.",
+          "position": 2
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Select Files or Folders",
+          "text": "Click Add Files or Add Folder on the sending computer to stage your data.",
+          "position": 3
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Accept and Stream at Full Speed",
+          "text": "Click Send. The receiving computer prompts to choose a destination directory and accept the transfer, streaming files at full gigabit speed.",
+          "position": 4
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <header class="top-nav">
@@ -22,8 +169,10 @@
                 <div class="nav-links">
                     <a href="#features" class="nav-link">Features</a>
                     <a href="#guide" class="nav-link">Guide</a>
+                    <a href="#comparison" class="nav-link">Comparison</a>
+                    <a href="#faq" class="nav-link">FAQ</a>
                     <a href="#downloads" class="nav-link">All Downloads</a>
-                    <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" class="nav-link">GitHub</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
                 </div>
                 <div class="nav-actions">
                     <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Theme">
@@ -52,6 +201,14 @@
                 </a>
                 <a href="#guide" class="mobile-nav-link">
                     <span>Guide</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="#comparison" class="mobile-nav-link">
+                    <span>Speed Comparison</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="#faq" class="mobile-nav-link">
+                    <span>FAQ</span>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
                 <a href="#downloads" class="mobile-nav-link">
@@ -321,6 +478,68 @@
                 </div>
             </section>
 
+            <!-- Speed & Protocol Comparison Section -->
+            <section id="comparison" class="comparison-section">
+                <div class="section-header">
+                    <h2>Speed & Method Comparison</h2>
+                    <p>Why direct Ethernet transfer is the fastest, most reliable method for moving massive files and intact folder trees between computers.</p>
+                </div>
+
+                <div class="comparison-table-wrapper">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Transfer Method</th>
+                                <th>Real Transfer Speed</th>
+                                <th>Time for 100 GB</th>
+                                <th>Internet / Router Required?</th>
+                                <th>Setup Complexity</th>
+                                <th>Folder Trees Intact?</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="highlight-row">
+                                <td>
+                                    <div class="table-method">
+                                        <strong>EtherTransfer (Direct LAN)</strong>
+                                        <span class="table-badge">Recommended</span>
+                                    </div>
+                                </td>
+                                <td class="speed-val">115 – 1,150 MB/s</td>
+                                <td class="time-val">~1.5 to 13 mins</td>
+                                <td><span class="tag-green">100% Offline (No Router)</span></td>
+                                <td>Zero Config (Plug & Play)</td>
+                                <td><span class="tag-green">Yes (Exact Structure)</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Local Wi-Fi Sharing (SMB / AirDrop)</strong></td>
+                                <td>15 – 45 MB/s</td>
+                                <td>~45 to 90 mins</td>
+                                <td>Requires Wi-Fi Router</td>
+                                <td>Network permissions & IPs</td>
+                                <td>Often fails on deep trees</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cloud Storage (Drive / OneDrive)</strong></td>
+                                <td>5 – 25 MB/s (Upload capped)</td>
+                                <td>~3 to 6+ hours</td>
+                                <td>Requires Fast Broadband</td>
+                                <td>Upload & download accounts</td>
+                                <td>Zipping required</td>
+                            </tr>
+                            <tr>
+                                <td><strong>USB 3.0 Flash Drive / External SSD</strong></td>
+                                <td>40 – 90 MB/s (2x copy)</td>
+                                <td>~40 to 60 mins (2 steps)</td>
+                                <td>No</td>
+                                <td>Physical copy-paste twice</td>
+                                <td>Yes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Downloads Section -->
             <section id="downloads" class="downloads-section">
                 <div class="downloads-header">
@@ -357,6 +576,76 @@
                         <div class="code-box">
                             <code>curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash</code>
                             <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash'); const btn = this; btn.innerText = 'Copied!'; setTimeout(() => btn.innerText = 'Copy', 2000);">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section id="faq" class="faq-section">
+                <div class="section-header">
+                    <h2>Frequently Asked Questions</h2>
+                    <p>Everything you need to know about transferring files between computers via direct Ethernet cable.</p>
+                </div>
+
+                <div class="faq-accordion">
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>How do I transfer large files directly between two PCs using an Ethernet cable?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Simply connect a standard Ethernet cable between the network ports of both PCs and launch EtherTransfer on both computers. The app automatically discovers the connected PC using link-local discovery (APIPA) without needing a router, switch, or manual IP configuration. Select your files or folders, click Send, and the receiving machine accepts to begin streaming data across the cable at full Gigabit speed.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>Do I need a crossover cable or will a regular Ethernet cable work?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. All modern PC network cards support Auto-MDI/MDIX, which automatically reconfigures the internal transmit and receive lines so a specialized crossover cable is never required.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>Does EtherTransfer work completely offline without internet or Wi-Fi?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes. EtherTransfer operates 100% offline. Data streams exclusively through the physical Ethernet wire from PC to PC. No internet connection, Wi-Fi router, cloud servers, or external telemetry are involved, making it ideal for air-gapped systems and sensitive data.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>Can I transfer files and folders between Windows and Linux?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes. EtherTransfer provides full cross-platform compatibility between Windows (10 and 11) and Linux distributions (Ubuntu, Debian, Fedora, Arch, CentOS). Directory paths, deep folder structures, and file metadata are automatically normalized during the transfer.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>How fast is direct Ethernet file transfer compared to Wi-Fi or USB?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Direct Gigabit Ethernet achieves transfer speeds of 115 MB/s to 125 MB/s (~1 Gbps), and 10GbE reaches over 1,000 MB/s. A 100 GB dataset transfers in roughly 13 minutes on Gigabit Ethernet, compared to over 1.5 hours on typical Wi-Fi and 4+ hours on cloud storage.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>Do I need to configure static IP addresses or change network adapter settings?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>No. EtherTransfer uses automatic peer discovery over link-local IPv4 addresses (APIPA 169.254.x.x). There are zero IP addresses to configure, zero network adapter settings to change, and zero router port forwards required.</p>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://divyviradiya2.github.io/ethertransfer/</loc>
+    <lastmod>2026-08-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://divyviradiya2.github.io/ethertransfer/assets/logo.png</image:loc>
+      <image:title>EtherTransfer Logo - Direct Ethernet File Transfer</image:title>
+      <image:caption>EtherTransfer: Offline, high-speed PC-to-PC file transfer utility via Ethernet cable.</image:caption>
+    </image:image>
+  </url>
+</urlset>

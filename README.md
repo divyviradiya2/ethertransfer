@@ -13,6 +13,7 @@
       <img src="https://img.shields.io/badge/Windows-x64%20%2F%20x86-0078D4?style=flat-square&logo=windows" alt="Windows" />
       <img src="https://img.shields.io/badge/Linux-x64-E95420?style=flat-square&logo=linux" alt="Linux" />
       <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" alt="MIT License" /></a>
+      <a href="https://divyviradiya2.github.io/ethertransfer/"><img src="https://img.shields.io/badge/Website-Live-2563EB?style=flat-square&logo=googlechrome&logoColor=white" alt="Live Website" /></a>
       <br><br>
       <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe"><img src="https://img.shields.io/badge/Download-Windows%2064--bit-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download 64-bit" /></a>
       <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x86.exe"><img src="https://img.shields.io/badge/Download-Windows%2032--bit-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download 32-bit" /></a>

@@ -189,4 +189,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // FAQ Accordion Logic
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    faqQuestions.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const isExpanded = btn.getAttribute('aria-expanded') === 'true';
+            const answer = btn.nextElementSibling;
+
+            // Optional: Close other FAQs for cleaner single-item view
+            faqQuestions.forEach(otherBtn => {
+                if (otherBtn !== btn && otherBtn.getAttribute('aria-expanded') === 'true') {
+                    otherBtn.setAttribute('aria-expanded', 'false');
+                    if (otherBtn.nextElementSibling) {
+                        otherBtn.nextElementSibling.style.maxHeight = null;
+                    }
+                }
+            });
+
+            // Toggle selected FAQ
+            if (isExpanded) {
+                btn.setAttribute('aria-expanded', 'false');
+                answer.style.maxHeight = null;
+            } else {
+                btn.setAttribute('aria-expanded', 'true');
+                answer.style.maxHeight = answer.scrollHeight + 'px';
+            }
+        });
+    });
 });

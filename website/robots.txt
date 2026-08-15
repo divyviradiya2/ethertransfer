@@ -1,0 +1,6 @@
+# Allow all search engine bots to crawl the entire website
+User-agent: *
+Allow: /
+
+# Direct link to XML sitemap for Google, Bing, and search crawlers
+Sitemap: https://divyviradiya2.github.io/ethertransfer/sitemap.xml
