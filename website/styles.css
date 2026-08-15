@@ -1127,6 +1127,7 @@ html {
 }
 
 @media (max-width: 768px) {
+    /* Hero Diagram Mobile Reflow */
     .concept-diagram {
         flex-direction: column;
         padding: 2rem;
@@ -1137,5 +1138,50 @@ html {
     }
     .link-info, .link-speed {
         display: none;
+    }
+    
+    /* Touch Target Button Stacking */
+    .action-row {
+        flex-direction: column;
+        width: 100%;
+        gap: 1rem;
+    }
+    .action-row > a,
+    .action-row > button {
+        width: 100%;
+        justify-content: center;
+    }
+    .dl-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    .dl-actions > a {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Nav & Header Collapse */
+    .nav-container {
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+    .nav-actions {
+        border-left: none;
+        padding-left: 0;
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Step 1 Visual Guide Mobile Reflow */
+    .diagram {
+        flex-direction: column;
+        gap: 0;
+    }
+    .connection-path {
+        transform: rotate(90deg);
+        margin: 3rem 0;
+        min-width: 100px;
     }
 }
