@@ -67,9 +67,9 @@ p {
 
 /* Layout */
 .site-wrapper {
-    max-width: 1200px;
+    max-width: 1300px;
     margin: 0 auto;
-    padding: 2rem 6vw;
+    padding: 2rem 4vw;
 }
 
 /* Header */
@@ -83,9 +83,9 @@ p {
 }
 
 .nav-container {
-    max-width: 1200px;
+    max-width: 1300px;
     margin: 0 auto;
-    padding: 1rem 6vw;
+    padding: 1rem 4vw;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -134,7 +134,7 @@ p {
 
 html {
     scroll-behavior: smooth;
-    font-size: 80%; /* Reduces global scale by 20% */
+    font-size: 90%; /* Reduces global scale by 10% */
 }
 
 [data-theme="dark"] .invert-on-dark {
