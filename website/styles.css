@@ -35,6 +35,7 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.2s, color 0.2s;
+    overflow-x: hidden;
 }
 
 /* Typography */
@@ -135,6 +136,7 @@ p {
 html {
     scroll-behavior: smooth;
     font-size: 90%; /* Reduces global scale by 10% */
+    overflow-x: hidden;
 }
 
 [data-theme="dark"] .invert-on-dark {
@@ -181,6 +183,7 @@ html {
     gap: 4rem;
     align-items: center;
     padding: 4rem 0 8rem;
+    max-width: 100vw;
 }
 
 .hero-subtitle {
