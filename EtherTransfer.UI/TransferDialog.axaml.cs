@@ -169,15 +169,28 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         return dialog;
     }
 
-    private void Cancel_Click(object? sender, RoutedEventArgs e)
+    private async void Cancel_Click(object? sender, RoutedEventArgs e)
     {
-        _senderCts?.Cancel();
-        _receiverCancelCts?.Cancel();
-        Close();
+        if (!IsProgressMode)
+        {
+            _isForceClosing = true;
+            CancelTransfer();
+            Close();
+            return;
+        }
+
+        bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync("Are you sure you want to cancel the transfer?", "Cancel Transfer");
+        if (confirm)
+        {
+            CancelTransfer();
+            // We do not close here. We let the background task throw the cancellation exception
+            // and MainWindow will transition this dialog to IsPartialSuccessMode.
+        }
     }
 
     private void Done_Click(object? sender, RoutedEventArgs e)
     {
+        _isForceClosing = true;
         Close();
     }
 
@@ -246,6 +259,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private void Decline_Click(object? sender, RoutedEventArgs e)
     {
         _receiverTcs?.TrySetResult((false, "", default));
+        _isForceClosing = true;
         Close();
     }
 
@@ -270,6 +284,45 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     {
         _senderCts?.Cancel();
         _receiverCancelCts?.Cancel();
+    }
+
+    private bool _isForceClosing = false;
+
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
+        if (_isForceClosing || IsSuccessMode)
+        {
+            base.OnClosing(e);
+            return;
+        }
+
+        if (IsProgressMode || IsSenderMode || IsReceiverMode)
+        {
+            e.Cancel = true; // Prevent immediate close
+            
+            if (!IsProgressMode)
+            {
+                _isForceClosing = true;
+                CancelTransfer();
+                Close();
+                return;
+            }
+
+            // Show native OS dialog
+            bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync(
+                "Are you sure you want to cancel the transfer?", 
+                "Cancel Transfer");
+                
+            if (confirm)
+            {
+                CancelTransfer();
+                // We do not close here. Let MainWindow catch the cancellation and set IsPartialSuccessMode
+            }
+        }
+        else
+        {
+            base.OnClosing(e);
+        }
     }
 
     protected override void OnClosed(EventArgs e)

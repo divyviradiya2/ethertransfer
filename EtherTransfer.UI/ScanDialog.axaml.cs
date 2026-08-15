@@ -29,4 +29,13 @@ public partial class ScanDialog : Window
         ScanCts.Cancel();
         Close();
     }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (!ScanCts.IsCancellationRequested)
+        {
+            ScanCts.Cancel();
+        }
+        base.OnClosing(e);
+    }
 }

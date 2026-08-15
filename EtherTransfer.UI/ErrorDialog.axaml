@@ -4,11 +4,8 @@
         Title="Error"
         Width="450" Height="200"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        SystemDecorations="None"
-        Background="Transparent"
-        TransparencyLevelHint="Transparent">
-    <Border Background="#1E1E1E" CornerRadius="8" BorderBrush="#333333" BorderThickness="1">
+        CanResize="True">
+    <Border Background="#1E1E1E" BorderBrush="#333333" BorderThickness="0">
         <Grid RowDefinitions="*, Auto" Margin="20">
             <TextBlock Name="MessageText" 
                        Foreground="#FF6B6B"

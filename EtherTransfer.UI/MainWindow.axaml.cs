@@ -197,6 +197,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     // For partial success, we can customize the text later
                     if (!result.Success)
                     {
+                        _activeDialog.IsPartialSuccessMode = true;
                         _activeDialog.TransferFinalSizeText = $"Partial Success. Completed {result.CompletedElementsCount}/{result.TotalElements} items.";
                     }
                     _activeDialog.SetCompletedElements(result.CompletedElementNames);
@@ -457,6 +458,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var payloads = await Task.WhenAll(scanTasks);
             scanDialog.Close();
 
+            if (cts.IsCancellationRequested)
+            {
+                SelectedPayloads.Clear();
+                UpdateSelectionUI();
+                return;
+            }
+
             foreach (var payload in payloads)
             {
                 if (payload != null)
@@ -528,6 +536,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
                 var payloads = await Task.WhenAll(scanTasks);
                 scanDialog.Close();
+
+                if (cts.IsCancellationRequested)
+                {
+                    SelectedPayloads.Clear();
+                    UpdateSelectionUI();
+                    return;
+                }
 
                 foreach (var payload in payloads)
                 {

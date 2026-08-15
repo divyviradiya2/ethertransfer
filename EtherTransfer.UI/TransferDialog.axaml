@@ -6,13 +6,11 @@
         Title="Transfer Window"
         Width="480" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="None"
-        Background="Transparent"
-        TransparencyLevelHint="Transparent"
+        ShowInTaskbar="False"
         Foreground="{DynamicResource AppForeground}"
         CanResize="False">
     
-    <Border BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="8" Background="{DynamicResource SurfaceBackground}">
+    <Border Background="{DynamicResource SurfaceBackground}">
         <Grid Margin="25">
             
             <!-- Sender Mode: Waiting for acceptance -->
