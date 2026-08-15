@@ -211,6 +211,25 @@ html {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    background-color: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 1rem 2rem;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: var(--border-color);
+    transform: translateY(-2px);
+}
+
 .os-text {
     font-size: 0.95rem;
     color: var(--text-muted);
@@ -239,6 +258,8 @@ html {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
+    z-index: 2;
 }
 
 .pc-monitor {
@@ -338,6 +359,8 @@ html {
     align-items: center;
     flex-grow: 1;
     max-width: 300px;
+    position: relative;
+    z-index: 1;
 }
 
 .link-info {
@@ -351,13 +374,13 @@ html {
 }
 
 .cable-track {
-    width: 100%;
+    width: calc(100% + 4rem);
     height: 32px;
     position: relative;
     display: flex;
     align-items: center;
     overflow: hidden;
-    margin-bottom: 0.8rem;
+    margin: 0 -2rem 0.8rem -2rem;
 }
 
 .cable-wire {
@@ -365,7 +388,7 @@ html {
     width: 100%;
     height: 8px;
     background-color: var(--border-color);
-    border-radius: 4px;
+    border-radius: 0;
     top: 50%;
     transform: translateY(-50%);
 }
@@ -401,7 +424,7 @@ html {
 
 @keyframes shootPacket {
     0% { transform: translate3d(-50px, 0, 0); }
-    100% { transform: translate3d(350px, 0, 0); }
+    100% { transform: translate3d(450px, 0, 0); }
 }
 
 .link-speed {
@@ -608,7 +631,6 @@ html {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.5rem;
     width: 100%;
 }
 
@@ -622,6 +644,8 @@ html {
     align-items: center;
     justify-content: center;
     color: var(--text-main);
+    position: relative;
+    z-index: 2;
 }
 
 .v-stroke {

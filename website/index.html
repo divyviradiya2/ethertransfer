@@ -45,7 +45,7 @@
                     
                     <div class="action-row">
                         <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest" class="btn-primary" id="primary-download-btn">Download Release</a>
-                        <span class="os-text" id="os-text">Supports Windows & Linux</span>
+                        <a href="#downloads" class="btn-secondary">All Downloads</a>
                     </div>
                 </div>
                 
@@ -303,12 +303,12 @@
                         <h3>Windows</h3>
                         <p>Available for Windows 10 and 11. Choose the version that matches your system architecture.</p>
                         <div class="dl-actions">
-                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-win-x64.exe" class="btn-primary dl-btn">
+                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe" class="btn-primary dl-btn">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                64-bit Installer
+                                64-bit Download
                             </a>
-                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-win-x86.exe" class="ui-btn dl-btn-alt">
-                                32-bit Installer
+                            <a href="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x86.exe" class="ui-btn dl-btn-alt">
+                                32-bit Download
                             </a>
                         </div>
                     </div>
@@ -364,6 +364,22 @@
                 
                 <h4>Zero Telemetry Guarantee</h4>
                 <p>EtherTransfer does not include background tracking services, telemetry agents, or startup analytics hooks. Absolutely no data ever leaves your local network.</p>
+            </div>
+        </dialog>
+
+        <dialog id="linuxInstallModal" class="privacy-modal">
+            <div class="modal-header">
+                <h3>Linux Installation</h3>
+                <button id="linuxInstallCloseBtn" class="close-modal" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>To install EtherTransfer on Linux, simply open your terminal and run the following command. The script will automatically detect your distribution and handle everything.</p>
+                
+                <h4 style="margin-top: 2rem;">Install Command</h4>
+                <div class="code-box" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                    <code style="border: none;">curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/main/install_linux.sh | bash</code>
+                    <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/main/install_linux.sh | bash'); const btn = this; btn.innerText = 'Copied!'; setTimeout(() => btn.innerText = 'Copy', 2000);">Copy</button>
+                </div>
             </div>
         </dialog>
     </div>

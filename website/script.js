@@ -1,26 +1,47 @@
 document.addEventListener('DOMContentLoaded', () => {
     // OS Detection for the primary download button
-    const osText = document.getElementById('os-text');
     const primaryBtn = document.getElementById('primary-download-btn');
     
     let userOS = "Unknown OS";
+    let is64Bit = false;
 
-    // Simple OS string detection
-    if (navigator.userAgent.indexOf("Win") != -1) {
+    // Advanced OS string detection
+    const ua = navigator.userAgent;
+    if (ua.indexOf("Win") !== -1) {
         userOS = "Windows";
-    } else if (navigator.userAgent.indexOf("Linux") != -1) {
+        if (ua.indexOf("WOW64") !== -1 || ua.indexOf("Win64") !== -1 || ua.indexOf("x64") !== -1) {
+            is64Bit = true;
+        }
+    } else if (ua.indexOf("Linux") !== -1 || ua.indexOf("X11") !== -1) {
         userOS = "Linux";
-    } else if (navigator.userAgent.indexOf("Mac") != -1) {
+    } else if (ua.indexOf("Mac") !== -1) {
         userOS = "MacOS";
     }
 
     // Update UI based on detected OS
-    if (userOS === "Windows" || userOS === "Linux") {
-        primaryBtn.textContent = `Download for ${userOS}`;
-        osText.textContent = `Auto-detected ${userOS}`;
-    } else {
-        primaryBtn.textContent = `Download Release`;
-        osText.textContent = `Supports Windows & Linux`;
+    if (primaryBtn) {
+        if (userOS === "Windows") {
+            if (is64Bit) {
+                primaryBtn.textContent = "Download for Windows (64-bit)";
+                primaryBtn.href = "https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe";
+            } else {
+                primaryBtn.textContent = "Download for Windows (32-bit)";
+                primaryBtn.href = "https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x86.exe";
+            }
+        } else if (userOS === "Linux") {
+            primaryBtn.textContent = "Install for Linux";
+            primaryBtn.href = "#"; // Prevent navigation
+            primaryBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const linuxModal = document.getElementById('linuxInstallModal');
+                if (linuxModal) {
+                    linuxModal.showModal();
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+        } else {
+            primaryBtn.textContent = "Download Release";
+        }
     }
 
     // Theme Toggle Logic
@@ -79,6 +100,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.clientY > dialogDimensions.bottom
             ) {
                 privacyModal.close();
+            }
+        });
+    }
+
+    // Linux Modal Logic
+    const linuxModal = document.getElementById('linuxInstallModal');
+    const linuxCloseBtn = document.getElementById('linuxInstallCloseBtn');
+
+    if (linuxModal && linuxCloseBtn) {
+        linuxCloseBtn.addEventListener('click', () => {
+            linuxModal.close();
+        });
+
+        linuxModal.addEventListener('close', () => {
+            document.body.style.overflow = ''; 
+        });
+        
+        linuxModal.addEventListener('click', (e) => {
+            const dialogDimensions = linuxModal.getBoundingClientRect();
+            if (
+                e.clientX < dialogDimensions.left ||
+                e.clientX > dialogDimensions.right ||
+                e.clientY < dialogDimensions.top ||
+                e.clientY > dialogDimensions.bottom
+            ) {
+                linuxModal.close();
             }
         });
     }
