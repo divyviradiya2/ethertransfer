@@ -456,9 +456,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 });
 
             var payloads = await Task.WhenAll(scanTasks);
+            bool wasCancelled = cts.IsCancellationRequested;
             scanDialog.Close();
 
-            if (cts.IsCancellationRequested)
+            if (wasCancelled)
             {
                 SelectedPayloads.Clear();
                 UpdateSelectionUI();
@@ -535,9 +536,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 });
 
                 var payloads = await Task.WhenAll(scanTasks);
+                bool wasCancelled = cts.IsCancellationRequested;
                 scanDialog.Close();
 
-                if (cts.IsCancellationRequested)
+                if (wasCancelled)
                 {
                     SelectedPayloads.Clear();
                     UpdateSelectionUI();
