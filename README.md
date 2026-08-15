@@ -36,20 +36,7 @@ There is no need for a router, DHCP server, or manual IP configuration.
 
 <br>
 
-## Supported platforms
 
-<table border="0" align="center" cellpadding="8">
-  <tr align="center">
-    <td><img src="https://img.icons8.com/color/96/windows-11.png" alt="Windows" height="60" /></td>
-    <td><img src="https://img.icons8.com/color/96/linux--v1.png" alt="Linux" height="60" /></td>
-  </tr>
-  <tr align="center" valign="top">
-    <td><sub><b>Windows 10 / 11</b></sub></td>
-    <td><sub><b>Linux</b></sub></td>
-  </tr>
-</table>
-
-<br>
 
 ## Features
 
