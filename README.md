@@ -6,6 +6,19 @@
 
 EtherTransfer is a lightning-fast, cross-platform file and folder transfer application designed for direct Ethernet connections between two devices. It emphasizes **maximum reliability, stability, simplicity, and enterprise-level robustness**.
 
+### Download & Install
+
+**Windows**  
+[![Windows 64-bit](https://img.shields.io/badge/Download-Windows%2064--bit-blue?style=for-the-badge&logo=windows)](https://github.com/divyviradiya2/ethertransfer/releases/latest/EtherTransfer_Setup_x64.exe)
+[![Windows 32-bit](https://img.shields.io/badge/Download-Windows%2032--bit-blue?style=for-the-badge&logo=windows)](https://github.com/divyviradiya2/ethertransfer/releases/latest/EtherTransfer_Setup_x86.exe)
+
+**Linux**  
+Run this single command in your terminal to install instantly:
+```bash
+curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash
+```
+*(To uninstall, simply run: `curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/uninstall_linux.sh | sudo bash`)*
+
 <div align="center">
   <img src="docs/network_diagram.jpg" alt="How it works" width="800">
 </div>
@@ -18,15 +31,6 @@ EtherTransfer is a lightning-fast, cross-platform file and folder transfer appli
 - **Robust Networking**: Features dynamic port binding, link-state monitoring, and connection-drop watchdogs.
 - **Deep Folder Structures**: Recursively scans and recreates entire directory trees accurately.
 - **Sandbox Security**: Built-in path sanitization prevents malicious directory traversal attacks (e.g. `../../Windows/System32`).
-
-## Quick Download
-
-### Linux
-Installs EtherTransfer effortlessly via a single command:
-```bash
-curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash
-```
-*(To uninstall: run `curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/uninstall_linux.sh | sudo bash`)*
 
 ## Usage
 
