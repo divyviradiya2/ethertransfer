@@ -196,6 +196,7 @@ html {
 .btn-primary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     background-color: var(--text-main);
     color: var(--bg-base);
     padding: 1rem 2rem;
@@ -204,6 +205,7 @@ html {
     border-radius: var(--radius-md);
     font-size: 1.1rem;
     transition: transform 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
 }
 
 .btn-primary:hover {
@@ -214,6 +216,7 @@ html {
 .btn-secondary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     background-color: transparent;
     color: var(--text-main);
     border: 1px solid var(--border-color);
@@ -223,6 +226,7 @@ html {
     border-radius: var(--radius-md);
     font-size: 1.1rem;
     transition: background-color 0.2s, transform 0.2s;
+    white-space: nowrap;
 }
 
 .btn-secondary:hover {
@@ -374,7 +378,7 @@ html {
 }
 
 .cable-track {
-    width: calc(100% + 4rem);
+    align-self: stretch;
     height: 32px;
     position: relative;
     display: flex;
