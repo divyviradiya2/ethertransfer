@@ -134,4 +134,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Mobile Navigation Drawer Logic
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileNavDrawer = document.getElementById('mobile-nav-drawer');
+    const mobileNavBackdrop = document.getElementById('mobile-nav-backdrop');
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link, .mobile-cta-btn');
+
+    if (mobileMenuBtn && mobileNavDrawer) {
+        const openMobileMenu = () => {
+            mobileNavDrawer.classList.add('is-open');
+            mobileMenuBtn.setAttribute('aria-expanded', 'true');
+            mobileNavDrawer.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeMobileMenu = () => {
+            mobileNavDrawer.classList.remove('is-open');
+            mobileMenuBtn.setAttribute('aria-expanded', 'false');
+            mobileNavDrawer.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        };
+
+        mobileMenuBtn.addEventListener('click', () => {
+            const isOpen = mobileNavDrawer.classList.contains('is-open');
+            if (isOpen) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
+        });
+
+        if (mobileNavBackdrop) {
+            mobileNavBackdrop.addEventListener('click', closeMobileMenu);
+        }
+
+        mobileNavLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                closeMobileMenu();
+            });
+        });
+
+        // Close on Escape key press
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && mobileNavDrawer.classList.contains('is-open')) {
+                closeMobileMenu();
+            }
+        });
+
+        // Close mobile drawer automatically if viewport resized to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768 && mobileNavDrawer.classList.contains('is-open')) {
+                closeMobileMenu();
+            }
+        });
+    }
 });

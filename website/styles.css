@@ -174,6 +174,152 @@ html {
     color: var(--text-main);
 }
 
+/* Mobile Navigation Button (Hidden on Desktop) */
+.mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 6px;
+    color: var(--text-main);
+    transition: background-color 0.2s, border-color 0.2s;
+    z-index: 101;
+}
+
+.mobile-menu-btn:hover, .mobile-menu-btn:focus-visible {
+    background-color: var(--border-color);
+}
+
+.hamburger-bar {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background-color: currentColor;
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    transform-origin: center;
+}
+
+/* Active hamburger animation (turns into X) */
+.mobile-menu-btn[aria-expanded="true"] .hamburger-bar:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.mobile-menu-btn[aria-expanded="true"] .hamburger-bar:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.mobile-menu-btn[aria-expanded="true"] .hamburger-bar:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Mobile Navigation Drawer (Hidden on Desktop) */
+.mobile-nav-drawer {
+    display: none;
+    position: fixed;
+    top: 57px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.mobile-nav-drawer.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.mobile-nav-backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.mobile-nav-panel {
+    position: relative;
+    background-color: var(--bg-panel);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
+    transform: translateY(-15px);
+    transition: transform 0.25s ease;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.mobile-nav-drawer.is-open .mobile-nav-panel {
+    transform: translateY(0);
+}
+
+.mobile-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.mobile-nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 500;
+    background-color: transparent;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.mobile-nav-link svg {
+    color: var(--text-muted);
+    transition: transform 0.2s, color 0.2s;
+}
+
+.mobile-nav-link:hover, .mobile-nav-link:active {
+    background-color: var(--bg-base);
+    color: var(--accent);
+}
+
+.mobile-nav-link:hover svg, .mobile-nav-link:active svg {
+    color: var(--accent);
+    transform: translateX(3px);
+}
+
+.mobile-nav-actions {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.mobile-cta-btn {
+    display: flex;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 0.85rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
 /* Hero Section */
 .hero-section {
     display: grid;
@@ -850,15 +996,6 @@ html {
 }
 .mt-2 { margin-top: 8px; }
 
-@media (max-width: 900px) {
-    .visual-step, .visual-step.reverse {
-        grid-template-columns: 1fr;
-        direction: ltr;
-        gap: 2rem;
-    }
-    .downloads-grid { grid-template-columns: 1fr; }
-}
-
 /* Downloads Section */
 .downloads-section {
     padding: 6rem 0;
@@ -967,7 +1104,6 @@ html {
 .copy-btn:hover { background-color: #d1d5db; }
 [data-theme="dark"] .copy-btn:hover { background-color: #333333; }
 
-/* Modal */
 .privacy-modal {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -975,6 +1111,8 @@ html {
     color: var(--text-main);
     max-width: 600px;
     width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
     padding: 0;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     margin: auto;
@@ -1094,23 +1232,45 @@ html {
     color: var(--text-main);
 }
 
-@media (max-width: 600px) {
-    .footer-content {
-        flex-direction: column;
-        gap: 2rem;
+/* ==========================================================================
+   Responsive Design System (Mobile & Tablet)
+   ========================================================================== */
+
+/* Keyframe for Vertical Data Flow on Mobile */
+@keyframes shootPacketVertical {
+    0% {
+        transform: translate3d(0, -25px, 0);
+        opacity: 0;
     }
-    .footer-links {
-        flex-direction: column;
-        gap: 1rem;
+    15% {
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate3d(0, 115px, 0);
+        opacity: 0;
     }
 }
 
-/* Responsive */
+/* Base Viewport Safeguards */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+/* Medium Tablets & Small Laptops (<= 1024px) */
 @media (max-width: 1024px) {
+    .site-wrapper {
+        padding: 1.5rem 4vw;
+    }
+
     .hero-section {
         grid-template-columns: 1fr;
         text-align: center;
         gap: 3rem;
+        padding: 3rem 0 6rem;
     }
     
     .hero-subtitle {
@@ -1120,22 +1280,556 @@ html {
     .action-row {
         justify-content: center;
     }
-    
-    .steps-grid {
-        grid-template-columns: 1fr;
+
+    .feature-row {
+        grid-template-columns: 240px 1fr;
+        gap: 2.5rem;
     }
 }
 
+/* Tablet Portrait & Large Mobile (<= 900px) */
+@media (max-width: 900px) {
+    .visual-step, 
+    .visual-step.reverse {
+        grid-template-columns: 1fr;
+        direction: ltr;
+        gap: 2rem;
+    }
+
+    .downloads-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+}
+
+/* Standard Mobile & Small Tablets (<= 768px) */
 @media (max-width: 768px) {
+    /* Navigation Bar */
+    .top-nav {
+        border-bottom-color: var(--border-color);
+    }
+
+    .nav-container {
+        padding: 0.85rem 4vw;
+    }
+
+    .nav-links {
+        display: none !important;
+    }
+
+    .nav-actions {
+        margin-left: 0;
+        padding-left: 0;
+        border-left: none;
+        gap: 0.75rem;
+    }
+
+    .nav-actions .btn-primary.small-btn {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .mobile-nav-drawer {
+        display: block;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        padding: 2rem 0 4.5rem;
+        gap: 2.5rem;
+    }
+
+    h1 {
+        font-size: clamp(2rem, 6.5vw, 2.75rem);
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        max-width: 100%;
+    }
+
+    /* Hero Concept Diagram (Clean Vertical Flow) */
     .concept-diagram {
         flex-direction: column;
-        padding: 2rem;
+        padding: 2.25rem 1.5rem;
+        gap: 0;
+        box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.08);
     }
+
+    .concept-pc .pc-monitor {
+        width: 140px;
+        height: 95px;
+    }
+
+    .concept-pc .pc-base {
+        width: 52px;
+        height: 10px;
+        margin-bottom: 0.25rem;
+    }
+
+    .concept-pc .pc-label {
+        font-size: 0.82rem;
+    }
+
     .concept-link {
-        transform: rotate(90deg);
-        margin: 4rem 0;
+        transform: none !important;
+        margin: 0.25rem 0;
+        max-width: 100%;
+        width: 100%;
+        height: 96px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .link-info, .link-speed {
-        display: none;
+
+    .link-info {
+        position: relative;
+        z-index: 5;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--accent);
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-color);
+        border-radius: 100px;
+        padding: 0.3rem 0.85rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        margin: 0;
+    }
+
+    .cable-track {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 100%;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    .cable-wire {
+        position: absolute;
+        width: 6px;
+        height: 100%;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--border-color);
+        border-radius: 3px;
+    }
+
+    .data-packet {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        margin-top: 0;
+        margin-left: -12px;
+        z-index: 2;
+        transform: translate3d(0, -25px, 0);
+        animation: shootPacketVertical 2.2s infinite linear;
+        box-shadow: 0 -3px 0 3px var(--bg-panel), 0 3px 0 3px var(--bg-panel);
+    }
+
+    /* Features Section */
+    .features-section {
+        padding: 4.5rem 0;
+    }
+
+    .features-section h2 {
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .feature-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        padding: 2rem 0;
+    }
+
+    .feature-label {
+        gap: 0.75rem;
+    }
+
+    .feature-label h3 {
+        font-size: 1.15rem;
+    }
+
+    .feature-desc p {
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 100%;
+    }
+
+    /* Visual Guide Section */
+    .usage-section {
+        padding: 4.5rem 0;
+    }
+
+    .usage-section h2 {
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .visual-steps {
+        gap: 3rem;
+        margin-top: 2rem;
+    }
+
+    .visual-step, 
+    .visual-step.reverse {
+        grid-template-columns: 1fr;
+        direction: ltr;
+        gap: 1.5rem;
+    }
+
+    .visual-box {
+        height: auto;
+        min-height: 220px;
+        padding: 1.5rem 1.25rem;
+        border-radius: var(--radius-md);
+    }
+
+    .diagram {
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .node-icon {
+        width: 62px;
+        height: 62px;
+        flex-shrink: 0;
+    }
+
+    .node-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .connection-path {
+        min-width: 60px;
+        flex: 1;
+    }
+
+    .connection-label {
+        font-size: 0.72rem;
+        padding: 0.2rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    /* Downloads Section */
+    .downloads-section {
+        padding: 4.5rem 0;
+    }
+
+    .downloads-header {
+        margin-bottom: 2.5rem;
+    }
+
+    .downloads-header h2 {
+        font-size: 1.75rem;
+    }
+
+    .download-card {
+        padding: 2.25rem 1.75rem;
+        border-radius: var(--radius-md);
+    }
+
+    .os-icon {
+        width: 54px;
+        height: 54px;
+        margin-bottom: 1.25rem;
+    }
+
+    .os-icon .os-asset {
+        width: 28px;
+        height: 28px;
+    }
+
+    .dl-actions {
+        padding-top: 1.5rem;
+        gap: 0.85rem;
+    }
+
+    /* Footer */
+    .footer {
+        padding: 3.5rem 0 2rem;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 2.25rem;
+    }
+
+    .footer-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem 1.5rem;
+        width: 100%;
+    }
+}
+
+/* Compact Mobile (<= 520px) */
+@media (max-width: 520px) {
+    .site-wrapper {
+        padding: 1.25rem 4vw;
+    }
+
+    h1 {
+        font-size: clamp(1.85rem, 7.5vw, 2.35rem);
+    }
+
+    .action-row {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .action-row .btn-primary,
+    .action-row .btn-secondary {
+        width: 100%;
+        text-align: center;
+        padding: 0.9rem 1.25rem;
+        font-size: 1rem;
+    }
+
+    .concept-diagram {
+        padding: 1.75rem 1rem;
+        gap: 0;
+    }
+
+    .concept-pc .pc-monitor {
+        width: 125px;
+        height: 85px;
+    }
+
+    .concept-pc .pc-base {
+        width: 46px;
+        height: 9px;
+        margin-bottom: 0.25rem;
+    }
+
+    .concept-link {
+        height: 86px;
+        margin: 0.25rem 0;
+    }
+
+    .link-info {
+        font-size: 0.68rem;
+        padding: 0.25rem 0.75rem;
+    }
+
+    /* Step Mockups Scaling */
+    .visual-box {
+        padding: 1.25rem 0.75rem;
+    }
+
+    .node-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    .node-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .connection-label {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+    }
+
+    .ui-mockup.main-window {
+        height: 210px;
+    }
+
+    .ui-sidebar {
+        width: 44%;
+        padding: 6px;
+    }
+
+    .ui-main {
+        padding: 6px;
+    }
+
+    .ui-sidebar-title, 
+    .ui-main-title {
+        font-size: 0.6rem;
+    }
+
+    .ui-device-item {
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .device-icon {
+        width: 12px;
+        height: 12px;
+    }
+
+    .d-name {
+        font-size: 0.6rem;
+    }
+
+    .d-ip {
+        font-size: 0.5rem;
+    }
+
+    .ui-btn {
+        padding: 3px 6px;
+        font-size: 0.55rem;
+    }
+
+    .ui-file-item {
+        font-size: 0.6rem;
+        padding: 2px;
+    }
+
+    /* Dialog mockups */
+    .ui-mockup.dialog {
+        width: 100%;
+        max-width: 260px;
+    }
+
+    .dialog-body {
+        padding: 12px 10px;
+        gap: 8px;
+    }
+
+    .d-title {
+        font-size: 0.8rem;
+    }
+
+    .d-desc {
+        font-size: 0.65rem;
+    }
+
+    /* Download Cards on Mobile */
+    .download-card {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .dl-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .dl-btn, 
+    .dl-btn-alt {
+        width: 100%;
+        justify-content: center;
+        padding: 0.85rem 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .code-box {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding: 0.85rem;
+    }
+
+    .code-box code {
+        font-size: 0.76rem;
+        word-break: break-all;
+    }
+
+    .copy-btn {
+        width: 100%;
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+
+    /* Modals on Mobile */
+    .privacy-modal {
+        width: 94%;
+        max-height: 88vh;
+        border-radius: var(--radius-md);
+    }
+
+    .modal-header {
+        padding: 1.15rem 1.25rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .modal-body {
+        padding: 1.25rem;
+    }
+
+    .modal-body h4 {
+        margin-top: 1.25rem;
+        font-size: 1rem;
+    }
+
+    .modal-body p {
+        font-size: 0.9rem;
+    }
+
+    /* Footer on Small Mobile */
+    .footer-links {
+        grid-template-columns: 1fr;
+        gap: 0.9rem;
+    }
+}
+
+/* Extra Small Devices (<= 360px) */
+@media (max-width: 360px) {
+    .site-wrapper {
+        padding: 1rem 3vw;
+    }
+
+    .brand-name {
+        font-size: 1.1rem;
+    }
+
+    .concept-pc .pc-monitor {
+        width: 110px;
+        height: 75px;
+    }
+
+    .concept-pc .pc-base {
+        width: 40px;
+        height: 8px;
+    }
+
+    .concept-link {
+        height: 76px;
+    }
+
+    .link-info {
+        font-size: 0.62rem;
+        padding: 0.2rem 0.65rem;
+    }
+
+    .node-icon {
+        width: 42px;
+        height: 42px;
+    }
+
+    .connection-label {
+        font-size: 0.6rem;
+    }
+
+    .download-card {
+        padding: 1.25rem 1rem;
     }
 }
