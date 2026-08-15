@@ -1127,17 +1127,44 @@ html {
 }
 
 @media (max-width: 768px) {
-    /* Hero Diagram Mobile Reflow */
+    /* Horizontal Scale-Down for Hero Diagram (No Layout-Breaking Rotations) */
     .concept-diagram {
-        flex-direction: column;
-        padding: 2rem;
+        padding: 1.5rem 0.5rem;
+        gap: 0.5rem;
+    }
+    .pc-monitor {
+        width: 110px;
+        height: 75px;
+    }
+    .pc-base {
+        width: 40px;
+        height: 8px;
+    }
+    .pc-label {
+        font-size: 0.75rem;
     }
     .concept-link {
-        transform: rotate(90deg);
-        margin: 4rem 0;
+        margin: 0;
+        min-width: 40px;
+    }
+    .cable-track {
+        margin: 0 -0.5rem 0.5rem -0.5rem;
+        height: 24px;
     }
     .link-info, .link-speed {
         display: none;
+    }
+    
+    /* Horizontal Scale-Down for Step 1 Visual Guide */
+    .diagram {
+        gap: 0.5rem;
+    }
+    .node-icon {
+        width: 50px;
+        height: 50px;
+    }
+    .connection-path {
+        min-width: 40px;
     }
     
     /* Touch Target Button Stacking */
@@ -1172,16 +1199,5 @@ html {
         margin-left: 0;
         width: 100%;
         justify-content: center;
-    }
-    
-    /* Step 1 Visual Guide Mobile Reflow */
-    .diagram {
-        flex-direction: column;
-        gap: 0;
-    }
-    .connection-path {
-        transform: rotate(90deg);
-        margin: 3rem 0;
-        min-width: 100px;
     }
 }
