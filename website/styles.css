@@ -39,11 +39,12 @@ body {
 
 /* Typography */
 h1 {
-    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-size: clamp(2.5rem, 3.5vw, 3.5rem);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: -0.02em;
     margin-bottom: 1.25rem;
+    text-wrap: balance;
 }
 
 h2 {
@@ -66,9 +67,9 @@ p {
 
 /* Layout */
 .site-wrapper {
-    max-width: 1400px; /* Widened the container to reduce empty space on sides */
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem 4vw;
+    padding: 2rem 6vw;
 }
 
 /* Header */
@@ -82,9 +83,9 @@ p {
 }
 
 .nav-container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 1rem 4vw;
+    padding: 1rem 6vw;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -133,6 +134,7 @@ p {
 
 html {
     scroll-behavior: smooth;
+    font-size: 80%; /* Reduces global scale by 20% */
 }
 
 [data-theme="dark"] .invert-on-dark {
@@ -156,6 +158,7 @@ html {
     background-color: var(--border-color);
 }
 
+.sun-icon { display: none; }
 [data-theme="dark"] .moon-icon { display: none; }
 [data-theme="dark"] .sun-icon { display: block !important; }
 

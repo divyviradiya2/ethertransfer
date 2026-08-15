@@ -47,8 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle');
     
-    // Check for saved theme preference or use OS preference
-    const savedTheme = localStorage.getItem('theme');
+    // Check for saved theme preference safely (avoids crash if localStorage is blocked)
+    let savedTheme = null;
+    try {
+        savedTheme = localStorage.getItem('theme');
+    } catch (e) {
+        console.warn('localStorage is blocked or unavailable.');
+    }
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
@@ -62,10 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme === 'dark') {
             document.documentElement.setAttribute('data-theme', 'light');
-            localStorage.setItem('theme', 'light');
+            try { localStorage.setItem('theme', 'light'); } catch (e) {}
         } else {
             document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('theme', 'dark');
+            try { localStorage.setItem('theme', 'dark'); } catch (e) {}
         }
     });
 
