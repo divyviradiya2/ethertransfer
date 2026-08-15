@@ -1,34 +1,56 @@
-# EtherTransfer Networking Layer
+# EtherTransfer Networking Architecture
 
 ## Overview
-EtherTransfer relies on UDP broadcasts for peer discovery and TCP for high-speed file transfers. The network layer has been heavily hardened to ensure reliable peer discovery even in challenging enterprise network environments (e.g., bridging, dual-homed machines, flaky link-local fallback on Linux).
+EtherTransfer relies on UDP broadcasts for peer discovery and high-performance TCP streaming for file transfers. The network layer has been heavily hardened and re-architected to guarantee absolute reliability over direct, unmanaged physical Ethernet links.
 
-## Stable Identity (`SessionId`)
-A device's identity is now tied to a dynamically generated `SessionId` (Guid) generated upon app startup, not its current IP address.
-- **Why?** Laptops commonly switch between networks, or connect to multiple networks simultaneously (VPNs, docks). Tying identity to an IP address creates stale UI entries ("ghost devices") and prevents reliable file transfers.
-- **How it works:** 
-  1. `DiscoveryService` generates a unique `SessionId`.
-  2. `DiscoveryMessage` broadcasts this `SessionId`.
-  3. `DeviceService` keys its internal `_devices` dictionary using `SessionId`.
-  4. If a device changes its IP address, `DeviceService` updates the `Address` in place, avoiding duplicates.
-  5. The UI resolves the *live IP address* from `DeviceService` at the exact moment the user clicks "Send".
+---
 
-## Concurrency & Performance (`EthernetConfigurator`)
-On Linux, EtherTransfer tries to configure Link-Local IPv4 addresses automatically using NetworkManager (`nmcli`) if standard DHCP fails.
-- **Locking & Thread Safety:** The configuration process is protected by `_lock` to safely handle simultaneous physical network unplugs and application startup events.
-- **Parallel Checks:** `Task.WhenAll` allows `EthernetConfigurator` to wait for all interfaces concurrently, significantly reducing application startup time on multi-NIC setups.
-- **Honest Tracking:** Configuration outcomes are properly tracked using `ConfigStatus` (Pending, Success, Failed) to avoid pointless retries and misleading log messages. The manual `ip addr add` `sudo` fallback was removed due to unpredictable behavior and permission issues.
+## 1. UDP Peer Discovery (`DiscoveryService.cs`)
 
-## UDP Discovery Port Binding
-The UDP listener `UdpClient` now binds to `0.0.0.0:50000` *before* `EthernetConfigurator` runs.
-- **Why?** Previously, slow NetworkManager link-local fallback negotiations would block the listener thread, meaning the app would completely miss `HELLO` packets broadcasted by peers who booted up faster. 
-- **Self-Discovery:** `DiscoveryService` filters out incoming packets where `message.SessionId == _sessionId` to prevent the UI from displaying the host machine.
+EtherTransfer uses UDP on Port **50000** for decentralized peer discovery.
 
-## Link-State Driven Eviction
-- Instead of waiting for a 45-second stale timeout when a cable is unplugged, `DeviceService` hooks into OS `NetworkChange.NetworkAddressChanged`.
-- It recalculates active IP subnets and instantly evicts peers that are no longer physically reachable, preventing stalled transfer attempts.
+### Session-Based Identity
+A device's identity is tied to a dynamically generated `SessionId` (Guid) created upon app startup, rather than a static IP address.
+- **Why?** Laptops commonly switch IP addresses due to DHCP or link-local renegotiations when plugging/unplugging cables. Tying identity to an IP address creates stale "ghost devices."
+- **Mechanism**: The `HELLO` broadcast payload contains the `SessionId`. The UI and `DeviceService` key their peers by this ID. If an IP address changes, the application updates the record in-place instead of creating a duplicate.
 
-## Structured Logging
-The network layer utilizes `StructuredLogMessage` (`EtherTransfer.Core.Models`), allowing events to carry structured identifiers (`EventId`) and `LogLevel`.
+### Subnet Security Filtering
+The `DiscoveryService` implements an aggressive enterprise-level filter on incoming `HELLO` packets.
+- When a packet is received, the service cross-references the source IP against `NetworkHelper.IsIpInActiveSubnets(sourceIpStr)`.
+- If the packet originated from a subnet that is *not* bound to a physical Ethernet adapter (e.g., it leaked over a Wi-Fi connection), the packet is silently dropped.
+
+---
+
+## 2. Physical Link Monitoring (`EthernetLinkMonitor.cs`)
+
+Because direct PC-to-PC connections do not use a router, the OS often struggles to allocate IP addresses (falling back to APIPA/Link-Local). The `EthernetLinkMonitor` replaces legacy static configuration scripts with a robust, real-time state machine.
+
+### The State Machine
+- **`NoCable`**: No physical Ethernet link is detected.
+- **`Configuring`**: A physical link is detected (OperationalStatus is UP), but the OS has not yet assigned an IPv4 address.
+- **`Ready`**: The interface is UP and has a valid IPv4 address. Peer discovery and transfers are permitted.
+- **`ConfigError`**: The OS failed to assign an IP address within the timeout period.
+
+### Linux Auto-Configuration (`nmcli`)
+On Windows and macOS, link-local (169.254.x.x) fallback is native and reliable. On Linux, it often hangs indefinitely.
+- When `EthernetLinkMonitor` enters the `Configuring` state on Linux, it invokes a background `nmcli` command (`nmcli device modify {iface} ipv4.method link-local`) to force the interface into link-local mode.
+- **Teardown**: When the cable is unplugged (transition to `NoCable`) or the application shuts down, `EthernetLinkMonitor` runs `nmcli device reapply {iface}` to cleanly restore the user's original network profile, leaving zero footprint.
+
+---
+
+## 3. TCP Transfer Protocol Hardening
+
+Because EtherTransfer operates directly on physical wire without a switch, the OS TCP stack doesn't always cleanly abort a connection immediately when a cable is pulled. To prevent application hangs, the TCP streaming protocol employs aggressive failure detection:
+
+- **Watchdog Timeouts**: Every network `ReadAsync` and `WriteAsync` call is wrapped in a `CancellationTokenSource.CancelAfter(timeoutMs)` watchdog. 
+  - Metadata reads/writes (e.g., file headers, skip markers) are given a strict **2-second timeout**.
+  - File chunk payload reads/writes (1MB chunks) are given a **5-second timeout**. If a 1MB chunk cannot traverse a direct Ethernet link in 5 seconds, the connection is considered physically severed.
+- **TCP Keep-Alives**: Since watchdogs only run during active data transmission, the system explicitly enables native OS TCP Keep-Alives (`SocketOptionName.KeepAlive`). This provides a seamless safety net for idle states (such as when waiting for a user UI prompt), ensuring physical link drops are caught even when no data is actively flowing.
+
+---
+
+## 4. Structured Diagnostics
+
+The network layer utilizes `StructuredLogMessage`, allowing all network events to carry structured identifiers (`EventId`) and `LogLevel`.
 - This separates diagnostic string parsing from UI rendering logic.
-- `MainWindow` maps log levels and event IDs to distinct Catppuccin color codes for the user-facing debug panel.
+- The UI maps log levels and event IDs to distinct color codes in the debug console, allowing developers to immediately spot DHCP failures or timeout watchdogs.
