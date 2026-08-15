@@ -1256,14 +1256,10 @@ html {
     }
 }
 
-/* Base Viewport Safeguards (use clip instead of hidden to keep position: sticky functional) */
-html, body {
-    overflow-x: clip;
-    max-width: 100%;
-}
-
+/* Base Content Safeguards */
 .site-wrapper {
     overflow-x: clip;
+    width: 100%;
 }
 
 /* Medium Tablets & Small Laptops (<= 1024px) */
