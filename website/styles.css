@@ -11,6 +11,8 @@
     
     --radius-md: 12px;
     --radius-lg: 24px;
+    
+    --nav-height: 62px;
 }
 
 [data-theme="dark"] {
@@ -35,6 +37,7 @@ body {
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.2s, color 0.2s;
+    padding-top: var(--nav-height);
 }
 
 /* Typography */
@@ -74,20 +77,25 @@ p {
 
 /* Header */
 .top-nav {
-    position: -webkit-sticky;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 1000;
+    left: 0;
+    right: 0;
     width: 100%;
+    height: var(--nav-height);
+    z-index: 1000;
     background-color: var(--bg-panel);
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s, border-color 0.2s;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 .nav-container {
     max-width: 1300px;
+    height: 100%;
     margin: 0 auto;
-    padding: 1rem 4vw;
+    padding: 0 4vw;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -137,6 +145,7 @@ p {
 html {
     scroll-behavior: smooth;
     font-size: 90%; /* Reduces global scale by 10% */
+    scroll-padding-top: calc(var(--nav-height) + 15px);
 }
 
 [data-theme="dark"] .invert-on-dark {
@@ -227,11 +236,11 @@ html {
 .mobile-nav-drawer {
     display: none;
     position: fixed;
-    top: 57px;
+    top: var(--nav-height);
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 99;
+    z-index: 999;
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -263,7 +272,8 @@ html {
     box-shadow: 0 20px 30px rgba(0, 0, 0, 0.15);
     transform: translateY(-15px);
     transition: transform 0.25s ease;
-    max-height: calc(100vh - 60px);
+    max-height: calc(100vh - var(--nav-height));
+    max-height: calc(100dvh - var(--nav-height));
     overflow-y: auto;
 }
 
@@ -1308,17 +1318,22 @@ html {
 @media (max-width: 768px) {
     /* Navigation Bar */
     .top-nav {
-        position: -webkit-sticky;
-        position: sticky;
+        position: fixed;
         top: 0;
-        z-index: 1000;
+        left: 0;
+        right: 0;
         width: 100%;
+        height: var(--nav-height);
+        z-index: 1000;
         background-color: var(--bg-panel);
         border-bottom-color: var(--border-color);
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
     }
 
     .nav-container {
-        padding: 0.85rem 4vw;
+        padding: 0 4vw;
+        height: 100%;
     }
 
     .nav-links {
