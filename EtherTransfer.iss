@@ -36,9 +36,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; Main executable
-Source: "publish\EtherTransfer.exe"; DestDir: "{app}"; Flags: ignoreversion
-; All other DLLs and files
-Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "publish\win-x64\EtherTransfer.exe"; DestDir: "{app}"; Flags: ignoreversion
+; All other DLLs and runtime files (excluding debug symbols)
+Source: "publish\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb"
 
 [Icons]
 ; Start Menu icon
