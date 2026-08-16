@@ -4,7 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <AssemblyName>EtherTransfer</AssemblyName>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(PortableBuild)' == 'true'">app.portable.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(PortableBuild)' != 'true'">app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
     <Version>0.1.0</Version>
     <Company>DS Labs</Company>

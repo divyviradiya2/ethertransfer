@@ -1,0 +1,41 @@
+name: Build Windows x86 Portable
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-windows-x86-portable:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Publish Portable App (Windows x86)
+      run: |
+        dotnet publish EtherTransfer.UI/EtherTransfer.UI.csproj `
+          -c Release `
+          -r win-x86 `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:EnableCompressionInSingleFile=true `
+          -p:PortableBuild=true `
+          -p:DebugType=None `
+          -o ./publish/portable
+
+    - name: Prepare Portable Artifact
+      shell: pwsh
+      run: |
+        Move-Item -Path "publish\portable\EtherTransfer.exe" -Destination "publish\portable\EtherTransfer_Portable_x86.exe" -Force
+
+    - name: Upload Portable Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: EtherTransfer-Windows-Portable-x86
+        path: publish/portable/EtherTransfer_Portable_x86.exe

@@ -92,6 +92,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         CustomDeviceName = settings.CustomDeviceName;
 
+        // If running with Administrator privileges (e.g. Windows Portable edition), ensure inbound firewall rule
+        _ = Task.Run(() =>
+        {
+            FirewallHelper.EnsureFirewallRule((msg, level) =>
+            {
+                OnDebugLog(this, new StructuredLogMessage("firewall.init", msg, level));
+            });
+        });
+
         _linkMonitor = new EthernetLinkMonitor(new EtherTransfer.Network.NetworkInterfaces.DefaultNetworkInterfaceProvider());
         _linkMonitor.StateChanged += OnLinkStateChanged;
         _linkMonitor.Start();

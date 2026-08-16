@@ -8,8 +8,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- Regular installed build: runs with standard user rights without UAC prompt -->
-        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+        <!-- Windows Portable build: requests administrator rights for dynamic firewall configuration -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>
