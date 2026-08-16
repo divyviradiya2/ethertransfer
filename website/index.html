@@ -84,7 +84,23 @@
           "name": "Do I need a crossover cable or will a regular Ethernet cable work?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. Modern network interface cards (NICs) support Auto-MDI/MDIX, which automatically switches the send and receive pins. You do not need a special crossover cable."
+            "text": "A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. Modern network interface cards (NICs) support Auto-MDI/MDIX, which automatically switches the send and receive pins. Legacy crossover cables are also 100% compatible."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I connect multiple computers together through an Ethernet switch?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. EtherTransfer works both point-to-point (1-to-1) with a direct cable and across unmanaged/managed Ethernet switches (multi-device). When multiple PCs running EtherTransfer are plugged into the same switch, they automatically discover each other via UDP broadcasts and populate the Discovered Devices list for selective transfers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if my laptop doesn't have an Ethernet port?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Any standard USB-A, USB-C, or Thunderbolt-to-Ethernet adapter/dongle (Realtek RTL8153, ASIX AX88179, etc.) works out of the box with zero drivers needed. Direct point-to-point Thunderbolt 3/4/USB4 networking cables are also supported."
           }
         },
         {
@@ -92,7 +108,7 @@
           "name": "Does EtherTransfer work completely offline without internet or Wi-Fi?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. EtherTransfer is 100% offline. Data travels exclusively through the physical Ethernet wire from PC to PC. No internet connection, Wi-Fi router, cloud servers, or external telemetry are involved, making it ideal for air-gapped systems and sensitive data."
+            "text": "Yes, EtherTransfer is 100% offline. Data travels exclusively through the physical Ethernet wire from PC to PC. No internet connection, Wi-Fi router, cloud servers, or external telemetry are involved, making it ideal for air-gapped systems and sensitive data."
           }
         },
         {
@@ -606,7 +622,27 @@
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. All modern PC network cards support Auto-MDI/MDIX, which automatically reconfigures the internal transmit and receive lines so a specialized crossover cable is never required.</p>
+                            <p>A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. All modern PC network cards support Auto-MDI/MDIX, which automatically reconfigures the internal transmit and receive lines so a specialized crossover cable is never required. Legacy crossover cables are also 100% supported.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>Can I connect multiple computers together through an Ethernet switch?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes! EtherTransfer works both point-to-point (1-to-1 with a direct cable) and across unmanaged or managed Ethernet switches (multi-device). When multiple PCs running EtherTransfer are plugged into the same switch, they automatically discover each other via UDP broadcasts and populate the Discovered Devices list for selective peer-to-peer transfers.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            <span>What if my laptop doesn't have an Ethernet port?</span>
+                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Any standard USB-A, USB-C, or Thunderbolt-to-Ethernet adapter/dongle (Realtek RTL8153, ASIX AX88179, etc.) works out of the box with zero drivers needed. Direct point-to-point Thunderbolt 3/4/USB4 networking cables are also supported via link-local virtual IP interfaces.</p>
                         </div>
                     </div>
 

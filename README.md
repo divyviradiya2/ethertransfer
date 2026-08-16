@@ -72,6 +72,27 @@ There is no need for a router, DHCP server, or manual IP configuration.
 
 </details>
 
+<details>
+<summary><b> &nbsp;Hardware, Cable & Adapter Compatibility</b></summary>
+<br>
+
+- **Standard RJ-45 Ethernet Cables (Cat 5e, 6, 6a, 7, 8):** Fully supported. All modern Gigabit+ network interface cards (NICs) support **Auto-MDI/MDIX** (IEEE 802.3ab), which automatically negotiates transmit/receive pins over standard straight-through cables.
+- **Legacy Crossover Cables:** 100% compatible out of the box.
+- **Laptops Without RJ-45 Ports:** Works with standard USB-A, USB-C, and Thunderbolt Ethernet adapters/dongles (Realtek RTL8153, ASIX AX88179, etc.) with zero driver configuration.
+- **Enterprise & High-End Creator Media:** Supports SFP+ Direct Attach Copper (DAC) cables and Fiber Optic (LC-LC OM3/OM4/OS2) links over PCIe 10G/25G/40G/100G network cards.
+- **Direct Thunderbolt Bridging:** Supports direct Thunderbolt 3 / 4 / USB4 point-to-point cables via OS link-local Thunderbolt networking interfaces.
+
+</details>
+
+<details>
+<summary><b> &nbsp;Network Topologies (Direct Cable vs Ethernet Switch)</b></summary>
+<br>
+
+- **Point-to-Point (1-to-1):** Connect two computers directly with a single cable without a router.
+- **Multi-Device Switch (1-to-Many / Many-to-Many):** Connect multiple computers to an unmanaged or managed Ethernet switch. EtherTransfer broadcasts UDP discovery frames across the subnet, automatically discovering every connected machine and displaying them in the peer list for selective transfers.
+
+</details>
+
 <br>
 
 ## Installation
