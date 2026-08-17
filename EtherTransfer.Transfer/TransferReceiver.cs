@@ -113,7 +113,7 @@ public class TransferReceiver
                 int filesReceived = 0;
                 int filesSkipped = 0;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                var buffer = new byte[1024 * 1024];
+                var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024);
 
                 int totalElements = request.PayloadFolderCount + request.PayloadFileCount;
                 result.TotalElements = totalElements;
@@ -262,6 +262,11 @@ public class TransferReceiver
                 {
                     result.Success = false;
                     result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+                    try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
+                }
+                finally
+                {
+                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
                 }
             }
         }
@@ -271,6 +276,7 @@ public class TransferReceiver
             result.ErrorMessage = ex is System.IO.IOException || ex is System.Net.Sockets.SocketException 
                 ? "Connection lost (Ethernet cable disconnected or sender aborted)." 
                 : ex.Message;
+            try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
         }
         return result;
     }

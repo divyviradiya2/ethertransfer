@@ -46,20 +46,34 @@ public static class ProtocolHelper
     public static async Task<T?> ReceiveMessageAsync<T>(NetworkStream stream, CancellationToken ct, int timeoutMs = -1) where T : class
     {
         // Read 4 bytes length prefix
-        var lengthBuffer = new byte[4];
-        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
-            return null;
+        var lengthBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
+        try
+        {
+            if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
+                return null;
 
-        var length = BitConverter.ToInt32(lengthBuffer, 0);
-        if (length <= 0 || length > 10 * 1024 * 1024) // 10MB sanity limit for metadata
-            throw new InvalidDataException($"Invalid metadata length: {length}");
+            var length = BitConverter.ToInt32(lengthBuffer, 0);
+            if (length <= 0 || length > 10 * 1024 * 1024) // 10MB sanity limit for metadata
+                throw new InvalidDataException($"Invalid metadata length: {length}");
 
-        var payloadBuffer = new byte[length];
-        if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
-            return null;
+            var payloadBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
+                    return null;
 
-        var json = Encoding.UTF8.GetString(payloadBuffer);
-        return JsonSerializer.Deserialize<T>(json);
+                var json = Encoding.UTF8.GetString(payloadBuffer, 0, length);
+                return JsonSerializer.Deserialize<T>(json);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<byte>.Shared.Return(payloadBuffer);
+            }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(lengthBuffer);
+        }
     }
 
     // Read exactly N bytes from the stream, handling partial reads
@@ -94,18 +108,32 @@ public static class ProtocolHelper
     /// </summary>
     public static async Task<string?> ReceiveRawJsonAsync(NetworkStream stream, CancellationToken ct, int timeoutMs = -1)
     {
-        var lengthBuffer = new byte[4];
-        if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
-            return null;
+        var lengthBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
+        try
+        {
+            if (!await ReadExactAsync(stream, lengthBuffer, 4, ct, timeoutMs))
+                return null;
 
-        var length = BitConverter.ToInt32(lengthBuffer, 0);
-        if (length <= 0 || length > 10 * 1024 * 1024)
-            throw new InvalidDataException($"Invalid metadata length: {length}");
+            var length = BitConverter.ToInt32(lengthBuffer, 0);
+            if (length <= 0 || length > 10 * 1024 * 1024)
+                throw new InvalidDataException($"Invalid metadata length: {length}");
 
-        var payloadBuffer = new byte[length];
-        if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
-            return null;
+            var payloadBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(length);
+            try
+            {
+                if (!await ReadExactAsync(stream, payloadBuffer, length, ct, timeoutMs))
+                    return null;
 
-        return Encoding.UTF8.GetString(payloadBuffer);
+                return Encoding.UTF8.GetString(payloadBuffer, 0, length);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<byte>.Shared.Return(payloadBuffer);
+            }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(lengthBuffer);
+        }
     }
 }

@@ -150,7 +150,7 @@ public class TransferSender
         int filesSent = 0;
         int filesSkipped = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var buffer = new byte[1024 * 1024]; // 1 MB read buffer
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024); // 1 MB read buffer
 
         int totalElements = session.PayloadFolderCount + session.PayloadFileCount;
         int currentElementIndex = 0;
@@ -288,6 +288,15 @@ public class TransferSender
         {
             result.Success = false;
             result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+            try 
+            { 
+                client.LingerState = new LingerOption(true, 0);
+                client.Close(); 
+            } catch { }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
         }
 
         watch.Stop();

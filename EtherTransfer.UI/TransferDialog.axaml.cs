@@ -228,8 +228,17 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     private bool _successQueued = false;
 
+    private DateTime _lastUiUpdate = DateTime.MinValue;
+
     public void UpdateProgress(EtherTransfer.Transfer.TransferProgressEventArgs e)
     {
+        var now = DateTime.UtcNow;
+        bool isComplete = e.BytesSent >= e.TotalBytes;
+        if (!isComplete && (now - _lastUiUpdate).TotalMilliseconds < 33)
+            return;
+
+        _lastUiUpdate = now;
+
         Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
             if (IsSuccessMode) return;

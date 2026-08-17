@@ -387,7 +387,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 session.PayloadFileCount++;
             }
-            session.Files.AddRange(payload.DeepScannedFiles);
+            session.AddFiles(payload.DeepScannedFiles);
         }
 
         if (session.Files.Count == 0) return;
