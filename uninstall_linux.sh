@@ -12,6 +12,12 @@ DIM='\033[2m'
 GRAY='\033[0;90m'
 
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+SPINNER_PID=""
+
+cleanup() {
+    stop_spinner
+}
+trap cleanup EXIT INT TERM
 
 print_success() {
     echo -e "\r\033[K${GREEN}[✔]${NC} $1"
@@ -25,7 +31,6 @@ print_warning() {
     echo -e "\r\033[K${YELLOW}[!]${NC} $1"
 }
 
-SPINNER_PID=""
 start_spinner() {
     local msg="$1"
     (
@@ -76,7 +81,8 @@ fi
 
 INSTALL_DIR="/opt/ethertransfer"
 DESKTOP_FILE="/usr/share/applications/ethertransfer.desktop"
-ICON_DIR="/usr/share/pixmaps"
+ICON_PNG="/usr/share/pixmaps/ethertransfer.png"
+ICON_ICO="/usr/share/pixmaps/ethertransfer.ico"
 SYMLINK="/usr/local/bin/ethertransfer"
 
 if [ ! -d "$INSTALL_DIR" ] && [ ! -f "$DESKTOP_FILE" ] && [ ! -L "$SYMLINK" ]; then
@@ -95,33 +101,44 @@ echo ""
 
 start_spinner "Removing firewall rules..."
 
+FIREWALL_REMOVED=false
+
 if command -v ufw > /dev/null; then
     ufw delete allow 8840/tcp > /dev/null 2>&1
     ufw delete allow 8840/udp > /dev/null 2>&1
-    stop_spinner
-    print_success "UFW rules removed for port 8840"
-elif command -v firewall-cmd > /dev/null; then
+    FIREWALL_REMOVED=true
+fi
+
+if command -v firewall-cmd > /dev/null && firewall-cmd --state > /dev/null 2>&1; then
     firewall-cmd --permanent --remove-port=8840/tcp > /dev/null 2>&1
     firewall-cmd --permanent --remove-port=8840/udp > /dev/null 2>&1
     firewall-cmd --reload > /dev/null 2>&1
-    stop_spinner
-    print_success "Firewalld rules removed for port 8840"
-elif command -v iptables > /dev/null; then
-    iptables -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1
-    iptables -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1
-    stop_spinner
-    print_success "iptables rules removed for port 8840"
+    FIREWALL_REMOVED=true
+fi
+
+if command -v iptables > /dev/null; then
+    iptables -w -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1
+    iptables -w -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1
+    FIREWALL_REMOVED=true
+fi
+
+stop_spinner
+if [ "$FIREWALL_REMOVED" = true ]; then
+    print_success "Firewall rules cleaned"
 else
-    stop_spinner
-    print_warning "No firewall detected, skipped"
+    print_warning "No active firewall detected, skipped"
 fi
 
 start_spinner "Removing desktop integration..."
 
 [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE"
-[ -f "$ICON_DIR/ethertransfer.ico" ] && rm -f "$ICON_DIR/ethertransfer.ico"
+[ -f "$ICON_PNG" ] && rm -f "$ICON_PNG"
+[ -f "$ICON_ICO" ] && rm -f "$ICON_ICO"
 [ -L "$SYMLINK" ] && rm -f "$SYMLINK"
-command -v update-desktop-database > /dev/null 2>&1 && update-desktop-database /usr/share/applications > /dev/null 2>&1
+
+if command -v update-desktop-database > /dev/null 2>&1; then
+    update-desktop-database /usr/share/applications > /dev/null 2>&1
+fi
 
 stop_spinner
 print_success "Desktop shortcut, icon, and terminal command removed"
