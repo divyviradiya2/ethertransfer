@@ -262,7 +262,7 @@ fi
 
 # 2. Confirmation prompt
 echo -ne "\n${YELLOW}Do you want to proceed with the installation of EtherTransfer? [y/N]: ${NC}"
-read -r CONFIRM
+read -r CONFIRM < /dev/tty
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
     echo -e "\n${RED}Installation cancelled by user.${NC}\n"
     exit 0
@@ -286,7 +286,7 @@ INSTALL_DIR="/opt/ethertransfer"
 SKIP_DOWNLOAD=false
 if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
     echo -ne "\n${YELLOW}EtherTransfer is already installed. Do you want to update/reinstall the app files? [y/N]: ${NC}"
-    read -r UPDATE_CONFIRM
+    read -r UPDATE_CONFIRM < /dev/tty
     if [[ "$UPDATE_CONFIRM" =~ ^[Yy]$ ]]; then
         SKIP_DOWNLOAD=false
         echo ""

@@ -140,7 +140,7 @@ fi
 
 # Confirmation prompt
 echo -ne "${YELLOW}Are you sure you want to uninstall EtherTransfer? [y/N]: ${NC}"
-read -r CONFIRM
+read -r CONFIRM < /dev/tty
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
     echo -e "\n${RED}Uninstallation cancelled by user.${NC}\n"
     exit 0
