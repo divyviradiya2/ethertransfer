@@ -187,8 +187,9 @@ download_with_progress() {
                     speed=$((final_size / elapsed))
                 fi
                 draw_progress 100 "$final_size" "$total_size" "$speed" 0
+                sleep 0.5
+                printf "\r\033[K"
             fi
-            echo ""
 
             return $exit_code
         else
@@ -196,10 +197,6 @@ download_with_progress() {
             curl -L --connect-timeout 15 -o "$output" "$url" 2>/dev/null
             local exit_code=$?
             stop_spinner
-            if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
-                local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
-                echo -e "    ${DIM}Downloaded $(format_bytes "$final_size")${NC}"
-            fi
             return $exit_code
         fi
     elif command -v wget > /dev/null; then
@@ -207,10 +204,6 @@ download_with_progress() {
         wget -q --timeout=15 --tries=1 "$url" -O "$output" 2>/dev/null
         local exit_code=$?
         stop_spinner
-        if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
-            local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
-            echo -e "    ${DIM}Downloaded $(format_bytes "$final_size")${NC}"
-        fi
         return $exit_code
     else
         print_error "Neither curl nor wget is installed. Cannot download."
@@ -286,8 +279,6 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
     TMP_DIR=$(mktemp -d)
     DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
 
-    print_step "Downloading EtherTransfer..."
-    echo ""
     MAX_RETRIES=3
     RETRY_COUNT=0
     DOWNLOAD_SUCCESS=false
@@ -297,7 +288,8 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
 
         if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
             DOWNLOAD_SUCCESS=true
-            print_success "Download complete"
+            local dl_size=$(stat -c%s "$TMP_DIR/ethertransfer.zip" 2>/dev/null || stat -f%z "$TMP_DIR/ethertransfer.zip" 2>/dev/null || echo 0)
+            print_success "Download complete ($(format_bytes "$dl_size"))"
             break
         else
             RETRY_COUNT=$((RETRY_COUNT+1))
