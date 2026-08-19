@@ -43,6 +43,7 @@ artifacts/
 *.nuget.props
 *.nuget.targets
 *.binlog
+publish/
 
 # Test and Profiling results
 *.coverage
