@@ -10,21 +10,10 @@ MAGENTA='\033[0;35m'
 NC='\033[0m'
 BOLD='\033[1m'
 DIM='\033[2m'
-GRAY='\033[0;90m'
 
-# Progress bar
-BAR_FILL="━"
-BAR_EMPTY="─"
-BAR_HEAD="▶"
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
-TOTAL_STEPS=3
-
 # Helpers
-print_step() {
-    echo -ne "\r\033[K${BLUE}[*]${NC} $1"
-}
-
 print_success() {
     echo -e "\r\033[K${GREEN}[✔]${NC} $1"
 }
@@ -37,59 +26,13 @@ print_warning() {
     echo -e "\r\033[K${YELLOW}[!]${NC} $1"
 }
 
-draw_step_progress() {
-    local current=$1
-    local total=$2
-    local label=$3
-
-    local bar_width=30
-    local percent=$((current * 100 / total))
-    local filled=$((current * bar_width / total))
-    local empty=$((bar_width - filled))
-
-    local bar=""
-    if [ "$filled" -gt 0 ]; then
-        if [ "$filled" -ge "$bar_width" ]; then
-            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $bar_width))
-        else
-            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $filled))
-            bar="${bar}${BAR_HEAD}"
-            if [ "$empty" -gt 1 ]; then
-                bar="${bar}$(printf "${BAR_EMPTY}%.0s" $(seq 1 $((empty - 1))))"
-            fi
-        fi
-    else
-        bar=$(printf "${BAR_EMPTY}%.0s" $(seq 1 $bar_width))
-    fi
-
-    local bar_color="${BLUE}"
-    if [ "$percent" -ge 100 ]; then
-        bar_color="${GREEN}"
-    elif [ "$percent" -ge 75 ]; then
-        bar_color="${CYAN}"
-    elif [ "$percent" -ge 50 ]; then
-        bar_color="${BLUE}"
-    fi
-
-    local status_str=""
-    if [ "$percent" -ge 100 ]; then
-        status_str="Done!"
-    else
-        status_str="Removing..."
-    fi
-
-    printf "\r    ${GRAY}│${NC} ${bar_color}${bar}${NC} ${BOLD}%3d%%${NC} ${GRAY}│${NC} ${DIM}Step %d / %d${NC} ${GRAY}│${NC} ${DIM}%s${NC} ${GRAY}│${NC} ${DIM}%s${NC}   " \
-        "$percent" "$current" "$total" "$label" "$status_str"
-    echo ""
-}
-
 SPINNER_PID=""
 start_spinner() {
     local msg="$1"
     (
         local i=0
         while true; do
-            printf "\r\033[K    ${MAGENTA}%s${NC} ${DIM}%s${NC}" "${SPINNER_FRAMES[$i]}" "$msg"
+            printf "\r\033[K${MAGENTA}%s${NC} ${DIM}%s${NC}" "${SPINNER_FRAMES[$i]}" "$msg"
             i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
             sleep 0.1
         done
@@ -122,7 +65,7 @@ echo -e "${NC}"
 echo -e "${BLUE}By DS Labs${NC}\n"
 echo -e "${YELLOW}Uninstaller${NC}\n"
 
-# 1. Permission check
+# Permission check
 if [ "$EUID" -ne 0 ]; then
   echo -e "${YELLOW}Administrator permissions (sudo) are required to uninstall EtherTransfer.${NC}\n"
   echo "We need this permission to:"
@@ -156,12 +99,8 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
-draw_step_progress 0 $TOTAL_STEPS "Starting..."
-
 # 1. Remove Firewall Rules
-print_step "Removing firewall rules..."
-start_spinner "Cleaning firewall rules..."
-sleep 0.3
+start_spinner "Removing firewall rules..."
 
 if command -v ufw > /dev/null; then
     ufw delete allow 8840/tcp > /dev/null 2>&1
@@ -181,51 +120,31 @@ elif command -v iptables > /dev/null; then
     print_success "iptables rules removed for port 8840"
 else
     stop_spinner
-    print_warning "No known firewall detected. Skipping firewall clean up"
+    print_warning "No firewall detected, skipped"
 fi
-
-draw_step_progress 1 $TOTAL_STEPS "Firewall cleaned"
 
 # 2. Remove Desktop Integration
-print_step "Removing desktop integration..."
-start_spinner "Removing shortcuts and icon..."
-sleep 0.3
+start_spinner "Removing desktop integration..."
 
-if [ -f "$DESKTOP_FILE" ]; then
-    rm -f "$DESKTOP_FILE"
-fi
-
-if [ -f "$ICON_DIR/ethertransfer.ico" ]; then
-    rm -f "$ICON_DIR/ethertransfer.ico"
-fi
-
-if [ -L "$SYMLINK" ]; then
-    rm -f "$SYMLINK"
-fi
-
-if command -v update-desktop-database > /dev/null 2>&1; then
-    update-desktop-database /usr/share/applications > /dev/null 2>&1
-fi
+[ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE"
+[ -f "$ICON_DIR/ethertransfer.ico" ] && rm -f "$ICON_DIR/ethertransfer.ico"
+[ -L "$SYMLINK" ] && rm -f "$SYMLINK"
+command -v update-desktop-database > /dev/null 2>&1 && update-desktop-database /usr/share/applications > /dev/null 2>&1
 
 stop_spinner
-print_success "Desktop shortcuts, icon, and terminal command removed"
-
-draw_step_progress 2 $TOTAL_STEPS "Desktop cleaned"
+print_success "Desktop shortcut, icon, and terminal command removed"
 
 # 3. Remove Application Files
-print_step "Removing application files..."
 if [ -d "$INSTALL_DIR" ]; then
     start_spinner "Removing $INSTALL_DIR..."
     rm -rf "$INSTALL_DIR"
-    sleep 0.3
     stop_spinner
-    print_success "Removed $INSTALL_DIR directory"
+    print_success "Removed $INSTALL_DIR"
 else
-    print_warning "Application directory $INSTALL_DIR not found"
+    print_warning "$INSTALL_DIR not found, skipped"
 fi
 
-draw_step_progress 3 $TOTAL_STEPS "All done"
-
+echo ""
 echo -e "${GREEN}${BOLD}=== Uninstallation Complete ===${NC}"
 echo "EtherTransfer has been completely removed from your system."
 echo ""

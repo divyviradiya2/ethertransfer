@@ -429,7 +429,7 @@ if [ -L "$SYMLINK" ] && [ "$(readlink "$SYMLINK")" = "$INSTALL_DIR/EtherTransfer
     print_success "Terminal command already exists (Skipped)"
 else
     ln -sf "$INSTALL_DIR/EtherTransfer" "$SYMLINK"
-    print_success "Terminal command created/fixed"
+    print_success "Terminal command created"
 fi
 
 # Cleanup
