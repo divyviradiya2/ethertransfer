@@ -9,6 +9,7 @@ MAGENTA='\033[0;35m'
 NC='\033[0m'
 BOLD='\033[1m'
 DIM='\033[2m'
+GRAY='\033[0;90m'
 
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
@@ -58,7 +59,7 @@ echo "██╔══╝     ██║   ██╔══██║██╔══
 echo "███████╗   ██║   ██║  ██║███████╗██║  ██║   ██║   ██║  ██║██║  ██║██║ ╚████║███████║██║     ███████╗██║  ██║"
 echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝"
 echo -e "${NC}"
-echo -e "${BLUE}By DS Labs${NC}\n"
+echo -e "${BLUE}By DS Labs${NC} ${GRAY}•${NC} ${DIM}Open source under MIT${NC}\n"
 echo -e "${YELLOW}Uninstaller${NC}\n"
 
 if [ "$EUID" -ne 0 ]; then

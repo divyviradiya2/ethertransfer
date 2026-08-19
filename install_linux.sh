@@ -223,7 +223,7 @@ echo "██╔══╝     ██║   ██╔══██║██╔══
 echo "███████╗   ██║   ██║  ██║███████╗██║  ██║   ██║   ██║  ██║██║  ██║██║ ╚████║███████║██║     ███████╗██║  ██║"
 echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝"
 echo -e "${NC}"
-echo -e "${BLUE}By DS Labs${NC}\n"
+echo -e "${BLUE}By DS Labs${NC} ${GRAY}•${NC} ${DIM}Open source under MIT${NC}\n"
 
 if [ "$EUID" -ne 0 ]; then
   echo -e "${YELLOW}Administrator permissions (sudo) are required to install EtherTransfer.${NC}\n"
