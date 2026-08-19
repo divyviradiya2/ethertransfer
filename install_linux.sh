@@ -288,7 +288,7 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
 
         if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
             DOWNLOAD_SUCCESS=true
-            local dl_size=$(stat -c%s "$TMP_DIR/ethertransfer.zip" 2>/dev/null || stat -f%z "$TMP_DIR/ethertransfer.zip" 2>/dev/null || echo 0)
+            dl_size=$(stat -c%s "$TMP_DIR/ethertransfer.zip" 2>/dev/null || stat -f%z "$TMP_DIR/ethertransfer.zip" 2>/dev/null || echo 0)
             print_success "Download complete ($(format_bytes "$dl_size"))"
             break
         else
