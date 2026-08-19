@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Colors and formatting
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -12,15 +12,15 @@ BOLD='\033[1m'
 DIM='\033[2m'
 GRAY='\033[0;90m'
 
-# Progress bar characters
+# Progress bar
 BAR_FILL="━"
 BAR_EMPTY="─"
+BAR_HEAD="▶"
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
 TOTAL_STEPS=3
 
-# ── Helper Functions ───────────────────────────────────────────
-
+# Helpers
 print_step() {
     echo -ne "\r\033[K${BLUE}[*]${NC} $1"
 }
@@ -37,41 +37,52 @@ print_warning() {
     echo -e "\r\033[K${YELLOW}[!]${NC} $1"
 }
 
-# Draw step-based progress bar
-# Usage: draw_step_progress <current_step> <total_steps> <step_label>
 draw_step_progress() {
     local current=$1
     local total=$2
     local label=$3
 
     local bar_width=30
+    local percent=$((current * 100 / total))
     local filled=$((current * bar_width / total))
     local empty=$((bar_width - filled))
-    local percent=$((current * 100 / total))
 
-    # Build the bar
     local bar=""
-    if [ "$filled" -ge "$bar_width" ]; then
-        bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $bar_width))
-    elif [ "$filled" -gt 0 ]; then
-        bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $filled))
-        bar="${bar}$(printf "${BAR_EMPTY}%.0s" $(seq 1 $empty))"
+    if [ "$filled" -gt 0 ]; then
+        if [ "$filled" -ge "$bar_width" ]; then
+            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $bar_width))
+        else
+            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $filled))
+            bar="${bar}${BAR_HEAD}"
+            if [ "$empty" -gt 1 ]; then
+                bar="${bar}$(printf "${BAR_EMPTY}%.0s" $(seq 1 $((empty - 1))))"
+            fi
+        fi
     else
         bar=$(printf "${BAR_EMPTY}%.0s" $(seq 1 $bar_width))
     fi
 
-    # Color based on progress
     local bar_color="${BLUE}"
     if [ "$percent" -ge 100 ]; then
         bar_color="${GREEN}"
-    elif [ "$percent" -ge 66 ]; then
+    elif [ "$percent" -ge 75 ]; then
         bar_color="${CYAN}"
+    elif [ "$percent" -ge 50 ]; then
+        bar_color="${BLUE}"
     fi
 
-    echo -e "\n  ${GRAY}${DIM}Progress${NC}  ${bar_color}${bar}${NC}  ${BOLD}${percent}%%${NC}  ${DIM}(${current}/${total}) ${label}${NC}\n"
+    local status_str=""
+    if [ "$percent" -ge 100 ]; then
+        status_str="Done!"
+    else
+        status_str="Removing..."
+    fi
+
+    printf "\r    ${GRAY}│${NC} ${bar_color}${bar}${NC} ${BOLD}%3d%%${NC} ${GRAY}│${NC} ${DIM}Step %d / %d${NC} ${GRAY}│${NC} ${DIM}%s${NC} ${GRAY}│${NC} ${DIM}%s${NC}   " \
+        "$percent" "$current" "$total" "$label" "$status_str"
+    echo ""
 }
 
-# Animated spinner
 SPINNER_PID=""
 start_spinner() {
     local msg="$1"
@@ -96,9 +107,7 @@ stop_spinner() {
     printf "\r\033[K"
 }
 
-# ── Start ──────────────────────────────────────────────────────
-
-# Clear screen for TUI-like feel
+# Clear screen
 clear
 
 # EtherTransfer Logo
@@ -131,7 +140,7 @@ DESKTOP_FILE="/usr/share/applications/ethertransfer.desktop"
 ICON_DIR="/usr/share/pixmaps"
 SYMLINK="/usr/local/bin/ethertransfer"
 
-# Check if EtherTransfer is actually installed
+# Check if EtherTransfer is installed
 if [ ! -d "$INSTALL_DIR" ] && [ ! -f "$DESKTOP_FILE" ] && [ ! -L "$SYMLINK" ]; then
     print_warning "EtherTransfer does not appear to be installed on this system."
     echo ""
@@ -149,9 +158,9 @@ echo ""
 
 draw_step_progress 0 $TOTAL_STEPS "Starting..."
 
-# ── Step 1: Remove Firewall Rules ──────────────────────────────
+# 1. Remove Firewall Rules
 print_step "Removing firewall rules..."
-start_spinner "Cleaning up firewall rules..."
+start_spinner "Cleaning firewall rules..."
 sleep 0.3
 
 if command -v ufw > /dev/null; then
@@ -177,7 +186,7 @@ fi
 
 draw_step_progress 1 $TOTAL_STEPS "Firewall cleaned"
 
-# ── Step 2: Remove Desktop Integration ─────────────────────────
+# 2. Remove Desktop Integration
 print_step "Removing desktop integration..."
 start_spinner "Removing shortcuts and icon..."
 sleep 0.3
@@ -203,7 +212,7 @@ print_success "Desktop shortcuts, icon, and terminal command removed"
 
 draw_step_progress 2 $TOTAL_STEPS "Desktop cleaned"
 
-# ── Step 3: Remove Application Files ──────────────────────────
+# 3. Remove Application Files
 print_step "Removing application files..."
 if [ -d "$INSTALL_DIR" ]; then
     start_spinner "Removing $INSTALL_DIR..."

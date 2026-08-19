@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ── Color & Style Definitions ──────────────────────────────────
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -12,14 +12,13 @@ BOLD='\033[1m'
 DIM='\033[2m'
 GRAY='\033[0;90m'
 
-# Progress bar characters
+# Progress bar
 BAR_FILL="━"
 BAR_EMPTY="─"
 BAR_HEAD="▶"
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
-# ── Helper Functions ───────────────────────────────────────────
-
+# Helpers
 print_step() {
     echo -ne "\r\033[K${BLUE}[*]${NC} $1"
 }
@@ -36,7 +35,6 @@ print_warning() {
     echo -e "\r\033[K${YELLOW}[!]${NC} $1"
 }
 
-# Format bytes into human-readable size
 format_bytes() {
     local bytes=$1
     if [ "$bytes" -ge 1073741824 ] 2>/dev/null; then
@@ -50,7 +48,6 @@ format_bytes() {
     fi
 }
 
-# Format seconds into human-readable time
 format_time() {
     local secs=$1
     if [ "$secs" -ge 3600 ] 2>/dev/null; then
@@ -62,7 +59,6 @@ format_time() {
     fi
 }
 
-# Draw the custom progress bar
 draw_progress() {
     local percent=$1
     local downloaded=$2
@@ -74,7 +70,6 @@ draw_progress() {
     local filled=$((percent * bar_width / 100))
     local empty=$((bar_width - filled))
 
-    # Build the bar string
     local bar=""
     if [ "$filled" -gt 0 ]; then
         if [ "$filled" -ge "$bar_width" ]; then
@@ -90,7 +85,6 @@ draw_progress() {
         bar=$(printf "${BAR_EMPTY}%.0s" $(seq 1 $bar_width))
     fi
 
-    # Color shifts based on progress
     local bar_color="${BLUE}"
     if [ "$percent" -ge 100 ]; then
         bar_color="${GREEN}"
@@ -114,7 +108,6 @@ draw_progress() {
         "$percent" "$dl_str" "$total_str" "$speed_str" "$eta_str"
 }
 
-# Animated spinner
 SPINNER_PID=""
 start_spinner() {
     local msg="$1"
@@ -139,25 +132,22 @@ stop_spinner() {
     printf "\r\033[K"
 }
 
-# Custom download with progress bar
 download_with_progress() {
     local url="$1"
     local output="$2"
 
-    # Get total file size via HEAD request
+    # Get file size first
     local total_size=0
     if command -v curl > /dev/null; then
         total_size=$(curl -sIL --connect-timeout 10 "$url" 2>/dev/null | grep -i 'content-length' | tail -1 | tr -d '[:space:]' | cut -d: -f2 | tr -d '\r')
     fi
     total_size=${total_size:-0}
-    # Validate it's a number
     if ! [ "$total_size" -gt 0 ] 2>/dev/null; then
         total_size=0
     fi
 
     if command -v curl > /dev/null; then
         if [ "$total_size" -gt 0 ]; then
-            # Download in background and track file size growth
             curl -L --connect-timeout 15 -o "$output" "$url" 2>/dev/null &
             local curl_pid=$!
             local start_time=$(date +%s)
@@ -188,7 +178,6 @@ download_with_progress() {
             wait "$curl_pid"
             local exit_code=$?
 
-            # Final 100% draw
             if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
                 local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
                 local now=$(date +%s)
@@ -203,8 +192,7 @@ download_with_progress() {
 
             return $exit_code
         else
-            # Unknown size — spinner fallback
-            start_spinner "Downloading (file size unknown)..."
+            start_spinner "Downloading..."
             curl -L --connect-timeout 15 -o "$output" "$url" 2>/dev/null
             local exit_code=$?
             stop_spinner
@@ -215,8 +203,7 @@ download_with_progress() {
             return $exit_code
         fi
     elif command -v wget > /dev/null; then
-        # wget fallback with spinner
-        start_spinner "Downloading with wget..."
+        start_spinner "Downloading..."
         wget -q --timeout=15 --tries=1 "$url" -O "$output" 2>/dev/null
         local exit_code=$?
         stop_spinner
@@ -231,9 +218,7 @@ download_with_progress() {
     fi
 }
 
-# ── Start ──────────────────────────────────────────────────────
-
-# Clear screen for TUI-like feel
+# Clear screen
 clear
 
 # EtherTransfer Logo
@@ -332,7 +317,7 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
     mkdir -p "$INSTALL_DIR"
 
     if command -v unzip > /dev/null; then
-        start_spinner "Extracting archive..."
+        start_spinner "Extracting..."
         unzip -o -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
         stop_spinner
     else
@@ -413,7 +398,7 @@ SYMLINK="/usr/local/bin/ethertransfer"
 if [ -f "$ICON_DIR/ethertransfer.ico" ]; then
     print_success "Icon already exists (Skipped)"
 else
-    start_spinner "Downloading application icon..."
+    start_spinner "Downloading icon..."
     if command -v curl > /dev/null; then
         curl -sSL "$ICON_URL" -o "$ICON_DIR/ethertransfer.ico"
     elif command -v wget > /dev/null; then
