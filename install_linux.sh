@@ -1,13 +1,237 @@
 #!/bin/bash
 
-# Colors and formatting
+# ── Color & Style Definitions ──────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
+MAGENTA='\033[0;35m'
 NC='\033[0m'
 BOLD='\033[1m'
+DIM='\033[2m'
+GRAY='\033[0;90m'
+
+# Progress bar characters
+BAR_FILL="━"
+BAR_EMPTY="─"
+BAR_HEAD="▶"
+SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+# ── Helper Functions ───────────────────────────────────────────
+
+print_step() {
+    echo -ne "\r\033[K${BLUE}[*]${NC} $1"
+}
+
+print_success() {
+    echo -e "\r\033[K${GREEN}[✔]${NC} $1"
+}
+
+print_error() {
+    echo -e "\r\033[K${RED}[✖]${NC} $1"
+}
+
+print_warning() {
+    echo -e "\r\033[K${YELLOW}[!]${NC} $1"
+}
+
+# Format bytes into human-readable size
+format_bytes() {
+    local bytes=$1
+    if [ "$bytes" -ge 1073741824 ] 2>/dev/null; then
+        printf "%.1f GB" "$(echo "scale=1; $bytes/1073741824" | bc 2>/dev/null || awk "BEGIN{printf \"%.1f\", $bytes/1073741824}")"
+    elif [ "$bytes" -ge 1048576 ] 2>/dev/null; then
+        printf "%.1f MB" "$(echo "scale=1; $bytes/1048576" | bc 2>/dev/null || awk "BEGIN{printf \"%.1f\", $bytes/1048576}")"
+    elif [ "$bytes" -ge 1024 ] 2>/dev/null; then
+        printf "%.1f KB" "$(echo "scale=1; $bytes/1024" | bc 2>/dev/null || awk "BEGIN{printf \"%.1f\", $bytes/1024}")"
+    else
+        printf "%d B" "$bytes"
+    fi
+}
+
+# Format seconds into human-readable time
+format_time() {
+    local secs=$1
+    if [ "$secs" -ge 3600 ] 2>/dev/null; then
+        printf "%dh %dm" $((secs/3600)) $((secs%3600/60))
+    elif [ "$secs" -ge 60 ] 2>/dev/null; then
+        printf "%dm %ds" $((secs/60)) $((secs%60))
+    else
+        printf "%ds" "$secs"
+    fi
+}
+
+# Draw the custom progress bar
+draw_progress() {
+    local percent=$1
+    local downloaded=$2
+    local total=$3
+    local speed=$4
+    local eta=$5
+
+    local bar_width=30
+    local filled=$((percent * bar_width / 100))
+    local empty=$((bar_width - filled))
+
+    # Build the bar string
+    local bar=""
+    if [ "$filled" -gt 0 ]; then
+        if [ "$filled" -ge "$bar_width" ]; then
+            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $bar_width))
+        else
+            bar=$(printf "${BAR_FILL}%.0s" $(seq 1 $filled))
+            bar="${bar}${BAR_HEAD}"
+            if [ "$empty" -gt 1 ]; then
+                bar="${bar}$(printf "${BAR_EMPTY}%.0s" $(seq 1 $((empty - 1))))"
+            fi
+        fi
+    else
+        bar=$(printf "${BAR_EMPTY}%.0s" $(seq 1 $bar_width))
+    fi
+
+    # Color shifts based on progress
+    local bar_color="${BLUE}"
+    if [ "$percent" -ge 100 ]; then
+        bar_color="${GREEN}"
+    elif [ "$percent" -ge 75 ]; then
+        bar_color="${CYAN}"
+    elif [ "$percent" -ge 50 ]; then
+        bar_color="${BLUE}"
+    fi
+
+    local dl_str=$(format_bytes "$downloaded")
+    local total_str=$(format_bytes "$total")
+    local speed_str="$(format_bytes "$speed")/s"
+    local eta_str=""
+    if [ "$eta" -gt 0 ] 2>/dev/null && [ "$percent" -lt 100 ]; then
+        eta_str="ETA $(format_time "$eta")"
+    elif [ "$percent" -ge 100 ]; then
+        eta_str="Done!"
+    fi
+
+    printf "\r    ${GRAY}│${NC} ${bar_color}${bar}${NC} ${BOLD}%3d%%${NC} ${GRAY}│${NC} ${DIM}%s / %s${NC} ${GRAY}│${NC} ${DIM}%s${NC} ${GRAY}│${NC} ${DIM}%s${NC}   " \
+        "$percent" "$dl_str" "$total_str" "$speed_str" "$eta_str"
+}
+
+# Animated spinner
+SPINNER_PID=""
+start_spinner() {
+    local msg="$1"
+    (
+        local i=0
+        while true; do
+            printf "\r\033[K    ${MAGENTA}%s${NC} ${DIM}%s${NC}" "${SPINNER_FRAMES[$i]}" "$msg"
+            i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
+            sleep 0.1
+        done
+    ) &
+    SPINNER_PID=$!
+    disown "$SPINNER_PID" 2>/dev/null
+}
+
+stop_spinner() {
+    if [ -n "$SPINNER_PID" ]; then
+        kill "$SPINNER_PID" 2>/dev/null
+        wait "$SPINNER_PID" 2>/dev/null
+        SPINNER_PID=""
+    fi
+    printf "\r\033[K"
+}
+
+# Custom download with progress bar
+download_with_progress() {
+    local url="$1"
+    local output="$2"
+
+    # Get total file size via HEAD request
+    local total_size=0
+    if command -v curl > /dev/null; then
+        total_size=$(curl -sIL --connect-timeout 10 "$url" 2>/dev/null | grep -i 'content-length' | tail -1 | tr -d '[:space:]' | cut -d: -f2 | tr -d '\r')
+    fi
+    total_size=${total_size:-0}
+    # Validate it's a number
+    if ! [ "$total_size" -gt 0 ] 2>/dev/null; then
+        total_size=0
+    fi
+
+    if command -v curl > /dev/null; then
+        if [ "$total_size" -gt 0 ]; then
+            # Download in background and track file size growth
+            curl -L --connect-timeout 15 -o "$output" "$url" 2>/dev/null &
+            local curl_pid=$!
+            local start_time=$(date +%s)
+
+            while kill -0 "$curl_pid" 2>/dev/null; do
+                if [ -f "$output" ]; then
+                    local current_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
+                    local now=$(date +%s)
+                    local elapsed=$((now - start_time))
+                    local speed=0
+                    if [ "$elapsed" -gt 0 ]; then
+                        speed=$((current_size / elapsed))
+                    fi
+                    local percent=0
+                    if [ "$total_size" -gt 0 ]; then
+                        percent=$((current_size * 100 / total_size))
+                        [ "$percent" -gt 100 ] && percent=100
+                    fi
+                    local eta=0
+                    if [ "$speed" -gt 0 ] && [ "$total_size" -gt 0 ]; then
+                        eta=$(( (total_size - current_size) / speed ))
+                    fi
+                    draw_progress "$percent" "$current_size" "$total_size" "$speed" "$eta"
+                fi
+                sleep 0.3
+            done
+
+            wait "$curl_pid"
+            local exit_code=$?
+
+            # Final 100% draw
+            if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
+                local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
+                local now=$(date +%s)
+                local elapsed=$((now - start_time))
+                local speed=0
+                if [ "$elapsed" -gt 0 ]; then
+                    speed=$((final_size / elapsed))
+                fi
+                draw_progress 100 "$final_size" "$total_size" "$speed" 0
+            fi
+            echo ""
+
+            return $exit_code
+        else
+            # Unknown size — spinner fallback
+            start_spinner "Downloading (file size unknown)..."
+            curl -L --connect-timeout 15 -o "$output" "$url" 2>/dev/null
+            local exit_code=$?
+            stop_spinner
+            if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
+                local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
+                echo -e "    ${DIM}Downloaded $(format_bytes "$final_size")${NC}"
+            fi
+            return $exit_code
+        fi
+    elif command -v wget > /dev/null; then
+        # wget fallback with spinner
+        start_spinner "Downloading with wget..."
+        wget -q --timeout=15 --tries=1 "$url" -O "$output" 2>/dev/null
+        local exit_code=$?
+        stop_spinner
+        if [ $exit_code -eq 0 ] && [ -f "$output" ]; then
+            local final_size=$(stat -c%s "$output" 2>/dev/null || stat -f%z "$output" 2>/dev/null || echo 0)
+            echo -e "    ${DIM}Downloaded $(format_bytes "$final_size")${NC}"
+        fi
+        return $exit_code
+    else
+        print_error "Neither curl nor wget is installed. Cannot download."
+        return 1
+    fi
+}
+
+# ── Start ──────────────────────────────────────────────────────
 
 # Clear screen for TUI-like feel
 clear
@@ -22,23 +246,6 @@ echo "███████╗   ██║   ██║  ██║█████
 echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝"
 echo -e "${NC}"
 echo -e "${BLUE}By DS Labs${NC}\n"
-
-# Helpers
-print_step() {
-    echo -ne "\r\033[K${BLUE}[*]${NC} $1"
-}
-
-print_success() {
-    echo -e "\r\033[K${GREEN}[✔]${NC} $1"
-}
-
-print_error() {
-    echo -e "\r\033[K${RED}[x]${NC} $1"
-}
-
-print_warning() {
-    echo -e "\r\033[K${YELLOW}[!]${NC} $1"
-}
 
 # 1. Permission check
 if [ "$EUID" -ne 0 ]; then
@@ -95,20 +302,13 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
     DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
 
     print_step "Downloading EtherTransfer..."
+    echo ""
     MAX_RETRIES=3
     RETRY_COUNT=0
     DOWNLOAD_SUCCESS=false
 
     while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-        if command -v curl > /dev/null; then
-            curl -L --progress-bar --connect-timeout 15 "$DOWNLOAD_URL" -o "$TMP_DIR/ethertransfer.zip"
-        elif command -v wget > /dev/null; then
-            wget -q --show-progress --timeout=15 --tries=1 "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
-        else
-            print_error "Neither curl nor wget is installed. Cannot download."
-            rm -rf "$TMP_DIR"
-            exit 1
-        fi
+        download_with_progress "$DOWNLOAD_URL" "$TMP_DIR/ethertransfer.zip"
 
         if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
             DOWNLOAD_SUCCESS=true
@@ -132,7 +332,9 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
     mkdir -p "$INSTALL_DIR"
 
     if command -v unzip > /dev/null; then
+        start_spinner "Extracting archive..."
         unzip -o -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
+        stop_spinner
     else
         print_error "unzip is not installed. Please install unzip and try again."
         rm -rf "$TMP_DIR"
@@ -211,11 +413,13 @@ SYMLINK="/usr/local/bin/ethertransfer"
 if [ -f "$ICON_DIR/ethertransfer.ico" ]; then
     print_success "Icon already exists (Skipped)"
 else
+    start_spinner "Downloading application icon..."
     if command -v curl > /dev/null; then
         curl -sSL "$ICON_URL" -o "$ICON_DIR/ethertransfer.ico"
     elif command -v wget > /dev/null; then
         wget -q "$ICON_URL" -O "$ICON_DIR/ethertransfer.ico"
     fi
+    stop_spinner
     print_success "Icon downloaded"
 fi
 
