@@ -36,7 +36,10 @@ print_warning() {
 }
 
 format_bytes() {
-    local bytes=$1
+    local bytes="${1:-0}"
+    if ! [[ "$bytes" =~ ^[0-9]+$ ]]; then
+        bytes=0
+    fi
     if [ "$bytes" -ge 1073741824 ] 2>/dev/null; then
         printf "%.1f GB" "$(echo "scale=1; $bytes/1073741824" | bc 2>/dev/null || awk "BEGIN{printf \"%.1f\", $bytes/1073741824}")"
     elif [ "$bytes" -ge 1048576 ] 2>/dev/null; then
@@ -49,7 +52,10 @@ format_bytes() {
 }
 
 format_time() {
-    local secs=$1
+    local secs="${1:-0}"
+    if ! [[ "$secs" =~ ^[0-9]+$ ]]; then
+        secs=0
+    fi
     if [ "$secs" -ge 3600 ] 2>/dev/null; then
         printf "%dh %dm" $((secs/3600)) $((secs%3600/60))
     elif [ "$secs" -ge 60 ] 2>/dev/null; then
