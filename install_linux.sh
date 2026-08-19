@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -12,13 +11,11 @@ BOLD='\033[1m'
 DIM='\033[2m'
 GRAY='\033[0;90m'
 
-# Progress bar
 BAR_FILL="━"
 BAR_EMPTY="─"
 BAR_HEAD="▶"
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
-# Helpers
 print_step() {
     echo -ne "\r\033[K${BLUE}[*]${NC} $1"
 }
@@ -142,7 +139,6 @@ download_with_progress() {
     local url="$1"
     local output="$2"
 
-    # Get file size first
     local total_size=0
     if command -v curl > /dev/null; then
         total_size=$(curl -sIL --connect-timeout 10 "$url" 2>/dev/null | grep -i 'content-length' | tail -1 | tr -d '[:space:]' | cut -d: -f2 | tr -d '\r')
@@ -217,10 +213,8 @@ download_with_progress() {
     fi
 }
 
-# Clear screen
 clear
 
-# EtherTransfer Logo
 echo -e "${CYAN}${BOLD}"
 echo "███████╗████████╗██╗  ██╗███████╗██████╗ ████████╗██████╗ █████╗ ███╗   ██╗███████╗███████╗███████╗██████╗"
 echo "██╔════╝╚══██╔══╝██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██╔════╝██╔════╝██╔══██╗"
@@ -231,7 +225,6 @@ echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚════
 echo -e "${NC}"
 echo -e "${BLUE}By DS Labs${NC}\n"
 
-# 1. Permission check
 if [ "$EUID" -ne 0 ]; then
   echo -e "${YELLOW}Administrator permissions (sudo) are required to install EtherTransfer.${NC}\n"
   echo "We need this permission to:"
@@ -244,7 +237,6 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# 2. Confirmation prompt
 echo -ne "\n${YELLOW}Do you want to proceed with the installation of EtherTransfer? [y/N]: ${NC}"
 read -r CONFIRM < /dev/tty
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
@@ -253,7 +245,6 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
-# 3. Architecture check
 print_step "Checking system architecture..."
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
@@ -266,7 +257,6 @@ fi
 
 INSTALL_DIR="/opt/ethertransfer"
 
-# 4. Check existing installation
 SKIP_DOWNLOAD=false
 if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
     echo -ne "\n${YELLOW}EtherTransfer is already installed. Do you want to update/reinstall the app files? [y/N]: ${NC}"
@@ -281,7 +271,6 @@ if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
 fi
 
 if [ "$SKIP_DOWNLOAD" = false ]; then
-    # 5. Download
     TMP_DIR=$(mktemp -d)
     DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
 
@@ -310,7 +299,6 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
         exit 1
     fi
 
-    # 6. Extract
     print_step "Extracting files to $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
 
@@ -328,7 +316,6 @@ if [ "$SKIP_DOWNLOAD" = false ]; then
     rm -rf "$TMP_DIR"
 fi
 
-# 5. Firewall
 print_step "Configuring firewall..."
 if command -v ufw > /dev/null; then
     if ufw status | grep -q "8840" || ufw show added 2>/dev/null | grep -q "8840"; then
@@ -359,7 +346,6 @@ else
     print_warning "No known firewall detected. Skipping firewall config"
 fi
 
-# 6. NetworkManager
 print_step "Checking NetworkManager..."
 if ! command -v nmcli > /dev/null; then
     print_warning "NetworkManager not found. Installing..."
@@ -386,7 +372,6 @@ else
     print_success "NetworkManager is already installed (Skipped)"
 fi
 
-# 7. Desktop Integration
 print_step "Setting up desktop integration..."
 ICON_URL="https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/EtherTransfer.UI/Assets/logo.ico"
 ICON_DIR="/usr/share/pixmaps"
@@ -430,10 +415,9 @@ else
     print_success "Terminal command created"
 fi
 
-# Cleanup
 rm -rf "$TMP_DIR"
 
 echo ""
-echo -e "${GREEN}${BOLD}=== Installation Complete ===${NC}"
+echo -e "${GREEN}${BOLD}Installation Complete${NC}"
 echo -e "You can launch EtherTransfer from your app menu or run ${CYAN}ethertransfer${NC} in your terminal."
 echo ""

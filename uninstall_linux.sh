@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -13,7 +12,6 @@ DIM='\033[2m'
 
 SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
-# Helpers
 print_success() {
     echo -e "\r\033[K${GREEN}[✔]${NC} $1"
 }
@@ -32,7 +30,7 @@ start_spinner() {
     (
         local i=0
         while true; do
-            printf "\r\033[K${MAGENTA}%s${NC} ${DIM}%s${NC}" "${SPINNER_FRAMES[$i]}" "$msg"
+            printf "\r\033[K    ${MAGENTA}%s${NC} ${DIM}%s${NC}" "${SPINNER_FRAMES[$i]}" "$msg"
             i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
             sleep 0.1
         done
@@ -50,10 +48,8 @@ stop_spinner() {
     printf "\r\033[K"
 }
 
-# Clear screen
 clear
 
-# EtherTransfer Logo
 echo -e "${CYAN}${BOLD}"
 echo "███████╗████████╗██╗  ██╗███████╗██████╗ ████████╗██████╗ █████╗ ███╗   ██╗███████╗███████╗███████╗██████╗"
 echo "██╔════╝╚══██╔══╝██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██╔════╝██╔════╝██╔══██╗"
@@ -65,7 +61,6 @@ echo -e "${NC}"
 echo -e "${BLUE}By DS Labs${NC}\n"
 echo -e "${YELLOW}Uninstaller${NC}\n"
 
-# Permission check
 if [ "$EUID" -ne 0 ]; then
   echo -e "${YELLOW}Administrator permissions (sudo) are required to uninstall EtherTransfer.${NC}\n"
   echo "We need this permission to:"
@@ -83,14 +78,12 @@ DESKTOP_FILE="/usr/share/applications/ethertransfer.desktop"
 ICON_DIR="/usr/share/pixmaps"
 SYMLINK="/usr/local/bin/ethertransfer"
 
-# Check if EtherTransfer is installed
 if [ ! -d "$INSTALL_DIR" ] && [ ! -f "$DESKTOP_FILE" ] && [ ! -L "$SYMLINK" ]; then
     print_warning "EtherTransfer does not appear to be installed on this system."
     echo ""
     exit 0
 fi
 
-# Confirmation prompt
 echo -ne "${YELLOW}Are you sure you want to uninstall EtherTransfer? [y/N]: ${NC}"
 read -r CONFIRM < /dev/tty
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
@@ -99,7 +92,6 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
 fi
 echo ""
 
-# 1. Remove Firewall Rules
 start_spinner "Removing firewall rules..."
 
 if command -v ufw > /dev/null; then
@@ -123,7 +115,6 @@ else
     print_warning "No firewall detected, skipped"
 fi
 
-# 2. Remove Desktop Integration
 start_spinner "Removing desktop integration..."
 
 [ -f "$DESKTOP_FILE" ] && rm -f "$DESKTOP_FILE"
@@ -134,7 +125,6 @@ command -v update-desktop-database > /dev/null 2>&1 && update-desktop-database /
 stop_spinner
 print_success "Desktop shortcut, icon, and terminal command removed"
 
-# 3. Remove Application Files
 if [ -d "$INSTALL_DIR" ]; then
     start_spinner "Removing $INSTALL_DIR..."
     rm -rf "$INSTALL_DIR"
@@ -145,6 +135,6 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}${BOLD}=== Uninstallation Complete ===${NC}"
+echo -e "${GREEN}${BOLD}Uninstallation Complete${NC}"
 echo "EtherTransfer has been completely removed from your system."
 echo ""
