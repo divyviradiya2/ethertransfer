@@ -1,160 +1,252 @@
 #!/bin/bash
 
-# =========================================
-# EtherTransfer Universal Linux Installer
-# =========================================
+# Colors and formatting
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+BOLD='\033[1m'
 
-# 1. Require sudo privileges (prompts for password if run normally)
+# Clear screen for TUI-like feel
+clear
+
+# EtherTransfer Logo
+echo -e "${CYAN}${BOLD}"
+echo "███████╗████████╗██╗  ██╗███████╗██████╗ ████████╗██████╗ █████╗ ███╗   ██╗███████╗███████╗███████╗██████╗"
+echo "██╔════╝╚══██╔══╝██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██╔════╝██╔════╝██╔══██╗"
+echo "█████╗     ██║   ███████║█████╗  ██████╔╝   ██║   ██████╔╝███████║██╔██╗ ██║███████╗█████╗  █████╗  ██████╔╝"
+echo "██╔══╝     ██║   ██╔══██║██╔══╝  ██╔══██╗   ██║   ██╔══██╗██╔══██║██║╚██╗██║╚════██║██╔══╝  ██╔══╝  ██╔══██╗"
+echo "███████╗   ██║   ██║  ██║███████╗██║  ██║   ██║   ██║  ██║██║  ██║██║ ╚████║███████║██║     ███████╗██║  ██║"
+echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝"
+echo -e "${NC}"
+echo -e "${BLUE}By DS Labs${NC}\n"
+
+# Helpers
+print_step() {
+    echo -ne "\r\033[K${BLUE}[*]${NC} $1"
+}
+
+print_success() {
+    echo -e "\r\033[K${GREEN}[✔]${NC} $1"
+}
+
+print_error() {
+    echo -e "\r\033[K${RED}[x]${NC} $1"
+}
+
+print_warning() {
+    echo -e "\r\033[K${YELLOW}[!]${NC} $1"
+}
+
+# 1. Permission check
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run this installer as root or with sudo:"
-  echo "sudo $0"
+  echo -e "${YELLOW}Administrator permissions (sudo) are required to install EtherTransfer.${NC}\n"
+  echo "We need this permission to:"
+  echo "  1. Save the app to your system's application folder (/opt)"
+  echo "  2. Configure your firewall to allow direct file transfers"
+  echo "  3. Add the app shortcut to your application menu"
+  echo "  4. Set up the 'ethertransfer' terminal command"
+  echo ""
+  echo -e "Please run the installer again using: ${CYAN}sudo bash install_linux.sh${NC}"
   exit 1
 fi
 
-echo "=============================="
-echo "  EtherTransfer Installer  "
-echo "=============================="
+# 2. Confirmation prompt
+echo -ne "\n${YELLOW}Do you want to proceed with the installation of EtherTransfer? [y/N]: ${NC}"
+read -r CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+    echo -e "\n${RED}Installation cancelled by user.${NC}\n"
+    exit 0
+fi
+echo ""
 
-# 1. Detect System Architecture
+# 3. Architecture check
+print_step "Checking system architecture..."
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
     ET_ARCH="x64"
+    print_success "Architecture x86_64 supported"
 else
-    echo "[-] Unsupported architecture: $ARCH. Only x86_64 (64-bit) is supported."
+    print_error "Unsupported architecture: $ARCH. Only x86_64 is supported."
     exit 1
 fi
-echo "[+] Detected Architecture: $ARCH ($ET_ARCH)"
 
-# 2. Download from GitHub Releases
-# Note: Ensure you upload your zip files to your GitHub Releases so this URL works!
-DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
+INSTALL_DIR="/opt/ethertransfer"
 
-echo "[+] Downloading EtherTransfer..."
-TMP_DIR=$(mktemp -d)
-
-MAX_RETRIES=3
-RETRY_COUNT=0
-DOWNLOAD_SUCCESS=false
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if command -v curl > /dev/null; then
-        # Use --connect-timeout to fail fast if GitHub is hanging
-        curl -L --progress-bar --connect-timeout 15 "$DOWNLOAD_URL" -o "$TMP_DIR/ethertransfer.zip"
-    elif command -v wget > /dev/null; then
-        wget -q --show-progress --timeout=15 --tries=1 "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
+# 4. Check existing installation
+SKIP_DOWNLOAD=false
+if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
+    echo -ne "\n${YELLOW}EtherTransfer is already installed. Do you want to update/reinstall the app files? [y/N]: ${NC}"
+    read -r UPDATE_CONFIRM
+    if [[ "$UPDATE_CONFIRM" =~ ^[Yy]$ ]]; then
+        SKIP_DOWNLOAD=false
+        echo ""
     else
-        echo "[-] Neither curl nor wget is installed. Cannot download."
+        print_success "EtherTransfer app files update skipped (Skipped)"
+        SKIP_DOWNLOAD=true
+    fi
+fi
+
+if [ "$SKIP_DOWNLOAD" = false ]; then
+    # 5. Download
+    TMP_DIR=$(mktemp -d)
+    DOWNLOAD_URL="https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer-linux-${ET_ARCH}.zip"
+
+    print_step "Downloading EtherTransfer..."
+    MAX_RETRIES=3
+    RETRY_COUNT=0
+    DOWNLOAD_SUCCESS=false
+
+    while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+        if command -v curl > /dev/null; then
+            curl -L --progress-bar --connect-timeout 15 "$DOWNLOAD_URL" -o "$TMP_DIR/ethertransfer.zip"
+        elif command -v wget > /dev/null; then
+            wget -q --show-progress --timeout=15 --tries=1 "$DOWNLOAD_URL" -O "$TMP_DIR/ethertransfer.zip"
+        else
+            print_error "Neither curl nor wget is installed. Cannot download."
+            rm -rf "$TMP_DIR"
+            exit 1
+        fi
+
+        if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
+            DOWNLOAD_SUCCESS=true
+            print_success "Download complete"
+            break
+        else
+            RETRY_COUNT=$((RETRY_COUNT+1))
+            print_warning "Download failed. Retrying ($RETRY_COUNT/$MAX_RETRIES)..."
+            sleep 2
+        fi
+    done
+
+    if [ "$DOWNLOAD_SUCCESS" = false ]; then
+        print_error "Failed to download EtherTransfer after multiple attempts."
         rm -rf "$TMP_DIR"
         exit 1
     fi
 
-    # Check if the file exists and is not empty
-    if [ -s "$TMP_DIR/ethertransfer.zip" ]; then
-        DOWNLOAD_SUCCESS=true
-        break
-    else
-        RETRY_COUNT=$((RETRY_COUNT+1))
-        echo "[-] Download interrupted or stalled. Retrying ($RETRY_COUNT/$MAX_RETRIES)..."
-        sleep 2
-    fi
-done
-
-if [ "$DOWNLOAD_SUCCESS" = false ]; then
-    echo "[-] Failed to download EtherTransfer after $MAX_RETRIES attempts."
-    echo "[-] Please ensure you have created a GitHub Release, uploaded the .zip artifacts, and check your internet!"
-    rm -rf "$TMP_DIR"
-    exit 1
-fi
-
-# Extract to standard Linux /opt directory
-INSTALL_DIR="/opt/ethertransfer"
-
-if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/EtherTransfer" ]; then
-    echo "[+] Existing installation found. Updating app files and verifying configuration..."
-else
-    echo "[+] Extracting files to $INSTALL_DIR..."
+    # 6. Extract
+    print_step "Extracting files to $INSTALL_DIR..."
     mkdir -p "$INSTALL_DIR"
-fi
 
-unzip -o -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
-chmod +x "$INSTALL_DIR/EtherTransfer"
-
-# 3. Dynamic Universal Firewall Configuration
-echo "[+] Configuring Firewall..."
-if command -v ufw > /dev/null; then
-    echo "    -> UFW (Ubuntu/Debian) detected. Allowing TCP/UDP 8840..."
-    ufw allow 8840/tcp comment 'EtherTransfer TCP'
-    ufw allow 8840/udp comment 'EtherTransfer UDP'
-elif command -v firewall-cmd > /dev/null; then
-    echo "    -> Firewalld (Fedora/RHEL/CentOS) detected. Allowing TCP/UDP 8840..."
-    firewall-cmd --permanent --add-port=8840/tcp
-    firewall-cmd --permanent --add-port=8840/udp
-    firewall-cmd --reload
-elif command -v iptables > /dev/null; then
-    echo "    -> iptables detected. Allowing TCP/UDP 8840..."
-    iptables -A INPUT -p tcp --dport 8840 -j ACCEPT
-    iptables -A INPUT -p udp --dport 8840 -j ACCEPT
-else
-    echo "    -> No supported firewall running. Skipping firewall config."
-fi
-
-# 4. Intelligent NetworkManager (nmcli) Detection & Installation
-echo "[+] Checking for NetworkManager (nmcli)..."
-if ! command -v nmcli > /dev/null; then
-    echo "    -> nmcli not found. Automatically installing NetworkManager..."
-    
-    # Detect the distro's package manager and install accordingly
-    if command -v apt-get > /dev/null; then
-        apt-get update && apt-get install -y network-manager
-    elif command -v dnf > /dev/null; then
-        dnf install -y NetworkManager
-    elif command -v pacman > /dev/null; then
-        pacman -S --noconfirm networkmanager
-    elif command -v zypper > /dev/null; then
-        zypper install -y NetworkManager
-    elif command -v yum > /dev/null; then
-        yum install -y NetworkManager
+    if command -v unzip > /dev/null; then
+        unzip -o -q "$TMP_DIR/ethertransfer.zip" -d "$INSTALL_DIR"
     else
-        echo "    [-] Could not determine package manager. Please install NetworkManager manually."
+        print_error "unzip is not installed. Please install unzip and try again."
+        rm -rf "$TMP_DIR"
+        exit 1
     fi
-    
-    # Ensure the service is enabled and started
-    if command -v systemctl > /dev/null; then
-        systemctl enable NetworkManager
-        systemctl start NetworkManager
-    fi
-else
-    echo "    -> nmcli is already installed."
+    chmod +x "$INSTALL_DIR/EtherTransfer"
+    print_success "Files extracted successfully"
+    rm -rf "$TMP_DIR"
 fi
 
-# 5. Desktop Application Registration
-echo "[+] Registering Desktop Application..."
-# Download the raw icon directly from the GitHub repository
+# 5. Firewall
+print_step "Configuring firewall..."
+if command -v ufw > /dev/null; then
+    if ufw status | grep -q "8840" || ufw show added 2>/dev/null | grep -q "8840"; then
+        print_success "UFW rules already exist (Skipped)"
+    else
+        ufw allow 8840/tcp > /dev/null 2>&1
+        ufw allow 8840/udp > /dev/null 2>&1
+        print_success "UFW rules added for port 8840"
+    fi
+elif command -v firewall-cmd > /dev/null; then
+    if firewall-cmd --query-port=8840/tcp > /dev/null 2>&1; then
+        print_success "Firewalld rules already exist (Skipped)"
+    else
+        firewall-cmd --permanent --add-port=8840/tcp > /dev/null 2>&1
+        firewall-cmd --permanent --add-port=8840/udp > /dev/null 2>&1
+        firewall-cmd --reload > /dev/null 2>&1
+        print_success "Firewalld rules added for port 8840"
+    fi
+elif command -v iptables > /dev/null; then
+    if iptables -C INPUT -p tcp --dport 8840 -j ACCEPT >/dev/null 2>&1; then
+        print_success "iptables rules already exist (Skipped)"
+    else
+        iptables -A INPUT -p tcp --dport 8840 -j ACCEPT
+        iptables -A INPUT -p udp --dport 8840 -j ACCEPT
+        print_success "iptables rules added for port 8840"
+    fi
+else
+    print_warning "No known firewall detected. Skipping firewall config"
+fi
+
+# 6. NetworkManager
+print_step "Checking NetworkManager..."
+if ! command -v nmcli > /dev/null; then
+    print_warning "NetworkManager not found. Installing..."
+    if command -v apt-get > /dev/null; then
+        apt-get update -qq && apt-get install -y -qq network-manager
+    elif command -v dnf > /dev/null; then
+        dnf install -y -q NetworkManager
+    elif command -v pacman > /dev/null; then
+        pacman -S --noconfirm --quiet networkmanager
+    elif command -v zypper > /dev/null; then
+        zypper install -y --quiet NetworkManager
+    elif command -v yum > /dev/null; then
+        yum install -y -q NetworkManager
+    else
+        print_error "Could not install NetworkManager automatically"
+    fi
+    
+    if command -v systemctl > /dev/null; then
+        systemctl enable NetworkManager > /dev/null 2>&1
+        systemctl start NetworkManager > /dev/null 2>&1
+    fi
+    print_success "NetworkManager installed and started"
+else
+    print_success "NetworkManager is already installed (Skipped)"
+fi
+
+# 7. Desktop Integration
+print_step "Setting up desktop integration..."
 ICON_URL="https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/EtherTransfer.UI/Assets/logo.ico"
 ICON_DIR="/usr/share/pixmaps"
-wget -q "$ICON_URL" -O "$ICON_DIR/ethertransfer.ico"
-
-# Create the standard Linux .desktop launcher file
 DESKTOP_FILE="/usr/share/applications/ethertransfer.desktop"
-cat << EOF > "$DESKTOP_FILE"
+SYMLINK="/usr/local/bin/ethertransfer"
+
+if [ -f "$ICON_DIR/ethertransfer.ico" ]; then
+    print_success "Icon already exists (Skipped)"
+else
+    if command -v curl > /dev/null; then
+        curl -sSL "$ICON_URL" -o "$ICON_DIR/ethertransfer.ico"
+    elif command -v wget > /dev/null; then
+        wget -q "$ICON_URL" -O "$ICON_DIR/ethertransfer.ico"
+    fi
+    print_success "Icon downloaded"
+fi
+
+if [ -f "$DESKTOP_FILE" ] && grep -q "Exec=$INSTALL_DIR/EtherTransfer" "$DESKTOP_FILE"; then
+    print_success "Desktop shortcut already exists (Skipped)"
+else
+    cat << EOF > "$DESKTOP_FILE"
 [Desktop Entry]
 Name=EtherTransfer
-Comment=Enterprise-grade local file transfer
+Comment=Local file transfer app by DS Labs
 Exec=$INSTALL_DIR/EtherTransfer
 Icon=$ICON_DIR/ethertransfer.ico
 Terminal=false
 Type=Application
 Categories=Network;FileTransfer;Utility;
 EOF
-chmod 644 "$DESKTOP_FILE"
+    chmod 644 "$DESKTOP_FILE"
+    print_success "Desktop shortcut created"
+fi
 
-# Create a symlink so users can run it from the terminal via 'ethertransfer'
-ln -sf "$INSTALL_DIR/EtherTransfer" "/usr/local/bin/ethertransfer"
+if [ -L "$SYMLINK" ] && [ "$(readlink "$SYMLINK")" = "$INSTALL_DIR/EtherTransfer" ]; then
+    print_success "Terminal command already exists (Skipped)"
+else
+    ln -sf "$INSTALL_DIR/EtherTransfer" "$SYMLINK"
+    print_success "Terminal command created/fixed"
+fi
 
-# Cleanup Temp Files
+# Cleanup
 rm -rf "$TMP_DIR"
 
-echo "========================================="
-echo " [+] EtherTransfer Installation Complete!"
-echo " [+] You can launch it from your App Menu or by typing 'ethertransfer' in terminal."
-echo "========================================="
+echo ""
+echo -e "${GREEN}${BOLD}=== Installation Complete ===${NC}"
+echo -e "You can launch EtherTransfer from your app menu or run ${CYAN}ethertransfer${NC} in your terminal."
+echo ""

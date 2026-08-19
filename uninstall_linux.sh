@@ -1,19 +1,58 @@
 #!/bin/bash
 
-# =========================================
-# EtherTransfer Universal Linux Uninstaller
-# =========================================
+# Colors and formatting
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+BOLD='\033[1m'
 
-# 1. Require sudo privileges
+# Clear screen for TUI-like feel
+clear
+
+# EtherTransfer Logo
+echo -e "${CYAN}${BOLD}"
+echo "███████╗████████╗██╗  ██╗███████╗██████╗ ████████╗██████╗ █████╗ ███╗   ██╗███████╗███████╗███████╗██████╗"
+echo "██╔════╝╚══██╔══╝██║  ██║██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗████╗  ██║██╔════╝██╔════╝██╔════╝██╔══██╗"
+echo "█████╗     ██║   ███████║█████╗  ██████╔╝   ██║   ██████╔╝███████║██╔██╗ ██║███████╗█████╗  █████╗  ██████╔╝"
+echo "██╔══╝     ██║   ██╔══██║██╔══╝  ██╔══██╗   ██║   ██╔══██╗██╔══██║██║╚██╗██║╚════██║██╔══╝  ██╔══╝  ██╔══██╗"
+echo "███████╗   ██║   ██║  ██║███████╗██║  ██║   ██║   ██║  ██║██║  ██║██║ ╚████║███████║██║     ███████╗██║  ██║"
+echo "╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝"
+echo -e "${NC}"
+echo -e "${BLUE}By DS Labs${NC}\n"
+echo -e "${YELLOW}Uninstaller${NC}\n"
+
+# Helpers
+print_step() {
+    echo -ne "\r\033[K${BLUE}[*]${NC} $1"
+}
+
+print_success() {
+    echo -e "\r\033[K${GREEN}[✔]${NC} $1"
+}
+
+print_error() {
+    echo -e "\r\033[K${RED}[x]${NC} $1"
+}
+
+print_warning() {
+    echo -e "\r\033[K${YELLOW}[!]${NC} $1"
+}
+
+# 1. Permission check
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run this uninstaller as root or with sudo:"
-  echo "sudo $0"
+  echo -e "${YELLOW}Administrator permissions (sudo) are required to uninstall EtherTransfer.${NC}\n"
+  echo "We need this permission to:"
+  echo "  1. Remove the app from your system's application folder (/opt)"
+  echo "  2. Remove the firewall rules created during installation"
+  echo "  3. Remove the app shortcut from your application menu"
+  echo "  4. Remove the 'ethertransfer' terminal command"
+  echo ""
+  echo -e "Please run the uninstaller again using: ${CYAN}sudo bash uninstall_linux.sh${NC}"
   exit 1
 fi
-
-echo "========================================="
-echo "  EtherTransfer Enterprise Uninstaller   "
-echo "========================================="
 
 INSTALL_DIR="/opt/ethertransfer"
 DESKTOP_FILE="/usr/share/applications/ethertransfer.desktop"
@@ -21,55 +60,53 @@ ICON_DIR="/usr/share/pixmaps"
 SYMLINK="/usr/local/bin/ethertransfer"
 
 # 1. Remove Firewall Rules
-echo "[+] Removing Firewall Rules..."
+print_step "Removing firewall rules..."
 if command -v ufw > /dev/null; then
-    echo "    -> UFW (Ubuntu/Debian) detected. Removing TCP/UDP 8840 rules..."
     ufw delete allow 8840/tcp > /dev/null 2>&1
     ufw delete allow 8840/udp > /dev/null 2>&1
+    print_success "UFW rules removed for port 8840"
 elif command -v firewall-cmd > /dev/null; then
-    echo "    -> Firewalld (Fedora/RHEL/CentOS) detected. Removing TCP/UDP 8840 rules..."
     firewall-cmd --permanent --remove-port=8840/tcp > /dev/null 2>&1
     firewall-cmd --permanent --remove-port=8840/udp > /dev/null 2>&1
     firewall-cmd --reload > /dev/null 2>&1
+    print_success "Firewalld rules removed for port 8840"
 elif command -v iptables > /dev/null; then
-    echo "    -> iptables detected. Removing TCP/UDP 8840 rules..."
     iptables -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1
     iptables -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1
+    print_success "iptables rules removed for port 8840"
 else
-    echo "    -> No supported firewall running. Skipping firewall config."
+    print_warning "No known firewall detected. Skipping firewall clean up"
 fi
 
 # 2. Unregister Desktop Application
-echo "[+] Removing Desktop Application..."
+print_step "Removing desktop integration..."
 if [ -f "$DESKTOP_FILE" ]; then
     rm -f "$DESKTOP_FILE"
-    echo "    -> Removed desktop launcher."
 fi
 
 if [ -f "$ICON_DIR/ethertransfer.ico" ]; then
     rm -f "$ICON_DIR/ethertransfer.ico"
-    echo "    -> Removed icon."
 fi
 
 if [ -L "$SYMLINK" ]; then
     rm -f "$SYMLINK"
-    echo "    -> Removed terminal command symlink."
 fi
 
-# Update the desktop database so the icon disappears immediately
 if command -v update-desktop-database > /dev/null 2>&1; then
     update-desktop-database /usr/share/applications
 fi
+print_success "Desktop shortcuts removed"
 
 # 3. Remove Application Files
-echo "[+] Removing Application Files..."
+print_step "Removing application files..."
 if [ -d "$INSTALL_DIR" ]; then
     rm -rf "$INSTALL_DIR"
-    echo "    -> Removed $INSTALL_DIR directory."
+    print_success "Removed $INSTALL_DIR directory"
 else
-    echo "    -> Application directory $INSTALL_DIR not found."
+    print_warning "Application directory $INSTALL_DIR not found"
 fi
 
-echo "========================================="
-echo " [+] EtherTransfer Uninstallation Complete!"
-echo "========================================="
+echo ""
+echo -e "${GREEN}${BOLD}=== Uninstallation Complete ===${NC}"
+echo "EtherTransfer has been completely removed from your system."
+echo ""

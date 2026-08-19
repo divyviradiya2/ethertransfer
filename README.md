@@ -8,7 +8,7 @@
     <td align="center">
       <h1 style="border: none; margin-bottom: 10px;">EtherTransfer</h1>
       <p><b>Lightning-fast, direct PC-to-PC file transfers, no router required.</b></p>
-      <p>A cross-platform application designed for maximum reliability and enterprise-level robustness over direct Ethernet connections.</p>
+      <p>A cross-platform application designed for maximum reliability over direct Ethernet connections.</p>
       <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet" alt=".NET 10" /></a>
       <img src="https://img.shields.io/badge/Windows-x64%20%2F%20x86-0078D4?style=flat-square&logo=windows" alt="Windows" />
       <img src="https://img.shields.io/badge/Linux-x64-E95420?style=flat-square&logo=linux" alt="Linux" />
@@ -62,7 +62,7 @@ There is no need for a router, DHCP server, or manual IP configuration.
 </details>
 
 <details>
-<summary><b> &nbsp;Enterprise-Level Robustness</b></summary>
+<summary><b> &nbsp;Reliability</b></summary>
 <br>
 
 - Dynamic port binding and link-state monitoring.
