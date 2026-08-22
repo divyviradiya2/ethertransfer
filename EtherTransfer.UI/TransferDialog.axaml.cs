@@ -289,6 +289,14 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
     }
 
+    public void ForceClose()
+    {
+        _isForceClosing = true;
+        CancelTransfer();
+        _receiverTcs?.TrySetResult((false, "", default));
+        Close();
+    }
+
     public void CancelTransfer()
     {
         _senderCts?.Cancel();
@@ -305,39 +313,35 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             return;
         }
 
-        if (IsProgressMode || IsSenderMode || IsReceiverMode)
+        // Only prompt for confirmation if files are actively streaming
+        if (IsProgressMode)
         {
-            e.Cancel = true; // Prevent immediate close
+            e.Cancel = true; // Prevent immediate close while confirming
             
-            if (!IsProgressMode)
-            {
-                _isForceClosing = true;
-                CancelTransfer();
-                Close();
-                return;
-            }
-
-            // Show native OS dialog
             bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync(
                 "Are you sure you want to cancel the transfer?", 
                 "Cancel Transfer");
                 
             if (confirm)
             {
+                _isForceClosing = true;
                 CancelTransfer();
-                // We do not close here. Let MainWindow catch the cancellation and set IsPartialSuccessMode
+                Close();
             }
+            return;
         }
-        else
-        {
-            base.OnClosing(e);
-        }
+
+        // In Sender mode (waiting for accept) or Receiver mode (incoming prompt), close immediately
+        _isForceClosing = true;
+        CancelTransfer();
+        _receiverTcs?.TrySetResult((false, "", default));
+        base.OnClosing(e);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _receiverCancelCts?.Cancel(); // Cancel any ongoing transfer
-        // Ensure TCS is completed if window is closed via the X button
+        // Ensure TCS is completed if window is closed via any route
         _receiverTcs?.TrySetResult((false, "", default));
         base.OnClosed(e);
     }

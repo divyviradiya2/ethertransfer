@@ -215,20 +215,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 else
                 {
-                    OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {result.ErrorMessage}", LogLevel.Error));
+                    OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {result.ErrorMessage}", LogLevel.Info));
                     
                     var dialogToClose = _activeDialog;
                     _activeDialog = null;
-                    dialogToClose.Close();
-
-                    if (!string.IsNullOrEmpty(result.ErrorMessage) && 
-                        result.ErrorMessage != "Transfer cancelled." && 
-                        !result.ErrorMessage.Contains("cancelled", StringComparison.OrdinalIgnoreCase) &&
-                        !result.ErrorMessage.Contains("declined", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var errorDialog = new ErrorDialog(result.ErrorMessage);
-                        _ = errorDialog.ShowDialog(this);
-                    }
+                    dialogToClose.ForceClose();
                 }
             }
         });
@@ -442,7 +433,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (_activeDialog != null && _activeDialog.IsReceiverMode)
             {
                 OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer request.", LogLevel.Info));
-                _activeDialog.Close();
+                var dialogToClose = _activeDialog;
+                _activeDialog = null;
+                dialogToClose.ForceClose();
             }
         });
     }
@@ -616,7 +609,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _ = Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _activeDialog?.Close();
+                var dialogToClose = _activeDialog;
+                _activeDialog = null;
+                dialogToClose?.ForceClose();
                 tcs.TrySetResult((false, "", default));
             });
         });
