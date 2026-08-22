@@ -302,29 +302,29 @@
 
             <!-- Features List -->
             <section id="features" class="features-section">
-                <h2>Why EtherTransfer?</h2>
+                <h2>Why EtherTransfer Exists</h2>
                 <div class="features-list">
                     <div class="feature-row">
                         <div class="feature-label">
                             <div class="f-icon">
                                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                             </div>
-                            <h3>Zero Configuration</h3>
+                            <h3>Zero Network Configuration</h3>
                         </div>
                         <div class="feature-desc">
-                            <p>Just plug in an Ethernet cable and open the app on both computers. There are no IP addresses to type, no settings to tweak, and no routers required.</p>
+                            <p>Plug in a standard Ethernet cable and launch EtherTransfer. Automatic Link-Local (APIPA RFC 3927) and Linux <code>nmcli</code> configuration handle IP negotiation automatically. No manual IP math, no DHCP servers, and no routers required.</p>
                         </div>
                     </div>
                     
                     <div class="feature-row">
                         <div class="feature-label">
                             <div class="f-icon">
-                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                             </div>
-                            <h3>100% Offline</h3>
+                            <h3>Physical Interface Pinning</h3>
                         </div>
                         <div class="feature-desc">
-                            <p>All files go directly through the cable from one computer to the other. It works completely offline, meaning you don't need an internet connection.</p>
+                            <p>EtherTransfer binds sockets strictly to physical Ethernet adapters, filtering out Wi-Fi and VPN routes. You can continue browsing the web on Wi-Fi while massive gigabyte files saturate the physical cable.</p>
                         </div>
                     </div>
                     
@@ -333,10 +333,10 @@
                             <div class="f-icon">
                                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                             </div>
-                            <h3>Keeps Folders Intact</h3>
+                            <h3>Native Directory Tree Recursion</h3>
                         </div>
                         <div class="feature-desc">
-                            <p>Transfer entire folders full of files at once. The app keeps everything perfectly organized exactly the way it was, without you needing to zip anything first.</p>
+                            <p>Drag and drop deep folder structures, game installs, or video assets. The streaming engine recursively scans and recreates exact directory hierarchies with strict path traversal sandboxing and hidden dotfile preservation.</p>
                         </div>
                     </div>
                     
@@ -345,12 +345,24 @@
                             <div class="f-icon">
                                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                             </div>
-                            <h3>Windows & Linux</h3>
+                            <h3>Cross-Platform Windows & Linux</h3>
                         </div>
                         <div class="feature-desc">
-                            <p>Easily send files between different operating systems. The app automatically handles all the technical differences behind the scenes.</p>
+                            <p>Seamlessly transfer files between Windows (10/11) and Linux without SMB permission conflicts, Samba server setup, or user account mapping.</p>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Philosophy & MIT Callout -->
+            <section class="philosophy-section" style="padding: 2.5rem 1rem; margin: 2rem 0; background: var(--bg-card); border-radius: 1rem; border: 1px solid var(--border-color);">
+                <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+                    <blockquote style="font-size: 1.15rem; font-style: italic; color: var(--text-main); margin-bottom: 1rem;">
+                        &ldquo;Making something complex is easy. Making something simple is much harder.&rdquo;
+                    </blockquote>
+                    <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">
+                        EtherTransfer was built for creators, developers, and users who want to move large data across an Ethernet cable without network administration overhead. If you already maintain a dedicated NAS, enterprise VLANs, Samba/NFS domains, or prefer manual Netcat / CLI terminal pipelines, you are completely free to use those tools. EtherTransfer exists under the <strong>MIT License</strong> for anyone who values a zero-fuss, plug-and-transfer workflow that works out of the box.
+                    </p>
                 </div>
             </section>
 
@@ -365,7 +377,7 @@
                         <div class="step-text">
                             <div class="step-badge">Step 1</div>
                             <h3>Connect the Ethernet Cable</h3>
-                            <p>Plug a standard Ethernet cable directly into the network ports of both the sending and receiving computers. No crossover cable or router is needed.</p>
+                            <p>Plug a standard Ethernet cable directly into the network ports of both computers. Modern Gigabit+ NICs support Auto-MDIX (IEEE 802.3ab), so standard patch cables work without crossover adapters.</p>
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
@@ -395,7 +407,7 @@
                         <div class="step-text">
                             <div class="step-badge">Step 2</div>
                             <h3>Launch & Discover</h3>
-                            <p>Launch EtherTransfer on both PCs. They will automatically find each other and populate the "Discovered Devices" list.</p>
+                            <p>Launch EtherTransfer on both PCs. Decentralized UDP discovery automatically identifies the connected machine over the wire within 1–3 seconds.</p>
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
@@ -441,8 +453,8 @@
                     <div class="visual-step">
                         <div class="step-text">
                             <div class="step-badge">Step 3</div>
-                            <h3>Acceptance Dialog</h3>
-                            <p>When you click Send, the receiving computer instantly gets an Incoming Transfer request. They can review the file size and choose where to save it before accepting.</p>
+                            <h3>Explicit Receiver Consent</h3>
+                            <p>When you click Send, the receiving computer receives an authorization prompt displaying the sender name, total file count, and payload size before accepting.</p>
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
@@ -469,8 +481,8 @@
                     <div class="visual-step reverse">
                         <div class="step-text">
                             <div class="step-badge">Step 4</div>
-                            <h3>Transfer Progress</h3>
-                            <p>Once accepted, the transfer begins immediately. You'll see real-time progress, transfer speed, and remaining data as your files stream directly across the cable.</p>
+                            <h3>Full-Speed Streaming</h3>
+                            <p>Once accepted, files stream using framed TCP with 1 MB pooled buffers. Real-time transfer speed, progress percentage, and elapsed metrics display continuously.</p>
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
@@ -483,7 +495,7 @@
                                         <div class="d-stats">
                                             <span>450 MB / 4.2 GB</span>
                                             <span class="d-accent">12%</span>
-                                            <span>850 MB/s</span>
+                                            <span>115 MB/s</span>
                                         </div>
                                         <div class="ui-btn danger mt-2">Cancel</div>
                                     </div>
@@ -498,59 +510,67 @@
             <!-- Speed & Protocol Comparison Section -->
             <section id="comparison" class="comparison-section">
                 <div class="section-header">
-                    <h2>Speed & Method Comparison</h2>
-                    <p>Why direct Ethernet transfer is the fastest, most reliable method for moving massive files and intact folder trees between computers.</p>
+                    <h2>Objective Method Comparison</h2>
+                    <p>How EtherTransfer compares to existing network sharing and physical transfer solutions.</p>
                 </div>
 
                 <div class="comparison-table-wrapper">
                     <table class="comparison-table">
                         <thead>
                             <tr>
-                                <th>Transfer Method</th>
-                                <th>Real Transfer Speed</th>
-                                <th>Time for 100 GB</th>
-                                <th>Internet / Router Required?</th>
-                                <th>Setup Complexity</th>
-                                <th>Folder Trees Intact?</th>
+                                <th>Solution</th>
+                                <th>Primary Strength</th>
+                                <th>Direct Cable Workflow</th>
+                                <th>Zero Router Required?</th>
+                                <th>Achievable Speed (1GbE / 10GbE)</th>
+                                <th>Security & Encryption</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr class="highlight-row">
                                 <td>
                                     <div class="table-method">
-                                        <strong>EtherTransfer (Direct LAN)</strong>
-                                        <span class="table-badge">Recommended</span>
+                                        <strong>EtherTransfer</strong>
+                                        <span class="table-badge">Direct Cable Focus</span>
                                     </div>
                                 </td>
-                                <td class="speed-val">115 – 1,150 MB/s</td>
-                                <td class="time-val">~1.5 to 13 mins</td>
-                                <td><span class="tag-green">100% Offline (No Router)</span></td>
-                                <td>Zero Config (Plug & Play)</td>
-                                <td><span class="tag-green">Yes (Exact Structure)</span></td>
+                                <td>Zero-config P2P physical transfers</td>
+                                <td><span class="tag-green">Automated (Pins physical Ethernet)</span></td>
+                                <td><span class="tag-green">Yes (Link-Local APIPA)</span></td>
+                                <td class="speed-val">115 MB/s (1GbE) / 450–1,150 MB/s (10GbE)</td>
+                                <td>Plaintext local wire (UI consent gate)</td>
                             </tr>
                             <tr>
-                                <td><strong>Local Wi-Fi Sharing (SMB / AirDrop)</strong></td>
-                                <td>15 – 45 MB/s</td>
-                                <td>~45 to 90 mins</td>
-                                <td>Requires Wi-Fi Router</td>
-                                <td>Network permissions & IPs</td>
-                                <td>Often fails on deep trees</td>
+                                <td><strong>LocalSend</strong></td>
+                                <td>Cross-platform Wi-Fi sharing (iOS/Android/PC)</td>
+                                <td>Manual (Defaults to Wi-Fi unless cable IP entered)</td>
+                                <td>Yes (Over hotspot/APIPA), but manual IP config needed</td>
+                                <td class="speed-val">20 – 80 MB/s (Wi-Fi / LAN)</td>
+                                <td><span class="tag-green">TLS 1.3 / HTTPS</span></td>
                             </tr>
                             <tr>
-                                <td><strong>Cloud Storage (Drive / OneDrive)</strong></td>
-                                <td>5 – 25 MB/s (Upload capped)</td>
-                                <td>~3 to 6+ hours</td>
-                                <td>Requires Fast Broadband</td>
-                                <td>Upload & download accounts</td>
-                                <td>Zipping required</td>
+                                <td><strong>Windows / Samba SMB</strong></td>
+                                <td>Persistent network drive mounts & streaming</td>
+                                <td>Manual static IP or NetBIOS discovery setup</td>
+                                <td>Requires manual static IP setup without router</td>
+                                <td class="speed-val">30 – 115 MB/s (1GbE) / up to 1,000 MB/s</td>
+                                <td><span class="tag-green">SMB 3.1.1 AES-128/256</span></td>
                             </tr>
                             <tr>
-                                <td><strong>USB 3.0 Flash Drive / External SSD</strong></td>
-                                <td>40 – 90 MB/s (2x copy)</td>
-                                <td>~40 to 60 mins (2 steps)</td>
-                                <td>No</td>
-                                <td>Physical copy-paste twice</td>
-                                <td>Yes</td>
+                                <td><strong>Syncthing</strong></td>
+                                <td>Continuous bi-directional folder syncing</td>
+                                <td>Complex (Requires folder pairing & discovery setup)</td>
+                                <td>Requires local network or relay server</td>
+                                <td class="speed-val">20 – 70 MB/s (Block hashing overhead)</td>
+                                <td><span class="tag-green">TLS 1.3 Block Sync</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>USB 3.0 External Drive</strong></td>
+                                <td>Offline physical portability</td>
+                                <td>Plug in, copy twice (two-phase transfer)</td>
+                                <td><span class="tag-green">Yes (Physical Storage)</span></td>
+                                <td class="speed-val">40 – 90 MB/s (Effective 2x copy time)</td>
+                                <td>Optional (BitLocker)</td>
                             </tr>
                         </tbody>
                     </table>
@@ -602,87 +622,77 @@
             <section id="faq" class="faq-section">
                 <div class="section-header">
                     <h2>Frequently Asked Questions</h2>
-                    <p>Everything you need to know about transferring files between computers via direct Ethernet cable.</p>
+                    <p>Concrete technical answers regarding direct Ethernet file transfers.</p>
                 </div>
 
                 <div class="faq-accordion">
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>How do I transfer large files directly between two PCs using an Ethernet cable?</span>
+                            <span>Do I need a crossover cable or will a standard Ethernet cable work?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Simply connect a standard Ethernet cable between the network ports of both PCs and launch EtherTransfer on both computers. The app automatically discovers the connected PC using link-local discovery (APIPA) without needing a router, switch, or manual IP configuration. Select your files or folders, click Send, and the receiving machine accepts to begin streaming data across the cable at full Gigabit speed.</p>
+                            <p>A standard straight-through patch cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. Virtually all Gigabit (1000BASE-T) and multi-gigabit network cards produced since 2000 implement <strong>Auto-MDI/MDIX</strong> (IEEE 802.3ab), which automatically crosses over the transmit and receive lines inside the physical layer hardware.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>Do I need a crossover cable or will a regular Ethernet cable work?</span>
+                            <span>Can I use EtherTransfer while both computers are also connected to Wi-Fi?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>A regular, standard Ethernet cable (Cat 5e, Cat 6, Cat 6a, Cat 7, or Cat 8) works perfectly. All modern PC network cards support Auto-MDI/MDIX, which automatically reconfigures the internal transmit and receive lines so a specialized crossover cable is never required. Legacy crossover cables are also 100% supported.</p>
+                            <p>Yes. EtherTransfer inspects hardware PNP identifiers and physical device paths to filter out Wi-Fi and virtual network adapters. The transfer engine explicitly binds outgoing TCP sockets to the physical Ethernet adapter's local IP, ensuring multi-gigabyte transfers saturate the physical cable without interrupting your Wi-Fi internet connection.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>Can I connect multiple computers together through an Ethernet switch?</span>
+                            <span>What throughput should I expect on 1GbE, 2.5GbE, 5GbE, and 10GbE?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Yes! EtherTransfer works both point-to-point (1-to-1 with a direct cable) and across unmanaged or managed Ethernet switches (multi-device). When multiple PCs running EtherTransfer are plugged into the same switch, they automatically discover each other via UDP broadcasts and populate the Discovered Devices list for selective peer-to-peer transfers.</p>
+                            <p>On 1 GbE, EtherTransfer sustains <strong>110–115 MB/s</strong>, saturating the physical line rate. On 2.5 GbE, it reaches <strong>270–285 MB/s</strong> (requires SATA SSD or NVMe). On 5 GbE, it reaches <strong>500–560 MB/s</strong>. On 10 GbE, a single plain TCP stream reaches <strong>450–850 MB/s</strong> (limited by standard 1500 MTU single-core interrupt load), while multi-stream pipelining on fast PCIe Gen 3/4 NVMe SSDs reaches <strong>1,100–1,150 MB/s</strong>.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>What if my laptop doesn't have an Ethernet port?</span>
+                            <span>Why does transfer speed sometimes drop from 115 MB/s to 50 MB/s?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Any standard USB-A, USB-C, or Thunderbolt-to-Ethernet adapter/dongle (Realtek RTL8153, ASIX AX88179, etc.) works out of the box with zero drivers needed. Direct point-to-point Thunderbolt 3/4/USB4 networking cables are also supported via link-local virtual IP interfaces.</p>
+                            <p>Speed drops during transfers typically result from three real-world factors: (1) <em>Many small files</em> (file creation overhead on disk dominates rather than network speed), (2) <em>SSD SLC cache exhaustion</em> (budget SSDs drop to TLC/QLC write speeds of 40–70 MB/s once their write cache fills up), or (3) <em>Mechanical hard drives</em> (HDDs max out around 60–100 MB/s sequential writes).</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>Does EtherTransfer work completely offline without internet or Wi-Fi?</span>
+                            <span>Does EtherTransfer work through an Ethernet switch?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Yes. EtherTransfer operates 100% offline. Data streams exclusively through the physical Ethernet wire from PC to PC. No internet connection, Wi-Fi router, cloud servers, or external telemetry are involved, making it ideal for air-gapped systems and sensitive data.</p>
+                            <p>Yes. When multiple computers running EtherTransfer are plugged into the same unmanaged or managed Ethernet switch, they discover each other via UDP broadcasts on port 50000 and appear in the Discovered Devices list for selective point-to-point transfers.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>Can I transfer files and folders between Windows and Linux?</span>
+                            <span>Can I transfer entire folders, game installs (Steam), and project trees?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Yes. EtherTransfer provides full cross-platform compatibility between Windows (10 and 11) and Linux distributions (Ubuntu, Debian, Fedora, Arch, CentOS). Directory paths, deep folder structures, and file metadata are automatically normalized during the transfer.</p>
+                            <p>Yes. EtherTransfer natively scans and recreates arbitrary nested directory structures on the receiving drive without requiring prior zip archiving. Hidden configuration files (like <code>.gitignore</code> and <code>.env</code>) are preserved, while path traversal attacks (<code>../</code>) and illegal filename characters are strictly sanitized.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">
-                            <span>How fast is direct Ethernet file transfer compared to Wi-Fi or USB?</span>
+                            <span>Is EtherTransfer free and open-source?</span>
                             <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
                         </button>
                         <div class="faq-answer">
-                            <p>Direct Gigabit Ethernet achieves transfer speeds of 115 MB/s to 125 MB/s (~1 Gbps), and 10GbE reaches over 1,000 MB/s. A 100 GB dataset transfers in roughly 13 minutes on Gigabit Ethernet, compared to over 1.5 hours on typical Wi-Fi and 4+ hours on cloud storage.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-item">
-                        <button class="faq-question" aria-expanded="false">
-                            <span>Do I need to configure static IP addresses or change network adapter settings?</span>
-                            <svg class="faq-chevron" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                        <div class="faq-answer">
-                            <p>No. EtherTransfer uses automatic peer discovery over link-local IPv4 addresses (APIPA 169.254.x.x). There are zero IP addresses to configure, zero network adapter settings to change, and zero router port forwards required.</p>
+                            <p>Yes. EtherTransfer is 100% free and open-source under the <strong>MIT License</strong>. There are zero subscriptions, zero ads, zero tracking telemetry, and zero accounts required.</p>
                         </div>
                     </div>
                 </div>
