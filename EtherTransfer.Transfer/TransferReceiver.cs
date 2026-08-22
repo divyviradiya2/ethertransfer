@@ -78,6 +78,8 @@ public class TransferReceiver
                 int currentElementIndex = 0;
                 string? currentRootName = null;
 
+                bool receivedTransferEnd = false;
+
                 try
                 {
                     while (true)
@@ -85,13 +87,22 @@ public class TransferReceiver
                         transferCt.ThrowIfCancellationRequested();
 
                         var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt, 5000);
-                        if (markerJson == null) break;
+                        if (markerJson == null)
+                        {
+                            throw new IOException("Connection closed by sender unexpectedly before transfer completed.");
+                        }
 
                         var baseMsg = JsonSerializer.Deserialize<BaseProtocolMessage>(markerJson);
-                        if (baseMsg == null) break;
+                        if (baseMsg == null)
+                        {
+                            throw new IOException("Received invalid protocol message header.");
+                        }
 
                         if (baseMsg.Type == "TRANSFER_END")
+                        {
+                            receivedTransferEnd = true;
                             break;
+                        }
 
                         if (baseMsg.Type == "FILE_SKIP")
                         {
@@ -107,7 +118,10 @@ public class TransferReceiver
 
                         // FILE_BEGIN — read metadata
                         var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt, 2000);
-                        if (fileMeta == null) break;
+                        if (fileMeta == null)
+                        {
+                            throw new IOException("Connection lost while reading file metadata.");
+                        }
                     
                         if (fileMeta.RootName != currentRootName)
                         {
@@ -233,8 +247,8 @@ public class TransferReceiver
                                 Log($"Failed to delete partial file: {delEx.Message}", LogLevel.Warning);
                             }
 
-                            if (ex is OperationCanceledException)
-                                throw;
+                            // Always rethrow so session is marked failed and rolled back
+                            throw;
                         }
                         finally
                         {
@@ -244,6 +258,11 @@ public class TransferReceiver
                                 fs = null;
                             }
                         }
+                    }
+
+                    if (!receivedTransferEnd)
+                    {
+                        throw new IOException("Transfer ended prematurely without TRANSFER_END marker.");
                     }
 
                     if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
@@ -259,7 +278,9 @@ public class TransferReceiver
                 catch (Exception ex)
                 {
                     result.Success = false;
-                    result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+                    result.ErrorMessage = ex is OperationCanceledException 
+                        ? "Transfer cancelled." 
+                        : (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException ? "Connection lost (sender aborted or network disconnected)." : ex.Message);
 
                     // Roll back any files from root elements that were NOT successfully completed
                     foreach (var kvp in filesByRootElement)

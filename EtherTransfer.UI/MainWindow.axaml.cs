@@ -437,9 +437,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_activeDialog != null && _activeDialog.IsReceiverMode)
+            if (_activeDialog != null && (_activeDialog.IsReceiverMode || _activeDialog.IsProgressMode))
             {
-                OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer request.", LogLevel.Info));
+                OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer.", LogLevel.Info));
                 var dialogToClose = _activeDialog;
                 _activeDialog = null;
                 dialogToClose.ForceClose();

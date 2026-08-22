@@ -320,4 +320,127 @@ public class TransferCancellationTests
         Assert.That(File.Exists(receivedF2_1), Is.False, "Incomplete Folder2's earlier files must be rolled back.");
         Assert.That(File.Exists(receivedF2_2), Is.False, "Incomplete Folder2's in-flight partial file must be deleted.");
     }
+
+    [Test]
+    public async Task SenderCancels_DuringSingleFileTransfer_ReceiverFailsAndDeletesPartialFile()
+    {
+        // Arrange
+        var testFilePath = Path.Combine(_tempSourceDir, "largefile.dat");
+        byte[] testData = new byte[10 * 1024 * 1024]; // 10 MB
+        new Random(42).NextBytes(testData);
+        await File.WriteAllBytesAsync(testFilePath, testData);
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        // Receiver does NOT cancel. Receiver is waiting normally.
+        receiver.OnIncomingTransfer = (req, ct) =>
+        {
+            return Task.FromResult((true, _tempDestDir, CancellationToken.None));
+        };
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        using var senderCts = new CancellationTokenSource();
+        var session = new TransferSession
+        {
+            PayloadFileCount = 1
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = testFilePath, RelativePath = "largefile.dat", RootName = "largefile.dat", Size = testData.Length }
+        });
+
+        // Sender cancels after 1MB
+        sender.ProgressUpdated += (_, e) =>
+        {
+            if (e.BytesSent > 1024 * 1024)
+            {
+                senderCts.Cancel();
+            }
+        };
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "TestSender", session, senderCts.Token);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        // Assert
+        Assert.That(senderResult.Success, Is.False, "Sender result should be false upon sender cancellation.");
+        Assert.That(receiverResult.Success, Is.False, "Receiver MUST NOT be marked successful when sender cancels!");
+        
+        var receivedFilePath = Path.Combine(_tempDestDir, "largefile.dat");
+        Assert.That(File.Exists(receivedFilePath), Is.False, "Receiver must delete partial file when sender cancels!");
+    }
+
+    [Test]
+    public async Task SenderCancels_DuringFolderTransfer_ReceiverFailsAndRollsBack()
+    {
+        // Arrange
+        var folder = Path.Combine(_tempSourceDir, "MyFolder");
+        Directory.CreateDirectory(folder);
+
+        var f1 = Path.Combine(folder, "f1.dat");
+        var f2 = Path.Combine(folder, "f2.dat");
+
+        byte[] smallData = new byte[1024];
+        byte[] largeData = new byte[10 * 1024 * 1024]; // 10 MB
+
+        await File.WriteAllBytesAsync(f1, smallData);
+        await File.WriteAllBytesAsync(f2, largeData);
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) =>
+        {
+            return Task.FromResult((true, _tempDestDir, CancellationToken.None));
+        };
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        using var senderCts = new CancellationTokenSource();
+        var session = new TransferSession
+        {
+            ContainsFolders = true,
+            PayloadFolderCount = 1
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = f1, RelativePath = "MyFolder/f1.dat", RootName = "MyFolder", Size = smallData.Length },
+            new() { AbsolutePath = f2, RelativePath = "MyFolder/f2.dat", RootName = "MyFolder", Size = largeData.Length }
+        });
+
+        // Sender cancels during f2
+        sender.ProgressUpdated += (_, e) =>
+        {
+            if (e.BytesSent > smallData.Length + 1024 * 1024)
+            {
+                senderCts.Cancel();
+            }
+        };
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "TestSender", session, senderCts.Token);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        // Assert
+        Assert.That(senderResult.Success, Is.False);
+        Assert.That(receiverResult.Success, Is.False, "Receiver must not be marked successful when sender cancels!");
+
+        var receivedF1 = Path.Combine(_tempDestDir, "MyFolder", "f1.dat");
+        var receivedF2 = Path.Combine(_tempDestDir, "MyFolder", "f2.dat");
+
+        Assert.That(File.Exists(receivedF2), Is.False, "Partial f2 must be deleted.");
+        Assert.That(File.Exists(receivedF1), Is.False, "Single folder transfer must roll back f1 when sender cancels.");
+    }
 }
