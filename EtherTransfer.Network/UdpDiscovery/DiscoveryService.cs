@@ -90,7 +90,7 @@ public class DiscoveryService : IDisposable
 
     public void Stop(bool sendBye = false)
     {
-        if (sendBye && _cts != null && !_cts.IsCancellationRequested)
+        if (sendBye)
         {
             SendBye();
         }
@@ -129,29 +129,44 @@ public class DiscoveryService : IDisposable
                 Log($"Failed to get interfaces during SendBye: {ex.Message}", LogLevel.Warning, "discovery.sendbye.error");
             }
 
-            foreach (var netIf in ethInterfaces)
+            // Send 3 bursts of UDP BYE packets to guarantee delivery on network teardown
+            for (int burst = 0; burst < 3; burst++)
             {
-                try
-                {
-                    using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
-                    sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                    if (netIf.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
-                    {
-                        sender.EnableBroadcast = true;
-                    }
-                    var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
-                    sender.Send(payload, payload.Length, target);
-                }
-                catch
+                foreach (var netIf in ethInterfaces)
                 {
                     try
                     {
-                        using var fallbackSender = new UdpClient();
-                        fallbackSender.EnableBroadcast = true;
-                        fallbackSender.Send(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
+                        using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
+                        sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                        if (netIf.LocalAddress.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            sender.EnableBroadcast = true;
+                        }
+                        var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
+                        sender.Send(payload, payload.Length, target);
                     }
-                    catch { }
+                    catch
+                    {
+                        try
+                        {
+                            using var fallbackSender = new UdpClient();
+                            fallbackSender.EnableBroadcast = true;
+                            fallbackSender.Send(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
+                        }
+                        catch { }
+                    }
                 }
+
+                // Also send a general broadcast packet
+                try
+                {
+                    using var genSender = new UdpClient();
+                    genSender.EnableBroadcast = true;
+                    genSender.Send(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+                }
+                catch { }
+
+                if (burst < 2) Thread.Sleep(20);
             }
         }
         catch { }

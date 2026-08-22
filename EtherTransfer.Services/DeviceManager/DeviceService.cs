@@ -203,9 +203,30 @@ public class DeviceService : IDisposable
 
         if (e.Message.Type == "BYE")
         {
+            bool removedAny = false;
+
             if (_devices.TryRemove(sessionId, out var removed))
             {
                 Log($"DEVICE WENT OFFLINE: {removed.Name} at {sourceIp}", LogLevel.Info, "device.offline");
+                removedAny = true;
+            }
+
+            var matchingKeys = _devices.Where(kvp =>
+                kvp.Value.SessionId == sessionId ||
+                kvp.Value.Name.Equals(e.Message.ComputerName, StringComparison.OrdinalIgnoreCase) ||
+                kvp.Value.Address == sourceIp).Select(kvp => kvp.Key).ToList();
+
+            foreach (var k in matchingKeys)
+            {
+                if (_devices.TryRemove(k, out var r))
+                {
+                    Log($"DEVICE WENT OFFLINE: {r.Name} at {r.Address}", LogLevel.Info, "device.offline");
+                    removedAny = true;
+                }
+            }
+
+            if (removedAny)
+            {
                 DevicesChanged?.Invoke(this, EventArgs.Empty);
             }
             return;
@@ -290,12 +311,9 @@ public class DeviceService : IDisposable
 
     public void Dispose()
     {
-        _debounceCts?.Cancel();
+        Stop();
         _debounceCts?.Dispose();
-        _cts?.Cancel();
         _cts?.Dispose();
         _discoveryService?.Dispose();
-        NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
-        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAddressChanged;
     }
 }

@@ -678,11 +678,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnDebugLog(this, new StructuredLogMessage("ui.name_saved", $"Saved and broadcasted new name: {CustomDeviceName}", LogLevel.Info));
     }
 
+    private bool _isShuttingDown = false;
+
+    public void Shutdown()
+    {
+        if (_isShuttingDown) return;
+        _isShuttingDown = true;
+
+        try
+        {
+            _deviceService.Dispose();
+            _transferService.Dispose();
+            _linkMonitor.Dispose();
+        }
+        catch { }
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        Shutdown();
+        base.OnClosing(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
-        _deviceService.Dispose();
-        _transferService.Dispose();
-        _linkMonitor.Dispose();
+        Shutdown();
         base.OnClosed(e);
     }
 
