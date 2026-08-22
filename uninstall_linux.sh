@@ -104,12 +104,20 @@ start_spinner "Removing firewall rules..."
 FIREWALL_REMOVED=false
 
 if command -v ufw > /dev/null; then
+    ufw delete allow 50000/udp > /dev/null 2>&1
+    ufw delete allow 50000/tcp > /dev/null 2>&1
+    ufw delete allow 55000/tcp > /dev/null 2>&1
+    ufw delete allow 55000/udp > /dev/null 2>&1
     ufw delete allow 8840/tcp > /dev/null 2>&1
     ufw delete allow 8840/udp > /dev/null 2>&1
     FIREWALL_REMOVED=true
 fi
 
 if command -v firewall-cmd > /dev/null && firewall-cmd --state > /dev/null 2>&1; then
+    firewall-cmd --permanent --remove-port=50000/udp > /dev/null 2>&1
+    firewall-cmd --permanent --remove-port=50000/tcp > /dev/null 2>&1
+    firewall-cmd --permanent --remove-port=55000/tcp > /dev/null 2>&1
+    firewall-cmd --permanent --remove-port=55000/udp > /dev/null 2>&1
     firewall-cmd --permanent --remove-port=8840/tcp > /dev/null 2>&1
     firewall-cmd --permanent --remove-port=8840/udp > /dev/null 2>&1
     firewall-cmd --reload > /dev/null 2>&1
@@ -117,6 +125,10 @@ if command -v firewall-cmd > /dev/null && firewall-cmd --state > /dev/null 2>&1;
 fi
 
 if command -v iptables > /dev/null; then
+    iptables -w -D INPUT -p udp --dport 50000 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p udp --dport 50000 -j ACCEPT > /dev/null 2>&1
+    iptables -w -D INPUT -p tcp --dport 50000 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p tcp --dport 50000 -j ACCEPT > /dev/null 2>&1
+    iptables -w -D INPUT -p tcp --dport 55000 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p tcp --dport 55000 -j ACCEPT > /dev/null 2>&1
+    iptables -w -D INPUT -p udp --dport 55000 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p udp --dport 55000 -j ACCEPT > /dev/null 2>&1
     iptables -w -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1
     iptables -w -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1 || iptables -D INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1
     FIREWALL_REMOVED=true

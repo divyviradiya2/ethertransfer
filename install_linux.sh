@@ -411,31 +411,38 @@ print_step "Configuring firewall..."
 FIREWALL_CONFIGURED=false
 
 if command -v ufw > /dev/null; then
-    if ufw status 2>/dev/null | grep -q "8840" || ufw show added 2>/dev/null | grep -q "8840"; then
+    if (ufw status 2>/dev/null | grep -q "50000" || ufw show added 2>/dev/null | grep -q "50000") && \
+       (ufw status 2>/dev/null | grep -q "55000" || ufw show added 2>/dev/null | grep -q "55000"); then
         print_success "UFW rules already exist (Skipped)"
     else
-        ufw allow 8840/tcp > /dev/null 2>&1
-        ufw allow 8840/udp > /dev/null 2>&1
-        print_success "UFW rules added for port 8840"
+        ufw allow 50000/udp > /dev/null 2>&1
+        ufw allow 50000/tcp > /dev/null 2>&1
+        ufw allow 55000/tcp > /dev/null 2>&1
+        ufw allow 55000/udp > /dev/null 2>&1
+        print_success "UFW rules added for ports 50000 (Discovery) and 55000 (Transfer)"
     fi
     FIREWALL_CONFIGURED=true
 elif command -v firewall-cmd > /dev/null && firewall-cmd --state > /dev/null 2>&1; then
-    if firewall-cmd --query-port=8840/tcp > /dev/null 2>&1; then
+    if firewall-cmd --query-port=50000/udp > /dev/null 2>&1 && firewall-cmd --query-port=55000/tcp > /dev/null 2>&1; then
         print_success "Firewalld rules already exist (Skipped)"
     else
-        firewall-cmd --permanent --add-port=8840/tcp > /dev/null 2>&1
-        firewall-cmd --permanent --add-port=8840/udp > /dev/null 2>&1
+        firewall-cmd --permanent --add-port=50000/udp > /dev/null 2>&1
+        firewall-cmd --permanent --add-port=50000/tcp > /dev/null 2>&1
+        firewall-cmd --permanent --add-port=55000/tcp > /dev/null 2>&1
+        firewall-cmd --permanent --add-port=55000/udp > /dev/null 2>&1
         firewall-cmd --reload > /dev/null 2>&1
-        print_success "Firewalld rules added for port 8840"
+        print_success "Firewalld rules added for ports 50000 (Discovery) and 55000 (Transfer)"
     fi
     FIREWALL_CONFIGURED=true
 elif command -v iptables > /dev/null; then
-    if iptables -C INPUT -p tcp --dport 8840 -j ACCEPT >/dev/null 2>&1; then
+    if iptables -C INPUT -p udp --dport 50000 -j ACCEPT >/dev/null 2>&1 && iptables -C INPUT -p tcp --dport 55000 -j ACCEPT >/dev/null 2>&1; then
         print_success "iptables rules already exist (Skipped)"
     else
-        iptables -w -A INPUT -p tcp --dport 8840 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 8840 -j ACCEPT > /dev/null 2>&1
-        iptables -w -A INPUT -p udp --dport 8840 -j ACCEPT 2>/dev/null || iptables -A INPUT -p udp --dport 8840 -j ACCEPT > /dev/null 2>&1
-        print_success "iptables rules added for port 8840"
+        iptables -w -A INPUT -p udp --dport 50000 -j ACCEPT 2>/dev/null || iptables -A INPUT -p udp --dport 50000 -j ACCEPT > /dev/null 2>&1
+        iptables -w -A INPUT -p tcp --dport 50000 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 50000 -j ACCEPT > /dev/null 2>&1
+        iptables -w -A INPUT -p tcp --dport 55000 -j ACCEPT 2>/dev/null || iptables -A INPUT -p tcp --dport 55000 -j ACCEPT > /dev/null 2>&1
+        iptables -w -A INPUT -p udp --dport 55000 -j ACCEPT 2>/dev/null || iptables -A INPUT -p udp --dport 55000 -j ACCEPT > /dev/null 2>&1
+        print_success "iptables rules added for ports 50000 (Discovery) and 55000 (Transfer)"
     fi
     FIREWALL_CONFIGURED=true
 fi
