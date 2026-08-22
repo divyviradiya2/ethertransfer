@@ -43,7 +43,20 @@ public static class LinuxNetworkInterfaceDetector
                 }
 
                 if (env.DirectoryExists($"{sysfsPath}/wireless") || 
-                    env.DirectoryExists($"{sysfsPath}/phy80211"))
+                    env.DirectoryExists($"{sysfsPath}/phy80211") ||
+                    ni.Name.StartsWith("wl", StringComparison.OrdinalIgnoreCase) ||
+                    ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
+                    ni.Description.Contains("wireless", StringComparison.OrdinalIgnoreCase) ||
+                    ni.Description.Contains("wlan", StringComparison.OrdinalIgnoreCase) ||
+                    ni.Description.Contains("wifi", StringComparison.OrdinalIgnoreCase))
+                {
+                    isWifi = true;
+                }
+            }
+            else
+            {
+                if (ni.Name.StartsWith("wl", StringComparison.OrdinalIgnoreCase) ||
+                    ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
                 {
                     isWifi = true;
                 }
@@ -51,7 +64,8 @@ public static class LinuxNetworkInterfaceDetector
         }
         catch
         {
-            isWifi = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+            isWifi = ni.Name.StartsWith("wl", StringComparison.OrdinalIgnoreCase) ||
+                     ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
             isVirtual = false;
             isPhysical = true;
         }

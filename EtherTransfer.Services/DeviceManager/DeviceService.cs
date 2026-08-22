@@ -188,8 +188,14 @@ public class DeviceService : IDisposable
     {
         var sourceIp = e.SourceAddress.ToString();
 
-        // Use cached IPs to avoid re-querying OS on every packet
+        // 1. Use cached IPs to avoid re-querying OS on every packet
         if (_lastKnownIps.Contains(sourceIp))
+        {
+            return;
+        }
+
+        // 2. STRICT ETHERNET ONLY: Drop any packet arriving from a non-Ethernet or Wi-Fi route
+        if (!NetworkHelper.IsIpInActiveSubnets(sourceIp))
         {
             return;
         }
@@ -321,12 +327,14 @@ public class DeviceService : IDisposable
                 var staleThreshold = NetworkConfig.Default.PeerStaleThreshold;
                 var removedAny = false;
 
-                var keysToRemove = _devices.Where(kvp => now - kvp.Value.LastSeen > staleThreshold).Select(kvp => kvp.Key).ToList();
+                var keysToRemove = _devices.Where(kvp => 
+                    now - kvp.Value.LastSeen > staleThreshold || 
+                    !NetworkHelper.IsIpInActiveSubnets(kvp.Value.Address)).Select(kvp => kvp.Key).ToList();
                 foreach (var key in keysToRemove)
                 {
                     if (_devices.TryRemove(key, out var removed))
                     {
-                        Log($"REMOVED stale: {removed.Name} at {removed.Address}", LogLevel.Info, "device.removed.stale");
+                        Log($"REMOVED offline/stale: {removed.Name} at {removed.Address}", LogLevel.Info, "device.removed.stale");
                         removedAny = true;
                     }
                 }

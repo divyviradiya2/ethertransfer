@@ -9,7 +9,15 @@ public static class WindowsNetworkInterfaceDetector
     {
         bool isPhysical = false;
         bool isVirtual = false;
-        bool isWifi = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+        var descLower = ni.Description.ToLowerInvariant();
+        var nameLower = ni.Name.ToLowerInvariant();
+
+        bool isWifi = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
+                      descLower.Contains("wi-fi") || descLower.Contains("wifi") ||
+                      descLower.Contains("wireless") || descLower.Contains("802.11") ||
+                      descLower.Contains("wlan") ||
+                      nameLower.Contains("wi-fi") || nameLower.Contains("wifi") ||
+                      nameLower.Contains("wireless") || nameLower.Contains("wlan");
 
         if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback)
         {

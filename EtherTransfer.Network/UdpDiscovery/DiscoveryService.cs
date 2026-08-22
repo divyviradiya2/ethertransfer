@@ -155,26 +155,8 @@ public class DiscoveryService : IDisposable
                         var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         sender.Send(payload, payload.Length, target);
                     }
-                    catch
-                    {
-                        try
-                        {
-                            using var fallbackSender = new UdpClient();
-                            fallbackSender.EnableBroadcast = true;
-                            fallbackSender.Send(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
-                        }
-                        catch { }
-                    }
+                    catch { }
                 }
-
-                // Also send a general broadcast packet
-                try
-                {
-                    using var genSender = new UdpClient();
-                    genSender.EnableBroadcast = true;
-                    genSender.Send(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
-                }
-                catch { }
 
                 if (burst < 2) Thread.Sleep(20);
             }
@@ -189,8 +171,15 @@ public class DiscoveryService : IDisposable
             int loopCount = 0;
             while (!ct.IsCancellationRequested)
             {
-                // Get all Ethernet interface broadcast addresses
+                // Get all physical Ethernet interface broadcast addresses
                 var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+
+                // If NO Ethernet interfaces are active/connected, DO NOT BROADCAST (Strict Ethernet Only)
+                if (ethInterfaces.Count == 0)
+                {
+                    await Task.Delay(2000, ct);
+                    continue;
+                }
 
                 // Re-build message each loop to pick up any custom name changes
                 var seq = Interlocked.Increment(ref _sequenceNumber);
@@ -206,9 +195,11 @@ public class DiscoveryService : IDisposable
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
-                // Send to each Ethernet interface's subnet broadcast
+                // Send strictly to each Ethernet interface's subnet broadcast
                 foreach (var netIf in ethInterfaces)
                 {
+                    if (ct.IsCancellationRequested) break;
+
                     try
                     {
                         using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
@@ -220,33 +211,10 @@ public class DiscoveryService : IDisposable
                         var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Fallback if local address is in tentative/DAD transition on Windows
-                        try
-                        {
-                            using var fallbackSender = new UdpClient();
-                            fallbackSender.EnableBroadcast = true;
-                            await fallbackSender.SendAsync(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
-                            await fallbackSender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
-                        }
-                        catch (Exception fallbackEx)
-                        {
-                            Log($"Send failed on {netIf.LocalAddress}: {fallbackEx.Message}", LogLevel.Warning, "discovery.send.failed");
-                        }
+                        Log($"Send failed on {netIf.LocalAddress}: {ex.Message}", LogLevel.Warning, "discovery.send.failed");
                     }
-                }
-
-                // If no specific Ethernet interfaces resolved yet, attempt global broadcast
-                if (ethInterfaces.Count == 0)
-                {
-                    try
-                    {
-                        using var globalSender = new UdpClient();
-                        globalSender.EnableBroadcast = true;
-                        await globalSender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
-                    }
-                    catch { }
                 }
 
                 loopCount++;
@@ -333,27 +301,19 @@ public class DiscoveryService : IDisposable
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
 
             var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
-            if (ethInterfaces.Count > 0)
+            if (ethInterfaces.Count == 0) return;
+
+            foreach (var netIf in ethInterfaces)
             {
-                foreach (var netIf in ethInterfaces)
+                try
                 {
-                    try
-                    {
-                        using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
-                        sender.EnableBroadcast = true;
-                        sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                        await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
-                        await sender.SendAsync(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
-                    }
-                    catch { }
+                    using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
+                    sender.EnableBroadcast = true;
+                    sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                    await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+                    await sender.SendAsync(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
                 }
-            }
-            else
-            {
-                using var sender = new UdpClient();
-                sender.EnableBroadcast = true;
-                await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
-                await sender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+                catch { }
             }
         }
         catch { }
@@ -375,25 +335,18 @@ public class DiscoveryService : IDisposable
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(reply));
 
             var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
-            if (ethInterfaces.Count > 0)
+            if (ethInterfaces.Count == 0) return;
+
+            foreach (var netIf in ethInterfaces)
             {
-                foreach (var netIf in ethInterfaces)
+                try
                 {
-                    try
-                    {
-                        using var responder = new UdpClient(netIf.LocalAddress.AddressFamily);
-                        responder.EnableBroadcast = true;
-                        responder.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
-                        await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
-                    }
-                    catch { }
+                    using var responder = new UdpClient(netIf.LocalAddress.AddressFamily);
+                    responder.EnableBroadcast = true;
+                    responder.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                    await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
                 }
-            }
-            else
-            {
-                using var responder = new UdpClient();
-                responder.EnableBroadcast = true;
-                await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+                catch { }
             }
         }
         catch { }
