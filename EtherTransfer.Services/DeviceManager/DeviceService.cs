@@ -327,6 +327,20 @@ public class DeviceService : IDisposable
                 var staleThreshold = NetworkConfig.Default.PeerStaleThreshold;
                 var removedAny = false;
 
+                // 1. Detect dynamic IP changes / interface swaps that OS events might have missed
+                var currentIps = GetCurrentLocalIps();
+                if (!_lastKnownIps.SetEquals(currentIps))
+                {
+                    _lastKnownIps = currentIps;
+                    var diags = NetworkHelper.DiagnoseInterfaces();
+                    foreach (var diag in diags)
+                    {
+                        Log(diag, LogLevel.Info, "network.diagnostic");
+                    }
+                    NetworkChanged?.Invoke(this, EventArgs.Empty);
+                }
+
+                // 2. Remove peers that are stale OR no longer in our active Ethernet subnets
                 var keysToRemove = _devices.Where(kvp => 
                     now - kvp.Value.LastSeen > staleThreshold || 
                     !NetworkHelper.IsIpInActiveSubnets(kvp.Value.Address)).Select(kvp => kvp.Key).ToList();
@@ -344,7 +358,7 @@ public class DeviceService : IDisposable
                     DevicesChanged?.Invoke(this, EventArgs.Empty);
                 }
 
-                await Task.Delay(2000, cancellationToken);
+                await Task.Delay(1000, cancellationToken);
             }
         }
         catch (OperationCanceledException) { }

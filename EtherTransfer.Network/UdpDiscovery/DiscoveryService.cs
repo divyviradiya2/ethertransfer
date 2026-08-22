@@ -211,6 +211,10 @@ public class DiscoveryService : IDisposable
                         var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
                     }
+                    catch (SocketException sockEx) when (sockEx.SocketErrorCode == SocketError.AddressNotAvailable)
+                    {
+                        // Transient Windows DAD / IP transition state (WSAEADDRNOTAVAIL 10049) - will bind automatically once settled
+                    }
                     catch (Exception ex)
                     {
                         Log($"Send failed on {netIf.LocalAddress}: {ex.Message}", LogLevel.Warning, "discovery.send.failed");
