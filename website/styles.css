@@ -1142,30 +1142,43 @@ html {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     overflow-x: auto;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
 }
 
 .comparison-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
 }
 
 .comparison-table th {
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.4rem;
     font-weight: 600;
+    font-size: 0.8rem;
     color: var(--text-main);
     background-color: var(--bg-base);
     border-bottom: 1px solid var(--border-color);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     white-space: nowrap;
 }
 
 .comparison-table td {
-    padding: 1.25rem 1.5rem;
+    padding: 1.15rem 1.4rem;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
+    transition: background-color 0.15s ease;
+}
+
+.comparison-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.comparison-table tbody tr:hover {
+    background-color: rgba(125, 125, 125, 0.03);
 }
 
 .comparison-table tbody tr:last-child td {
@@ -1173,61 +1186,28 @@ html {
 }
 
 .comparison-table .highlight-row {
-    background-color: rgba(37, 99, 235, 0.04);
+    background-color: rgba(37, 99, 235, 0.035);
 }
 
 [data-theme="dark"] .comparison-table .highlight-row {
-    background-color: rgba(0, 122, 255, 0.08);
+    background-color: rgba(59, 130, 246, 0.06);
 }
 
-.table-method {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+.comparison-table .highlight-row td {
+    color: var(--text-main);
 }
 
 .table-method strong {
     color: var(--text-main);
-    font-size: 1rem;
-}
-
-.table-badge {
-    display: inline-block;
-    width: fit-content;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--accent);
-    background-color: var(--bg-base);
-    border: 1px solid var(--accent);
-    padding: 0.15rem 0.5rem;
-    border-radius: 100px;
-}
-
-.speed-val {
-    font-weight: 600;
-    color: var(--text-main) !important;
-}
-
-.time-val {
+    font-size: 0.98rem;
     font-weight: 600;
 }
 
-.highlight-row .time-val,
-.highlight-row .speed-val {
-    color: var(--accent) !important;
-}
-
-.tag-green {
-    display: inline-flex;
-    align-items: center;
-    color: #16a34a;
-    font-weight: 600;
-}
-
-[data-theme="dark"] .tag-green {
-    color: #4ade80;
+.comparison-table .speed-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
 }
 
 /* FAQ Section */

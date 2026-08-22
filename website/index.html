@@ -510,8 +510,8 @@
             <!-- Speed & Protocol Comparison Section -->
             <section id="comparison" class="comparison-section">
                 <div class="section-header">
-                    <h2>Objective Method Comparison</h2>
-                    <p>How EtherTransfer compares to existing network sharing and physical transfer solutions.</p>
+                    <h2>Comparison With Existing Tools</h2>
+                    <p>An objective technical comparison between EtherTransfer, network file sharing, and physical storage methods.</p>
                 </div>
 
                 <div class="comparison-table-wrapper">
@@ -521,9 +521,9 @@
                                 <th>Solution</th>
                                 <th>Primary Strength</th>
                                 <th>Direct Cable Workflow</th>
-                                <th>Zero Router Required?</th>
-                                <th>Achievable Speed (1GbE / 10GbE)</th>
-                                <th>Security & Encryption</th>
+                                <th>Zero Router Required</th>
+                                <th>Achievable Speed</th>
+                                <th>Security Model</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -531,45 +531,60 @@
                                 <td>
                                     <div class="table-method">
                                         <strong>EtherTransfer</strong>
-                                        <span class="table-badge">Direct Cable Focus</span>
                                     </div>
                                 </td>
                                 <td>Zero-config P2P physical transfers</td>
-                                <td><span class="tag-green">Automated (Pins physical Ethernet)</span></td>
-                                <td><span class="tag-green">Yes (Link-Local APIPA)</span></td>
-                                <td class="speed-val">115 MB/s (1GbE) / 450–1,150 MB/s (10GbE)</td>
+                                <td>Automated (Pins physical Ethernet)</td>
+                                <td>Yes (Link-Local APIPA)</td>
+                                <td class="speed-val">115 MB/s (1G) &middot; Up to 1,150 MB/s (10G)</td>
                                 <td>Plaintext local wire (UI consent gate)</td>
                             </tr>
                             <tr>
-                                <td><strong>LocalSend</strong></td>
+                                <td>
+                                    <div class="table-method">
+                                        <strong>LocalSend</strong>
+                                    </div>
+                                </td>
                                 <td>Cross-platform Wi-Fi sharing (iOS/Android/PC)</td>
-                                <td>Manual (Defaults to Wi-Fi unless cable IP entered)</td>
-                                <td>Yes (Over hotspot/APIPA), but manual IP config needed</td>
-                                <td class="speed-val">20 – 80 MB/s (Wi-Fi / LAN)</td>
-                                <td><span class="tag-green">TLS 1.3 / HTTPS</span></td>
+                                <td>Manual (Defaults to Wi-Fi route)</td>
+                                <td>Yes (Requires manual IP setup on cable)</td>
+                                <td class="speed-val">20 &ndash; 80 MB/s (Wi-Fi / LAN)</td>
+                                <td>TLS 1.3 / HTTPS</td>
                             </tr>
                             <tr>
-                                <td><strong>Windows / Samba SMB</strong></td>
+                                <td>
+                                    <div class="table-method">
+                                        <strong>Windows / Samba SMB</strong>
+                                    </div>
+                                </td>
                                 <td>Persistent network drive mounts & streaming</td>
-                                <td>Manual static IP or NetBIOS discovery setup</td>
-                                <td>Requires manual static IP setup without router</td>
-                                <td class="speed-val">30 – 115 MB/s (1GbE) / up to 1,000 MB/s</td>
-                                <td><span class="tag-green">SMB 3.1.1 AES-128/256</span></td>
+                                <td>Requires manual static IP or NetBIOS setup</td>
+                                <td>Requires manual static IP without router</td>
+                                <td class="speed-val">30 &ndash; 115 MB/s (1G) &middot; Up to 1,000 MB/s (10G)</td>
+                                <td>SMB 3.1.1 AES-128/256</td>
                             </tr>
                             <tr>
-                                <td><strong>Syncthing</strong></td>
+                                <td>
+                                    <div class="table-method">
+                                        <strong>Syncthing</strong>
+                                    </div>
+                                </td>
                                 <td>Continuous bi-directional folder syncing</td>
-                                <td>Complex (Requires folder pairing & discovery setup)</td>
+                                <td>Complex (Requires pairing & discovery setup)</td>
                                 <td>Requires local network or relay server</td>
-                                <td class="speed-val">20 – 70 MB/s (Block hashing overhead)</td>
-                                <td><span class="tag-green">TLS 1.3 Block Sync</span></td>
+                                <td class="speed-val">20 &ndash; 70 MB/s (Block hashing overhead)</td>
+                                <td>TLS 1.3 Block Sync</td>
                             </tr>
                             <tr>
-                                <td><strong>USB 3.0 External Drive</strong></td>
+                                <td>
+                                    <div class="table-method">
+                                        <strong>USB 3.0 External Drive</strong>
+                                    </div>
+                                </td>
                                 <td>Offline physical portability</td>
                                 <td>Plug in, copy twice (two-phase transfer)</td>
-                                <td><span class="tag-green">Yes (Physical Storage)</span></td>
-                                <td class="speed-val">40 – 90 MB/s (Effective 2x copy time)</td>
+                                <td>Yes (Physical media)</td>
+                                <td class="speed-val">40 &ndash; 90 MB/s (Effective 2x copy time)</td>
                                 <td>Optional (BitLocker)</td>
                             </tr>
                         </tbody>
