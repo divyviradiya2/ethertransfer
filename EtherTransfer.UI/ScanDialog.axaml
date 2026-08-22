@@ -3,35 +3,35 @@
         xmlns:ui="clr-namespace:EtherTransfer.UI"
         x:Class="EtherTransfer.UI.ScanDialog"
         x:DataType="ui:ScanDialog"
-        Title="Scanning"
-        Width="400" SizeToContent="Height"
+        Title="Preparing Files"
+        Width="440" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Foreground="{DynamicResource AppForeground}"
         CanResize="False">
     
     <Border Background="{DynamicResource SurfaceBackground}">
-        <Grid RowDefinitions="Auto,*,Auto" Margin="25">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="24">
             <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="Scanning Files" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" HorizontalAlignment="Center"/>
-                <TextBlock Text="Please wait while your selected items are prepared." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" Margin="0,5,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="Preparing Files" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Calculating folder contents and file sizes..." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" Margin="0,4,0,0" TextWrapping="Wrap" HorizontalAlignment="Center"/>
             </StackPanel>
 
             <!-- Scanning List -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="300">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" MaxHeight="280">
                 <ItemsControl ItemsSource="{Binding ScanTasks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="ui:ScanProgressViewModel">
-                            <Border Background="{DynamicResource AppBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                            <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding FolderName}" FontWeight="Medium" Foreground="{DynamicResource AppForeground}" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,3,0,0"/>
                                     </StackPanel>
                                     <ProgressBar Grid.Column="1" IsIndeterminate="{Binding !IsComplete}" Width="60" Height="6" CornerRadius="3" VerticalAlignment="Center" Margin="15,0,0,0" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" IsVisible="{Binding !IsComplete}"/>
                                     
-                                    <PathIcon Grid.Column="1" Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Foreground="{DynamicResource SuccessColor}" Width="16" Height="16" VerticalAlignment="Center" Margin="15,0,0,0" IsVisible="{Binding IsComplete}"/>
+                                    <PathIcon Grid.Column="1" Data="{StaticResource CheckIcon}" Foreground="{DynamicResource SuccessColor}" Width="16" Height="16" VerticalAlignment="Center" Margin="15,0,0,0" IsVisible="{Binding IsComplete}"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -39,7 +39,7 @@
                 </ItemsControl>
             </ScrollViewer>
             
-            <Button Grid.Row="2" Content="Cancel Scan" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Margin="0,20,0,0" Padding="20,8"/>
+            <Button Grid.Row="2" Content="Cancel" Classes="Secondary" Click="Cancel_Click" HorizontalAlignment="Center" Margin="0,16,0,0" Padding="28,8"/>
         </Grid>
     </Border>
 </Window>

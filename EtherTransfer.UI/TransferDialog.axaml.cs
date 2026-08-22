@@ -222,6 +222,34 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
     }
 
+    public bool CanOpenFolder => !string.IsNullOrWhiteSpace(SavePath) && Directory.Exists(SavePath);
+
+    private void OpenFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            string path = SavePath;
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            {
+                path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            }
+
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+            }
+            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("xdg-open", $"\"{path}\"") { UseShellExecute = true });
+            }
+            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{path}\"") { UseShellExecute = true });
+            }
+        }
+        catch { }
+    }
+
     private void Done_Click(object? sender, RoutedEventArgs e)
     {
         _isForceClosing = true;

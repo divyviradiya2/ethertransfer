@@ -2,25 +2,39 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="EtherTransfer.UI.ErrorDialog"
         Title="Error"
-        Width="450" Height="200"
+        Width="460" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
-        CanResize="True">
-    <Border Background="#1E1E1E" BorderBrush="#333333" BorderThickness="0">
-        <Grid RowDefinitions="*, Auto" Margin="20">
-            <TextBlock Name="MessageText" 
-                       Foreground="#FF6B6B"
-                       TextWrapping="Wrap" 
-                       VerticalAlignment="Center" 
-                       HorizontalAlignment="Center" 
-                       TextAlignment="Center"
-                       FontSize="16" />
-            <Button Grid.Row="1" 
+        ShowInTaskbar="False"
+        Foreground="{DynamicResource AppForeground}"
+        CanResize="False">
+    <Border Background="{DynamicResource SurfaceBackground}">
+        <Grid RowDefinitions="Auto,*,Auto" Margin="24">
+            <!-- Header with Icon -->
+            <StackPanel Grid.Row="0" Orientation="Vertical" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,16">
+                <PathIcon Data="{StaticResource ErrorIcon}" Width="40" Height="40" Foreground="{DynamicResource DangerColor}" HorizontalAlignment="Center"/>
+                <TextBlock Text="Error" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Message Card -->
+            <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="16,14" MaxHeight="250">
+                <ScrollViewer>
+                    <TextBlock Name="MessageText" 
+                               Foreground="{DynamicResource AppForeground}"
+                               TextWrapping="Wrap" 
+                               FontSize="13"
+                               LineHeight="20"
+                               TextAlignment="Center" />
+                </ScrollViewer>
+            </Border>
+
+            <!-- Action Button -->
+            <Button Grid.Row="2" 
                     Content="OK" 
+                    Classes="Primary"
                     Click="Ok_Click" 
                     HorizontalAlignment="Center" 
-                    HorizontalContentAlignment="Center"
-                    Width="100" 
-                    Margin="0,20,0,0" />
+                    Padding="36,8" 
+                    Margin="0,18,0,0" />
         </Grid>
     </Border>
 </Window>

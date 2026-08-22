@@ -11,90 +11,110 @@
         CanResize="False">
     
     <Border Background="{DynamicResource SurfaceBackground}">
-        <Grid Margin="25">
+        <Grid Margin="24">
             
             <!-- Sender Mode: Waiting for acceptance -->
-            <StackPanel IsVisible="{Binding IsSenderMode}" VerticalAlignment="Center" Spacing="20">
-                <TextBlock Text="Awaiting Response" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
-                <TextBlock Text="{Binding WaitingText}" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+            <StackPanel IsVisible="{Binding IsSenderMode}" VerticalAlignment="Center" Spacing="16">
+                <PathIcon Data="{StaticResource SyncIcon}" Width="44" Height="44" Foreground="{DynamicResource AccentColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                <TextBlock Text="Waiting for Peer" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
                 
-                <ProgressBar IsIndeterminate="True" Height="4" Margin="20,10" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="2"/>
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,12">
+                    <TextBlock Text="{Binding WaitingText}" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
+                </Border>
                 
-                <Button Content="Cancel" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Padding="24,8"/>
+                <ProgressBar IsIndeterminate="True" Height="4" Margin="10,4" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="2"/>
+                
+                <Button Content="Cancel" Classes="Secondary" Click="Cancel_Click" HorizontalAlignment="Center" Padding="28,8"/>
             </StackPanel>
             
             <!-- Receiver Mode: Incoming Request -->
-            <StackPanel IsVisible="{Binding IsReceiverMode}" VerticalAlignment="Center" Spacing="15">
-                <TextBlock Text="Incoming Transfer" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
-                <TextBlock Text="{Binding IncomingRequestText}" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+            <StackPanel IsVisible="{Binding IsReceiverMode}" VerticalAlignment="Center" Spacing="16">
+                <TextBlock Text="Incoming Transfer Request" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
                 
-                <StackPanel Spacing="5" Margin="0,5">
-                    <TextBlock Text="Save Location:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}"/>
+                <!-- Request Summary Card -->
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+                    <TextBlock Text="{Binding IncomingRequestText}" FontSize="13" LineHeight="20" Foreground="{DynamicResource AppForeground}" TextAlignment="Center" TextWrapping="Wrap"/>
+                </Border>
+                
+                <!-- Save Location Selection -->
+                <StackPanel Spacing="6" Margin="0,2">
+                    <TextBlock Text="Save Location" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppForegroundSecondary}"/>
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBox Grid.Column="0" Text="{Binding SavePath}" IsReadOnly="True" VerticalAlignment="Center"/>
-                        <Button Grid.Column="1" Content="Change" Click="ChangeFolder_Click" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Browse" Classes="Secondary" Click="ChangeFolder_Click" Margin="8,0,0,0" VerticalAlignment="Center" Padding="14,6"/>
                     </Grid>
                 </StackPanel>
                 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15" Margin="0,20,0,0">
-                    <Button Content="Decline" Click="Decline_Click" Padding="25,8"/>
-                    <Button Content="Accept" Classes="Primary" Click="Accept_Click" Padding="25,8"/>
-                </StackPanel>
+                <!-- Action Buttons -->
+                <Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+                    <Button Grid.Column="0" Content="Decline" Classes="Secondary" Click="Decline_Click" HorizontalAlignment="Stretch" Margin="0,0,6,0" Padding="0,8"/>
+                    <Button Grid.Column="1" Content="Accept" Classes="Primary" Click="Accept_Click" HorizontalAlignment="Stretch" Margin="6,0,0,0" Padding="0,8"/>
+                </Grid>
             </StackPanel>
 
             <!-- Progress Mode: Transferring Data -->
-            <StackPanel IsVisible="{Binding IsProgressMode}" VerticalAlignment="Center" Spacing="10">
+            <StackPanel IsVisible="{Binding IsProgressMode}" VerticalAlignment="Center" Spacing="12">
                 <TextBlock Text="Transferring" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,15">
-                    <TextBlock Text="{Binding TransferFileName}" Foreground="{DynamicResource AppForegroundSecondary}" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding TransferItemCountText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
-                </StackPanel>
                 
-                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="6" Margin="0,5" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="3"/>
+                <!-- Active Item Card -->
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding TransferFileName}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource AppForeground}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding TransferItemCountText}" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </Grid>
+                </Border>
                 
-                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,5,0,15">
+                <!-- Progress Bar -->
+                <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="6" Margin="0,4" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="3"/>
+                
+                <!-- Metrics -->
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,10">
                     <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Left"/>
                     <TextBlock Grid.Column="1" Text="{Binding TransferPercentageText}" Foreground="{DynamicResource AccentColor}" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
                     <TextBlock Grid.Column="2" Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Right"/>
                 </Grid>
                 
-                <Button Content="Cancel" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Padding="24,8"/>
+                <Button Content="Cancel" Classes="Secondary" Click="Cancel_Click" HorizontalAlignment="Center" Padding="28,8"/>
             </StackPanel>
 
             <!-- Success / Completion Mode -->
-            <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="12">
+            <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="14">
                 <!-- Full Success Header -->
                 <StackPanel IsVisible="{Binding IsFullSuccessMode}" Spacing="6">
-                    <PathIcon Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Width="44" Height="44" Foreground="{DynamicResource SuccessColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <PathIcon Data="{StaticResource CheckIcon}" Width="44" Height="44" Foreground="{DynamicResource SuccessColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                     <TextBlock Text="Transfer Complete" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
                     <TextBlock Text="{Binding TransferFinalSizeText, StringFormat='{}{0} transferred successfully.'}" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
                 
                 <!-- Partial Success Header (Transfer Cancelled with some saved items) -->
                 <StackPanel IsVisible="{Binding IsPartialSuccessMode}" Spacing="6">
-                    <PathIcon Data="{StaticResource WarningIcon}" Width="44" Height="44" Foreground="#F9E2AF" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <PathIcon Data="{StaticResource WarningIcon}" Width="44" Height="44" Foreground="{DynamicResource WarningColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                     <TextBlock Text="Transfer Cancelled" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
-                    <TextBlock Text="{Binding TransferFinalSizeText}" FontWeight="SemiBold" FontSize="14" Foreground="#F9E2AF" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding TransferFinalSizeText}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource WarningColor}" TextAlignment="Center"/>
                     <TextBlock Text="Partial/incomplete files were removed. Completed items are saved:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
                 
                 <!-- Transferred items box -->
-                <Border Background="{DynamicResource AppSurface}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,4,0,8" MaxHeight="130">
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,2,0,4" MaxHeight="130">
                     <ScrollViewer>
                         <TextBlock Text="{Binding CompletedElementsList}" Foreground="{DynamicResource AppForeground}" FontSize="13" LineHeight="20" TextWrapping="Wrap"/>
                     </ScrollViewer>
                 </Border>
                 
-                <Button Content="Done" Classes="Primary" Click="Done_Click" HorizontalAlignment="Center" Padding="36,8"/>
+                <!-- Action Buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                    <Button Content="Open Folder" Classes="Secondary" Click="OpenFolder_Click" IsVisible="{Binding CanOpenFolder}" Padding="20,8"/>
+                    <Button Content="Done" Classes="Primary" Click="Done_Click" Padding="32,8"/>
+                </StackPanel>
             </StackPanel>
 
             <!-- Failure / Cancelled Mode (0 items completed) -->
-            <StackPanel IsVisible="{Binding IsFailureMode}" VerticalAlignment="Center" Spacing="12">
-                <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" Width="44" Height="44" Foreground="{DynamicResource DangerColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+            <StackPanel IsVisible="{Binding IsFailureMode}" VerticalAlignment="Center" Spacing="14">
+                <PathIcon Data="{StaticResource CloseIcon}" Width="44" Height="44" Foreground="{DynamicResource DangerColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                 <TextBlock Text="{Binding FailureTitle}" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
                 <TextBlock Text="{Binding FailureMessage}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                 
-                <Border Background="{DynamicResource AppSurface}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,4,0,8">
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,2,0,4">
                     <TextBlock Text="{Binding FailureSubDetail}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap"/>
                 </Border>
                 
