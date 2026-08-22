@@ -118,7 +118,12 @@ public class TransferSender
 
     public async Task<TransferResult> TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
     {
-        var result = new TransferResult { TotalElements = session.PayloadFolderCount + session.PayloadFileCount };
+        var rootElements = session.Files.Select(f => f.RootName).Distinct().ToList();
+        var result = new TransferResult 
+        { 
+            TotalElements = session.PayloadFolderCount + session.PayloadFileCount,
+            AllElementNames = rootElements
+        };
         if (session.Files.Count == 0)
         {
             result.Success = true;
@@ -156,7 +161,8 @@ public class TransferSender
             TotalSize = session.TotalSize,
             ContainsFolders = session.ContainsFolders,
             PayloadFolderCount = session.PayloadFolderCount,
-            PayloadFileCount = session.PayloadFileCount
+            PayloadFileCount = session.PayloadFileCount,
+            RootElementNames = rootElements
         };
 
         // 1. Send Request
@@ -345,6 +351,7 @@ public class TransferSender
             summary += $" ({filesSkipped} skipped)";
         Log(summary);
         
+        result.FailedElementNames = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(result.AllElementNames, name => !result.CompletedElementNames.Contains(name)));
         return result;
     }
 

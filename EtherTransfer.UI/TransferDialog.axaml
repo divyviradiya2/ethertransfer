@@ -67,11 +67,11 @@
                 <!-- Progress Bar -->
                 <ProgressBar Minimum="0" Maximum="{Binding TransferTotalBytes}" Value="{Binding TransferSentBytes}" Height="6" Margin="0,4" Foreground="{DynamicResource AccentColor}" Background="{DynamicResource AppBorder}" CornerRadius="3"/>
                 
-                <!-- Metrics -->
-                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,10">
-                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Left"/>
-                    <TextBlock Grid.Column="1" Text="{Binding TransferPercentageText}" Foreground="{DynamicResource AccentColor}" FontWeight="SemiBold" FontSize="12" HorizontalAlignment="Center"/>
-                    <TextBlock Grid.Column="2" Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" HorizontalAlignment="Right"/>
+                <!-- Metrics (Locked 3-Column Grid to prevent vibration/jitter) -->
+                <Grid ColumnDefinitions="*,*,*" Margin="0,4,0,12">
+                    <TextBlock Grid.Column="0" Text="{Binding TransferProgressText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" TextAlignment="Left" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="{Binding TransferPercentageText}" Foreground="{DynamicResource AccentColor}" FontWeight="SemiBold" FontSize="13" TextAlignment="Center" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="2" Text="{Binding TransferSpeedText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" TextAlignment="Right" HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                 </Grid>
                 
                 <Button Content="Cancel" Classes="Secondary" Click="Cancel_Click" HorizontalAlignment="Center" Padding="28,8"/>
@@ -94,10 +94,28 @@
                     <TextBlock Text="Partial/incomplete files were removed. Completed items are saved:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
                 
-                <!-- Transferred items box -->
-                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,2,0,4" MaxHeight="130">
+                <!-- Transferred items box with Vector Icons -->
+                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,2,0,4" MaxHeight="140">
                     <ScrollViewer>
-                        <TextBlock Text="{Binding CompletedElementsList}" Foreground="{DynamicResource AppForeground}" FontSize="13" LineHeight="20" TextWrapping="Wrap"/>
+                        <ItemsControl ItemsSource="{Binding CompletedItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="ui:CompletedItemViewModel">
+                                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,3">
+                                        <!-- Checkmark Icon for Successful Items -->
+                                        <PathIcon Grid.Column="0" Data="{StaticResource CheckIcon}" Width="12" Height="12" Foreground="{DynamicResource SuccessColor}" VerticalAlignment="Center" Margin="0,0,8,0" IsVisible="{Binding IsSuccess}"/>
+                                        
+                                        <!-- Cross Icon for Failed/Cancelled Items -->
+                                        <PathIcon Grid.Column="0" Data="{StaticResource CloseIcon}" Width="12" Height="12" Foreground="{DynamicResource DangerColor}" VerticalAlignment="Center" Margin="0,0,8,0" IsVisible="{Binding IsFailed}"/>
+                                        
+                                        <!-- Folder or File Type Icon -->
+                                        <PathIcon Grid.Column="1" Data="{StaticResource FolderIcon}" Width="14" Height="14" Foreground="{DynamicResource AccentColor}" VerticalAlignment="Center" Margin="0,0,8,0" IsVisible="{Binding IsFolder}"/>
+                                        <PathIcon Grid.Column="1" Data="{StaticResource FileIcon}" Width="14" Height="14" Foreground="{DynamicResource AppForegroundSecondary}" VerticalAlignment="Center" Margin="0,0,8,0" IsVisible="{Binding IsFile}"/>
+                                        
+                                        <TextBlock Grid.Column="2" Text="{Binding Name}" Foreground="{DynamicResource AppForeground}" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </ScrollViewer>
                 </Border>
                 

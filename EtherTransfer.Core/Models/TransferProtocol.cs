@@ -28,6 +28,7 @@ public class TransferRequestMessage : BaseProtocolMessage
     public bool ContainsFolders { get; set; }
     public int PayloadFolderCount { get; set; }
     public int PayloadFileCount { get; set; }
+    public System.Collections.Generic.List<string> RootElementNames { get; set; } = new();
 }
 
 public class TransferResponseMessage : BaseProtocolMessage

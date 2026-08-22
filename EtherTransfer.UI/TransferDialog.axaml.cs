@@ -10,6 +10,15 @@ using Avalonia.Platform.Storage;
 
 namespace EtherTransfer.UI;
 
+public class CompletedItemViewModel
+{
+    public string Name { get; set; } = string.Empty;
+    public bool IsFolder { get; set; }
+    public bool IsFile => !IsFolder;
+    public bool IsSuccess { get; set; } = true;
+    public bool IsFailed => !IsSuccess;
+}
+
 public partial class TransferDialog : Window, INotifyPropertyChanged
 {
     private bool _isSenderMode;
@@ -114,14 +123,46 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private string _completedElementsList = "";
     public string CompletedElementsList { get => _completedElementsList; set { _completedElementsList = value; OnPropertyChanged(); } }
 
+    public System.Collections.ObjectModel.ObservableCollection<CompletedItemViewModel> CompletedItems { get; } = new();
+
     public void SetCompletedElements(System.Collections.Generic.List<string> elements)
     {
-        if (elements == null || elements.Count == 0)
+        SetTransferElements(elements, null);
+    }
+
+    public void SetTransferElements(System.Collections.Generic.List<string>? completedElements, System.Collections.Generic.List<string>? failedElements = null)
+    {
+        CompletedItems.Clear();
+
+        if (completedElements != null)
         {
-            CompletedElementsList = "";
-            return;
+            foreach (var name in completedElements)
+            {
+                bool isFolder = !System.IO.Path.HasExtension(name);
+                CompletedItems.Add(new CompletedItemViewModel
+                {
+                    Name = name,
+                    IsFolder = isFolder,
+                    IsSuccess = true
+                });
+            }
         }
-        CompletedElementsList = string.Join("\n", System.Linq.Enumerable.Select(elements, e => $"✓  {e}"));
+
+        if (failedElements != null)
+        {
+            foreach (var name in failedElements)
+            {
+                bool isFolder = !System.IO.Path.HasExtension(name);
+                CompletedItems.Add(new CompletedItemViewModel
+                {
+                    Name = name,
+                    IsFolder = isFolder,
+                    IsSuccess = false
+                });
+            }
+        }
+
+        CompletedElementsList = string.Join("\n", System.Linq.Enumerable.Select(CompletedItems, e => $"{(e.IsSuccess ? "[OK]" : "[FAILED]")}  {e.Name}"));
     }
 
     private long _transferSentBytes;
@@ -296,7 +337,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
         var now = DateTime.UtcNow;
         bool isComplete = e.BytesSent >= e.TotalBytes;
-        if (!isComplete && (now - _lastUiUpdate).TotalMilliseconds < 33)
+        if (!isComplete && (now - _lastUiUpdate).TotalMilliseconds < 50)
             return;
 
         _lastUiUpdate = now;

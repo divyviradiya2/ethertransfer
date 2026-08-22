@@ -75,6 +75,7 @@ public class TransferReceiver
 
                 int totalElements = request.PayloadFolderCount + request.PayloadFileCount;
                 result.TotalElements = totalElements;
+                result.AllElementNames = request.RootElementNames ?? new List<string>();
                 int currentElementIndex = 0;
                 string? currentRootName = null;
 
@@ -363,6 +364,7 @@ public class TransferReceiver
                 : ex.Message;
             try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
         }
+        result.FailedElementNames = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(result.AllElementNames, name => !result.CompletedElementNames.Contains(name)));
         return result;
     }
 

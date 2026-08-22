@@ -90,16 +90,16 @@ public static class NetworkHelper
 
                 if (ipv4Addrs.Count > 0)
                 {
-                    results.Add($"✅ {ni.Name}: UP, IP = {string.Join(", ", ipv4Addrs)}");
+                    results.Add($"[OK] {ni.Name}: UP, IP = {string.Join(", ", ipv4Addrs)}");
                 }
                 else
                 {
-                    results.Add($"⚠️ {ni.Name}: UP but NO IPv4 address!");
+                    results.Add($"[WARN] {ni.Name}: UP but NO IPv4 address!");
                 }
             }
             else if (ni.OperationalStatus == OperationalStatus.Down)
             {
-                results.Add($"❌ {ni.Name}: Cable not connected");
+                results.Add($"[INFO] {ni.Name}: Cable not connected");
             }
         }
 

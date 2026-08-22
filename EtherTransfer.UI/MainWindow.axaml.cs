@@ -207,7 +207,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     _activeDialog.IsSuccessMode = true;
                     _activeDialog.IsPartialSuccessMode = false;
                     _activeDialog.IsFailureMode = false;
-                    _activeDialog.SetCompletedElements(result.CompletedElementNames);
+                    _activeDialog.SetTransferElements(result.CompletedElementNames, null);
                 }
                 else if (result.TotalElements > 1 && result.CompletedElementsCount > 0)
                 {
@@ -215,7 +215,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     _activeDialog.IsPartialSuccessMode = true;
                     _activeDialog.IsFailureMode = false;
                     _activeDialog.TransferFinalSizeText = $"Completed {result.CompletedElementsCount} of {result.TotalElements} items";
-                    _activeDialog.SetCompletedElements(result.CompletedElementNames);
+                    _activeDialog.SetTransferElements(result.CompletedElementNames, result.FailedElementNames);
                 }
                 else
                 {

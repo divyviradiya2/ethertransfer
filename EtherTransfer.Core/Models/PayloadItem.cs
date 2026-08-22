@@ -24,7 +24,8 @@ public class PayloadItem
     public int FileCount => DeepScannedFiles.Count;
 
     // UI Helpers
-    public string Icon => Type == PayloadItemType.Folder ? "📁" : "📄";
+    public bool IsFolder => Type == PayloadItemType.Folder;
+    public bool IsFile => Type == PayloadItemType.File;
     public string DisplaySize => $"{TotalSize / 1024.0 / 1024.0:F1} MB";
     public string DisplayCount => Type == PayloadItemType.Folder ? $"({FileCount} files)" : "";
 }
