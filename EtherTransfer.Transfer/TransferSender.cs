@@ -96,9 +96,45 @@ public class TransferSender
         Log($"Connecting to {targetIp}:{targetPort}...");
         using var client = new TcpClient();
 
-        var connectTcs = new TaskCompletionSource();
+        // If an active IPv4 interface matches targetIp's link-local or subnet, bind to it to guarantee direct Ethernet routing
+        try
+        {
+            if (System.Net.IPAddress.TryParse(targetIp, out var targetAddress) && targetAddress.AddressFamily == AddressFamily.InterNetwork)
+            {
+                var targetBytes = targetAddress.GetAddressBytes();
+                System.Net.IPAddress? matchingLocalIp = null;
+
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
+
+                    foreach (var ip in ni.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            var localBytes = ip.Address.GetAddressBytes();
+                            // RFC 3927 Link-Local match (169.254.x.x)
+                            if (targetBytes[0] == 169 && targetBytes[1] == 254 && localBytes[0] == 169 && localBytes[1] == 254)
+                            {
+                                matchingLocalIp = ip.Address;
+                                break;
+                            }
+                        }
+                    }
+                    if (matchingLocalIp != null) break;
+                }
+
+                if (matchingLocalIp != null)
+                {
+                    client.Client.Bind(new System.Net.IPEndPoint(matchingLocalIp, 0));
+                }
+            }
+        }
+        catch { }
+
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        connectCts.CancelAfter(5000);
+        connectCts.CancelAfter(10000); // 10s connection timeout
 
         try
         {
@@ -106,7 +142,7 @@ public class TransferSender
         }
         catch (OperationCanceledException)
         {
-            throw new TimeoutException("Connection timed out.");
+            throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out. Ensure EtherTransfer is open on the other machine and firewall allows TCP port {targetPort}.");
         }
         catch (Exception ex)
         {
