@@ -15,6 +15,7 @@ using EtherTransfer.Core.Models;
 using EtherTransfer.Services.DeviceManager;
 using EtherTransfer.Services;
 using EtherTransfer.Network.NetworkInterfaces;
+using EtherTransfer.Network.UdpDiscovery;
 
 namespace EtherTransfer.UI;
 
@@ -136,6 +137,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
+        _deviceService.TransferCancelReceived += OnTransferCancelReceived;
         _deviceService.NetworkChanged += (_, _) => _ = Dispatcher.UIThread.InvokeAsync(() => OnPropertyChanged(nameof(HasActiveVpn)));
         _deviceService.DebugLog += OnDebugLog;
         
@@ -403,11 +405,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             await _transferService.TransmitSessionAsync(targetIp, targetPort, session, cts.Token);
         }
+        catch (OperationCanceledException)
+        {
+            if (System.Net.IPAddress.TryParse(targetIp, out var targetAddr))
+            {
+                _ = _deviceService.SendTransferCancelAsync(targetAddr);
+            }
+            throw;
+        }
         finally
         {
+            if (cts.IsCancellationRequested && System.Net.IPAddress.TryParse(targetIp, out var targetAddr))
+            {
+                _ = _deviceService.SendTransferCancelAsync(targetAddr);
+            }
             // Dialog manages its own closure on success via the Done button
             _activeDialog = null;
         }
+    }
+
+    private void OnTransferCancelReceived(object? sender, PeerDiscoveredEventArgs e)
+    {
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_activeDialog != null && _activeDialog.IsReceiverMode)
+            {
+                OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer request.", LogLevel.Info));
+                _activeDialog.Close();
+            }
+        });
     }
 
     private async void SendFilesButton_Click(object? sender, RoutedEventArgs e)

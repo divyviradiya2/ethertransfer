@@ -39,6 +39,7 @@ public class DiscoveryService : IDisposable
     private readonly NetworkConfig _config = NetworkConfig.Default;
 
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
+    public event EventHandler<PeerDiscoveredEventArgs>? TransferCancelReceived;
 
     // Debug log for the UI
     public event EventHandler<StructuredLogMessage>? DebugLog;
@@ -253,19 +254,26 @@ public class DiscoveryService : IDisposable
                 {
                     var message = JsonSerializer.Deserialize<DiscoveryMessage>(json);
 
-                    if (message != null && (message.Type == "HELLO" || message.Type == "BYE") && message.Id == AppId)
+                    if (message != null && message.Id == AppId)
                     {
                         if (message.SessionId != _sessionId)
                         {
                             var sourceIpStr = result.RemoteEndPoint.Address.ToString();
                             if (NetworkHelper.IsIpInActiveSubnets(sourceIpStr))
                             {
-                                PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
-
-                                // Immediate directed HELLO reply for instant discovery handshake
-                                if (message.Type == "HELLO")
+                                if (message.Type == "TRANSFER_CANCEL")
                                 {
-                                    _ = SendDirectHelloAsync(result.RemoteEndPoint.Address);
+                                    TransferCancelReceived?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
+                                }
+                                else if (message.Type == "HELLO" || message.Type == "BYE")
+                                {
+                                    PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
+
+                                    // Immediate directed HELLO reply for instant discovery handshake
+                                    if (message.Type == "HELLO")
+                                    {
+                                        _ = SendDirectHelloAsync(result.RemoteEndPoint.Address);
+                                    }
                                 }
                             }
                         }
@@ -280,6 +288,29 @@ public class DiscoveryService : IDisposable
         catch (OperationCanceledException) { }
         catch (SocketException ex) { Log($"Socket error: {ex.Message}", LogLevel.Error, "discovery.listen.error"); }
         catch (ObjectDisposedException) { }
+    }
+
+    public async Task SendTransferCancelAsync(IPAddress targetAddress)
+    {
+        try
+        {
+            var msg = new DiscoveryMessage
+            {
+                Type = "TRANSFER_CANCEL",
+                ComputerName = _computerName,
+                TcpPort = _tcpPort,
+                Id = AppId,
+                SessionId = _sessionId,
+                OS = GetCurrentOS()
+            };
+            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
+
+            using var sender = new UdpClient();
+            sender.EnableBroadcast = true;
+            await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+            await sender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+        }
+        catch { }
     }
 
     private async Task SendDirectHelloAsync(IPAddress targetAddress)

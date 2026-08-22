@@ -94,82 +94,23 @@ public class TransferSender
         }
 
         Log($"Connecting to {targetIp}:{targetPort}...");
-        
-        System.Net.IPAddress? matchingLocalIp = null;
-        try
-        {
-            if (System.Net.IPAddress.TryParse(targetIp, out var targetAddress) && targetAddress.AddressFamily == AddressFamily.InterNetwork)
-            {
-                var targetBytes = targetAddress.GetAddressBytes();
+        using var client = new TcpClient();
 
-                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
-                {
-                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
-                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
-
-                    foreach (var ip in ni.GetIPProperties().UnicastAddresses)
-                    {
-                        if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            var localBytes = ip.Address.GetAddressBytes();
-                            // RFC 3927 Link-Local match (169.254.x.x)
-                            if (targetBytes[0] == 169 && targetBytes[1] == 254 && localBytes[0] == 169 && localBytes[1] == 254)
-                            {
-                                matchingLocalIp = ip.Address;
-                                break;
-                            }
-                        }
-                    }
-                    if (matchingLocalIp != null) break;
-                }
-            }
-        }
-        catch { }
-
-        TcpClient client;
-        if (matchingLocalIp != null)
-        {
-            try
-            {
-                client = new TcpClient(new System.Net.IPEndPoint(matchingLocalIp, 0));
-            }
-            catch
-            {
-                client = new TcpClient();
-            }
-        }
-        else
-        {
-            client = new TcpClient();
-        }
-
-        using var clientDisposer = client;
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        connectCts.CancelAfter(10000); // 10s connection timeout
-
-        var parsedIp = System.Net.IPAddress.Parse(targetIp);
+        connectCts.CancelAfter(5000);
 
         try
         {
-            await client.ConnectAsync(parsedIp, targetPort, connectCts.Token);
-        }
-        catch (Exception ex) when (matchingLocalIp != null && !connectCts.IsCancellationRequested)
-        {
-            // Fallback attempt without local binding in case local IP was in transition
-            Log($"Direct bound connect failed ({ex.Message}), retrying with default routing...");
-            try
-            {
-                client = new TcpClient();
-                await client.ConnectAsync(parsedIp, targetPort, connectCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out.");
-            }
+            await client.ConnectAsync(targetIp, targetPort, connectCts.Token);
         }
         catch (OperationCanceledException)
         {
-            throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out.");
+            throw new TimeoutException("Connection timed out.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to connect: {ex.Message}");
+            throw;
         }
 
         var stream = client.GetStream();

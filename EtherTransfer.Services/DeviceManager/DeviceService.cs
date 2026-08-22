@@ -28,6 +28,7 @@ public class DeviceService : IDisposable
 
     public event EventHandler? DevicesChanged;
     public event EventHandler? NetworkChanged;
+    public event EventHandler<PeerDiscoveredEventArgs>? TransferCancelReceived;
     public event EventHandler<StructuredLogMessage>? DebugLog;
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "device.log")
@@ -39,7 +40,13 @@ public class DeviceService : IDisposable
     {
         _discoveryService = new DiscoveryService();
         _discoveryService.PeerDiscovered += OnPeerDiscovered;
+        _discoveryService.TransferCancelReceived += (_, e) => TransferCancelReceived?.Invoke(this, e);
         _discoveryService.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
+    }
+
+    public Task SendTransferCancelAsync(IPAddress targetAddress)
+    {
+        return _discoveryService.SendTransferCancelAsync(targetAddress);
     }
 
     public async Task StartAsync(string computerName, int tcpPort)
