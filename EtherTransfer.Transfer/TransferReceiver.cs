@@ -61,22 +61,28 @@ public class TransferReceiver
 
                 var disconnectTask = Task.Run(async () =>
                 {
+                    var peekBuf = new byte[1];
                     while (!disconnectCts.Token.IsCancellationRequested)
                     {
                         try
                         {
-                            if (client.Client.Poll(1000, SelectMode.SelectRead) && client.Client.Available == 0)
-                                return true;
+                            if (client.Client.Poll(1000, SelectMode.SelectRead))
+                            {
+                                int peeked = client.Client.Receive(peekBuf, SocketFlags.Peek);
+                                if (peeked == 0)
+                                    return true; // Confirmed EOF / connection closed by remote
+                            }
                         }
-                        catch { return true; }
-                        await Task.Delay(200, disconnectCts.Token);
+                        catch (SocketException) { return true; }
+                        catch { }
+                        await Task.Delay(300, disconnectCts.Token);
                     }
                     return false;
                 });
 
                 var finishedTask = await Task.WhenAny(uiTask, disconnectTask);
 
-                if (finishedTask == disconnectTask)
+                if (finishedTask == disconnectTask && await disconnectTask)
                 {
                     uiCts.Cancel();
                     Log("Sender disconnected before request was accepted.");

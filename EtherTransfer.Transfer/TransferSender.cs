@@ -94,15 +94,13 @@ public class TransferSender
         }
 
         Log($"Connecting to {targetIp}:{targetPort}...");
-        using var client = new TcpClient();
-
-        // If an active IPv4 interface matches targetIp's link-local or subnet, bind to it to guarantee direct Ethernet routing
+        
+        System.Net.IPAddress? matchingLocalIp = null;
         try
         {
             if (System.Net.IPAddress.TryParse(targetIp, out var targetAddress) && targetAddress.AddressFamily == AddressFamily.InterNetwork)
             {
                 var targetBytes = targetAddress.GetAddressBytes();
-                System.Net.IPAddress? matchingLocalIp = null;
 
                 foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
                 {
@@ -124,30 +122,54 @@ public class TransferSender
                     }
                     if (matchingLocalIp != null) break;
                 }
-
-                if (matchingLocalIp != null)
-                {
-                    client.Client.Bind(new System.Net.IPEndPoint(matchingLocalIp, 0));
-                }
             }
         }
         catch { }
 
+        TcpClient client;
+        if (matchingLocalIp != null)
+        {
+            try
+            {
+                client = new TcpClient(new System.Net.IPEndPoint(matchingLocalIp, 0));
+            }
+            catch
+            {
+                client = new TcpClient();
+            }
+        }
+        else
+        {
+            client = new TcpClient();
+        }
+
+        using var clientDisposer = client;
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         connectCts.CancelAfter(10000); // 10s connection timeout
 
+        var parsedIp = System.Net.IPAddress.Parse(targetIp);
+
         try
         {
-            await client.ConnectAsync(targetIp, targetPort, connectCts.Token);
+            await client.ConnectAsync(parsedIp, targetPort, connectCts.Token);
+        }
+        catch (Exception ex) when (matchingLocalIp != null && !connectCts.IsCancellationRequested)
+        {
+            // Fallback attempt without local binding in case local IP was in transition
+            Log($"Direct bound connect failed ({ex.Message}), retrying with default routing...");
+            try
+            {
+                client = new TcpClient();
+                await client.ConnectAsync(parsedIp, targetPort, connectCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out.");
+            }
         }
         catch (OperationCanceledException)
         {
-            throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out. Ensure EtherTransfer is open on the other machine and firewall allows TCP port {targetPort}.");
-        }
-        catch (Exception ex)
-        {
-            Log($"Failed to connect: {ex.Message}");
-            throw;
+            throw new TimeoutException($"Connection to {targetIp}:{targetPort} timed out.");
         }
 
         var stream = client.GetStream();
