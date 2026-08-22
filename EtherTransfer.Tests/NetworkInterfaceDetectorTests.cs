@@ -111,9 +111,50 @@ public class NetworkInterfaceDetectorTests
         var mockNi = CreateMockInterface("Tailscale", NetworkInterfaceType.Ethernet, "Tailscale Tunnel");
         _mockEnv.Setup(e => e.IsWindows).Returns(true);
         // Simulate registry read failure
-        _mockEnv.Setup(e => e.GetRegistryValue(It.IsAny<string>(), It.IsAny<string>())).Returns((string)null);
+        _mockEnv.Setup(e => e.GetRegistryValue(It.IsAny<string>(), It.IsAny<string>())).Returns((string?)null!);
 
         var (isPhysical, isVirtual, isWifi) = WindowsNetworkInterfaceDetector.Analyze(mockNi.Object, _mockEnv.Object);
+
+        Assert.That(isPhysical, Is.False);
+        Assert.That(isVirtual, Is.True);
+    }
+
+    [Test]
+    public void Windows_BluetoothAdapter_ReturnsVirtual()
+    {
+        var mockNi = CreateMockInterface("Bluetooth Network Connection", NetworkInterfaceType.Ethernet, "Bluetooth Device (Personal Area Network)");
+        _mockEnv.Setup(e => e.IsWindows).Returns(true);
+        _mockEnv.Setup(e => e.GetRegistryValue($@"SYSTEM\CurrentControlSet\Control\Network\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\Bluetooth Network Connection\Connection", "PnpInstanceID"))
+                .Returns(@"BTH\MS_BTHPAN\6&31A60DE8&0&2");
+
+        var (isPhysical, isVirtual, isWifi) = WindowsNetworkInterfaceDetector.Analyze(mockNi.Object, _mockEnv.Object);
+
+        Assert.That(isPhysical, Is.False);
+        Assert.That(isVirtual, Is.True);
+    }
+
+    [Test]
+    public void Windows_BluetoothAdapter_Fallback_ReturnsVirtual()
+    {
+        var mockNi = CreateMockInterface("Bluetooth Network Connection", NetworkInterfaceType.Ethernet, "Bluetooth Device (Personal Area Network)");
+        _mockEnv.Setup(e => e.IsWindows).Returns(true);
+        _mockEnv.Setup(e => e.GetRegistryValue(It.IsAny<string>(), It.IsAny<string>())).Returns((string?)null!);
+
+        var (isPhysical, isVirtual, isWifi) = WindowsNetworkInterfaceDetector.Analyze(mockNi.Object, _mockEnv.Object);
+
+        Assert.That(isPhysical, Is.False);
+        Assert.That(isVirtual, Is.True);
+    }
+
+    [Test]
+    public void Linux_BluetoothAdapter_ReturnsVirtual()
+    {
+        var mockNi = CreateMockInterface("bnep0", NetworkInterfaceType.Ethernet, "Bluetooth PAN");
+        _mockEnv.Setup(e => e.IsLinux).Returns(true);
+        _mockEnv.Setup(e => e.DirectoryExists("/sys/class/net/bnep0")).Returns(true);
+        _mockEnv.Setup(e => e.GetSymlinkTarget("/sys/class/net/bnep0")).Returns("../../devices/virtual/net/bnep0");
+
+        var (isPhysical, isVirtual, isWifi) = LinuxNetworkInterfaceDetector.Analyze(mockNi.Object, _mockEnv.Object);
 
         Assert.That(isPhysical, Is.False);
         Assert.That(isVirtual, Is.True);

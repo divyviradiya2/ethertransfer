@@ -52,6 +52,14 @@ public static class LinuxNetworkInterfaceDetector
                 {
                     isWifi = true;
                 }
+
+                if (ni.Name.StartsWith("bt", StringComparison.OrdinalIgnoreCase) ||
+                    ni.Name.StartsWith("bnep", StringComparison.OrdinalIgnoreCase) ||
+                    ni.Description.Contains("bluetooth", StringComparison.OrdinalIgnoreCase))
+                {
+                    isVirtual = true;
+                    isPhysical = false;
+                }
             }
             else
             {

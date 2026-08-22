@@ -31,9 +31,14 @@ public static class WindowsNetworkInterfaceDetector
             
             if (!string.IsNullOrEmpty(pnpInstanceId))
             {
-                if (pnpInstanceId.StartsWith(@"PCI\", StringComparison.OrdinalIgnoreCase) ||
-                    pnpInstanceId.StartsWith(@"USB\", StringComparison.OrdinalIgnoreCase) ||
-                    pnpInstanceId.StartsWith(@"BTH\", StringComparison.OrdinalIgnoreCase))
+                if (pnpInstanceId.StartsWith(@"BTH\", StringComparison.OrdinalIgnoreCase) ||
+                    pnpInstanceId.StartsWith(@"BTHENUM\", StringComparison.OrdinalIgnoreCase))
+                {
+                    isPhysical = false;
+                    isVirtual = true;
+                }
+                else if (pnpInstanceId.StartsWith(@"PCI\", StringComparison.OrdinalIgnoreCase) ||
+                         pnpInstanceId.StartsWith(@"USB\", StringComparison.OrdinalIgnoreCase))
                 {
                     isPhysical = true;
                     isVirtual = false;
@@ -56,8 +61,10 @@ public static class WindowsNetworkInterfaceDetector
             var desc = ni.Description.ToLowerInvariant();
             var name = ni.Name.ToLowerInvariant();
 
-            // Enterprise VPNs, tunnels, virtual adapters, container networks, and packet filters
-            if (desc.Contains("virtual") || desc.Contains("pseudo") || desc.Contains("vpn") ||
+            // Enterprise VPNs, tunnels, virtual adapters, container networks, Bluetooth, and packet filters
+            if (desc.Contains("bluetooth") || desc.Contains("bth") ||
+                name.Contains("bluetooth") || name.Contains("bth") ||
+                desc.Contains("virtual") || desc.Contains("pseudo") || desc.Contains("vpn") ||
                 desc.Contains("tunnel") || desc.Contains("tap") || desc.Contains("tun") || desc.Contains("wintun") ||
                 desc.Contains("tailscale") || desc.Contains("wireguard") || desc.Contains("zerotier") ||
                 desc.Contains("openvpn") || desc.Contains("nord") || desc.Contains("expressvpn") ||
