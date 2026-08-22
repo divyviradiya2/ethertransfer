@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -25,6 +25,7 @@
     <ProjectReference Include="..\EtherTransfer.Core\EtherTransfer.Core.csproj" />
     <ProjectReference Include="..\EtherTransfer.Network\EtherTransfer.Network.csproj" />
     <ProjectReference Include="..\EtherTransfer.Services\EtherTransfer.Services.csproj" />
+    <ProjectReference Include="..\EtherTransfer.Transfer\EtherTransfer.Transfer.csproj" />
   </ItemGroup>
 
 </Project>

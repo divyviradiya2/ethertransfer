@@ -61,21 +61,24 @@
                 <Button Content="Cancel" Classes="Danger" Click="Cancel_Click" HorizontalAlignment="Center" Padding="24,8"/>
             </StackPanel>
 
-            <!-- Success Mode -->
+            <!-- Success / Completion Mode -->
             <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="10">
                 <StackPanel IsVisible="{Binding IsFullSuccessMode}">
                     <PathIcon Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Width="48" Height="48" Foreground="{DynamicResource SuccessColor}" Margin="0,0,0,10"/>
                     <TextBlock Text="Transfer Complete" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
+                        <TextBlock Text="{Binding TransferFinalSizeText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
+                        <TextBlock Text="successfully transferred." Foreground="{DynamicResource AppForegroundSecondary}"/>
+                    </StackPanel>
                 </StackPanel>
                 
                 <StackPanel IsVisible="{Binding IsPartialSuccessMode}">
                     <PathIcon Data="{StaticResource WarningIcon}" Width="48" Height="48" Foreground="#E5C890" Margin="0,0,0,10"/>
                     <TextBlock Text="Incomplete Transfer" FontWeight="SemiBold" FontSize="18" Foreground="#E5C890" TextAlignment="Center"/>
-                </StackPanel>
-                
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
-                    <TextBlock Text="{Binding TransferFinalSizeText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
-                    <TextBlock Text="successfully transferred." Foreground="{DynamicResource AppForegroundSecondary}"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
+                        <TextBlock Text="{Binding TransferFinalSizeText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
+                        <TextBlock Text="transferred before cancellation." Foreground="{DynamicResource AppForegroundSecondary}"/>
+                    </StackPanel>
                 </StackPanel>
                 
                 <ScrollViewer MaxHeight="120" Margin="0,0,0,15" Background="{DynamicResource AppSurface}" CornerRadius="4">

@@ -8,19 +8,6 @@ using EtherTransfer.Core.Models;
 
 namespace EtherTransfer.Transfer;
 
-public class IncomingTransferEventArgs : EventArgs
-{
-    public TransferRequestMessage Request { get; }
-
-    public bool Accept { get; set; }
-    public string SaveDirectory { get; set; } = string.Empty;
-
-    public IncomingTransferEventArgs(TransferRequestMessage request)
-    {
-        Request = request;
-    }
-}
-
 public class TransferReceiver
 {
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
@@ -83,6 +70,8 @@ public class TransferReceiver
                 int filesSkipped = 0;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024);
+                var filesByRootElement = new Dictionary<string, List<string>>();
+                var createdDirectoriesThisSession = new HashSet<string>();
 
                 int totalElements = request.PayloadFolderCount + request.PayloadFileCount;
                 result.TotalElements = totalElements;
@@ -144,11 +133,19 @@ public class TransferReceiver
                         safePath = PathSanitizer.ResolveCollision(safePath);
 
                         var dirPath = Path.GetDirectoryName(safePath);
-                        if (dirPath != null) Directory.CreateDirectory(dirPath);
+                        if (dirPath != null)
+                        {
+                            if (!Directory.Exists(dirPath))
+                            {
+                                Directory.CreateDirectory(dirPath);
+                                createdDirectoriesThisSession.Add(dirPath);
+                            }
+                        }
 
+                        FileStream? fs = null;
                         try
                         {
-                            using var fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
+                            fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
 
                             long fileReceived = 0;
 
@@ -198,22 +195,54 @@ public class TransferReceiver
                                 }
                             }
 
+                            await fs.FlushAsync(transferCt);
+                            await fs.DisposeAsync();
+                            fs = null;
+
                             filesReceived++;
+                            
+                            var rootKey = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName;
+                            if (!filesByRootElement.ContainsKey(rootKey))
+                            {
+                                filesByRootElement[rootKey] = new List<string>();
+                            }
+                            filesByRootElement[rootKey].Add(safePath);
                         }
                         catch (Exception ex)
                         {
                             Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
 
-                            // Clean up partially received file
+                            // 1. MUST dispose and release OS handle first!
+                            if (fs != null)
+                            {
+                                try { await fs.DisposeAsync(); } catch { }
+                                fs = null;
+                            }
+
+                            // 2. Delete the partial/corrupt file from disk
                             try
                             {
                                 if (File.Exists(safePath))
+                                {
                                     File.Delete(safePath);
+                                    Log($"Cleaned up partial file: {fileMeta.RelativePath}");
+                                }
                             }
-                            catch { }
+                            catch (Exception delEx)
+                            {
+                                Log($"Failed to delete partial file: {delEx.Message}", LogLevel.Warning);
+                            }
 
                             if (ex is OperationCanceledException)
                                 throw;
+                        }
+                        finally
+                        {
+                            if (fs != null)
+                            {
+                                try { await fs.DisposeAsync(); } catch { }
+                                fs = null;
+                            }
                         }
                     }
 
@@ -231,6 +260,40 @@ public class TransferReceiver
                 {
                     result.Success = false;
                     result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
+
+                    // Roll back any files from root elements that were NOT successfully completed
+                    foreach (var kvp in filesByRootElement)
+                    {
+                        if (!result.CompletedElementNames.Contains(kvp.Key))
+                        {
+                            foreach (var file in kvp.Value)
+                            {
+                                try
+                                {
+                                    if (File.Exists(file))
+                                    {
+                                        File.Delete(file);
+                                        Log($"Rollback deleted incomplete element file: {file}");
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+
+                    foreach (var dir in createdDirectoriesThisSession.OrderByDescending(d => d.Length))
+                    {
+                        try
+                        {
+                            if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any())
+                            {
+                                Directory.Delete(dir);
+                                Log($"Rollback deleted empty directory: {dir}");
+                            }
+                        }
+                        catch { }
+                    }
+
                     try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
                 }
                 finally

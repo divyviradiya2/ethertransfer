@@ -169,22 +169,24 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         return dialog;
     }
 
+    private bool _isCancelled = false;
+    public bool IsCancelled => _isCancelled;
+
     private async void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         if (!IsProgressMode)
         {
-            _isForceClosing = true;
-            CancelTransfer();
-            Close();
+            _isCancelled = true;
+            ForceClose();
             return;
         }
 
         bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync("Are you sure you want to cancel the transfer?", "Cancel Transfer");
         if (confirm)
         {
+            _isCancelled = true;
             CancelTransfer();
-            // We do not close here. We let the background task throw the cancellation exception
-            // and MainWindow will transition this dialog to IsPartialSuccessMode.
+            ForceClose();
         }
     }
 
@@ -226,12 +228,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
     }
 
-    private bool _successQueued = false;
-
     private DateTime _lastUiUpdate = DateTime.MinValue;
 
     public void UpdateProgress(EtherTransfer.Transfer.TransferProgressEventArgs e)
     {
+        if (_isCancelled || _isForceClosing || IsSuccessMode) return;
+
         var now = DateTime.UtcNow;
         bool isComplete = e.BytesSent >= e.TotalBytes;
         if (!isComplete && (now - _lastUiUpdate).TotalMilliseconds < 33)
@@ -241,7 +243,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
         Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (IsSuccessMode) return;
+            if (_isCancelled || _isForceClosing || IsSuccessMode) return;
 
             if (!IsProgressMode) IsProgressMode = true;
 
@@ -252,21 +254,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             TransferProgressText = $"{EtherTransfer.Core.FormatHelper.FormatSize(e.BytesSent)} / {EtherTransfer.Core.FormatHelper.FormatSize(e.TotalBytes)}";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
-
-            if (e.BytesSent >= e.TotalBytes && !_successQueued)
-            {
-                _successQueued = true;
-                // Wait a tiny bit so the user sees the progress bar hit 100%
-                Task.Delay(500).ContinueWith(_ => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    IsSuccessMode = true;
-                }));
-            }
         });
     }
 
     private void Decline_Click(object? sender, RoutedEventArgs e)
     {
+        _isCancelled = true;
         _receiverTcs?.TrySetResult((false, "", default));
         _isForceClosing = true;
         Close();
@@ -291,6 +284,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     public void ForceClose()
     {
+        _isCancelled = true;
         _isForceClosing = true;
         CancelTransfer();
         _receiverTcs?.TrySetResult((false, "", default));
@@ -299,6 +293,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     public void CancelTransfer()
     {
+        _isCancelled = true;
         _senderCts?.Cancel();
         _receiverCancelCts?.Cancel();
     }
@@ -324,6 +319,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
                 
             if (confirm)
             {
+                _isCancelled = true;
                 _isForceClosing = true;
                 CancelTransfer();
                 Close();
@@ -332,6 +328,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
 
         // In Sender mode (waiting for accept) or Receiver mode (incoming prompt), close immediately
+        _isCancelled = true;
         _isForceClosing = true;
         CancelTransfer();
         _receiverTcs?.TrySetResult((false, "", default));
@@ -340,6 +337,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     protected override void OnClosed(EventArgs e)
     {
+        _isCancelled = true;
         _receiverCancelCts?.Cancel(); // Cancel any ongoing transfer
         // Ensure TCS is completed if window is closed via any route
         _receiverTcs?.TrySetResult((false, "", default));
