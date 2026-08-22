@@ -188,16 +188,20 @@ public class TransferSender
         int currentElementIndex = 0;
         string? currentRootName = null;
 
+        var totalFilesInRoot = new Dictionary<string, int>();
+        foreach (var file in session.Files)
+        {
+            var r = file.RootName;
+            totalFilesInRoot[r] = totalFilesInRoot.GetValueOrDefault(r, 0) + 1;
+        }
+        var sentFilesInRoot = new Dictionary<string, int>();
+
         try
         {
             foreach (var item in session.Files)
             {
                 if (item.RootName != currentRootName)
                 {
-                    if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
-                    {
-                        result.CompletedElementNames.Add(currentRootName);
-                    }
                     currentRootName = item.RootName;
                     currentElementIndex++;
                 }
@@ -302,13 +306,17 @@ public class TransferSender
                 }
                 await stream.FlushAsync(ct);
                 filesSent++;
+
+                sentFilesInRoot[item.RootName] = sentFilesInRoot.GetValueOrDefault(item.RootName, 0) + 1;
+                if (sentFilesInRoot[item.RootName] == totalFilesInRoot[item.RootName])
+                {
+                    if (!result.CompletedElementNames.Contains(item.RootName))
+                    {
+                        result.CompletedElementNames.Add(item.RootName);
+                    }
+                }
             }
         }
-            
-            if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
-            {
-                result.CompletedElementNames.Add(currentRootName);
-            }
 
             // 4. End of Transfer
             var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };

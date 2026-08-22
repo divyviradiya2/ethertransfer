@@ -90,7 +90,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     public void SetCompletedElements(System.Collections.Generic.List<string> elements)
     {
-        CompletedElementsList = string.Join("\n", elements);
+        if (elements == null || elements.Count == 0)
+        {
+            CompletedElementsList = "";
+            return;
+        }
+        CompletedElementsList = string.Join("\n", System.Linq.Enumerable.Select(elements, e => $"✓  {e}"));
     }
 
     private long _transferSentBytes;

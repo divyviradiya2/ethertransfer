@@ -333,6 +333,7 @@ public class TransferCancellationTests
         var (listener, port) = StartTestListener();
 
         var receiver = new TransferReceiver();
+        receiver.DebugLog += (_, msg) => Console.WriteLine($"[RECEIVER LOG] {msg.EventId}: {msg.Message}");
         // Receiver does NOT cancel. Receiver is waiting normally.
         receiver.OnIncomingTransfer = (req, ct) =>
         {

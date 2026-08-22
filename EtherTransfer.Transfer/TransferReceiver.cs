@@ -221,6 +221,15 @@ public class TransferReceiver
                                 filesByRootElement[rootKey] = new List<string>();
                             }
                             filesByRootElement[rootKey].Add(safePath);
+
+                            // For individual file items in multi-item transfers, mark completed immediately
+                            if (totalElements > 1 && (fileMeta.RelativePath == fileMeta.RootName || string.IsNullOrEmpty(fileMeta.RootName)))
+                            {
+                                if (!result.CompletedElementNames.Contains(rootKey))
+                                {
+                                    result.CompletedElementNames.Add(rootKey);
+                                }
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -282,10 +291,11 @@ public class TransferReceiver
                         ? "Transfer cancelled." 
                         : (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException ? "Connection lost (sender aborted or network disconnected)." : ex.Message);
 
-                    // Roll back any files from root elements that were NOT successfully completed
-                    foreach (var kvp in filesByRootElement)
+                    // Roll back files based on single-item vs multi-item transfer rules
+                    if (totalElements <= 1)
                     {
-                        if (!result.CompletedElementNames.Contains(kvp.Key))
+                        // Single-item session was aborted -> roll back all files created in this session
+                        foreach (var kvp in filesByRootElement)
                         {
                             foreach (var file in kvp.Value)
                             {
@@ -294,10 +304,32 @@ public class TransferReceiver
                                     if (File.Exists(file))
                                     {
                                         File.Delete(file);
-                                        Log($"Rollback deleted incomplete element file: {file}");
+                                        Log($"Rollback deleted session file: {file}");
                                     }
                                 }
                                 catch { }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Multi-item transfer -> roll back only incomplete elements
+                        foreach (var kvp in filesByRootElement)
+                        {
+                            if (!result.CompletedElementNames.Contains(kvp.Key))
+                            {
+                                foreach (var file in kvp.Value)
+                                {
+                                    try
+                                    {
+                                        if (File.Exists(file))
+                                        {
+                                            File.Delete(file);
+                                            Log($"Rollback deleted incomplete element file: {file}");
+                                        }
+                                    }
+                                    catch { }
+                                }
                             }
                         }
                     }

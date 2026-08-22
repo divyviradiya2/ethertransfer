@@ -62,30 +62,30 @@
             </StackPanel>
 
             <!-- Success / Completion Mode -->
-            <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="10">
-                <StackPanel IsVisible="{Binding IsFullSuccessMode}">
-                    <PathIcon Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Width="48" Height="48" Foreground="{DynamicResource SuccessColor}" Margin="0,0,0,10"/>
+            <StackPanel IsVisible="{Binding IsSuccessMode}" VerticalAlignment="Center" Spacing="12">
+                <!-- Full Success Header -->
+                <StackPanel IsVisible="{Binding IsFullSuccessMode}" Spacing="6">
+                    <PathIcon Data="M20.285 2l-11.285 11.567-5.286-5.011-3.714 3.716 9 8.728 15-15.285z" Width="44" Height="44" Foreground="{DynamicResource SuccessColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
                     <TextBlock Text="Transfer Complete" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
-                        <TextBlock Text="{Binding TransferFinalSizeText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
-                        <TextBlock Text="successfully transferred." Foreground="{DynamicResource AppForegroundSecondary}"/>
-                    </StackPanel>
+                    <TextBlock Text="{Binding TransferFinalSizeText, StringFormat='{}{0} transferred successfully.'}" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
                 
-                <StackPanel IsVisible="{Binding IsPartialSuccessMode}">
-                    <PathIcon Data="{StaticResource WarningIcon}" Width="48" Height="48" Foreground="#E5C890" Margin="0,0,0,10"/>
-                    <TextBlock Text="Incomplete Transfer" FontWeight="SemiBold" FontSize="18" Foreground="#E5C890" TextAlignment="Center"/>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5" Margin="0,5,0,15">
-                        <TextBlock Text="{Binding TransferFinalSizeText}" Foreground="{DynamicResource AppForegroundSecondary}"/>
-                        <TextBlock Text="transferred before cancellation." Foreground="{DynamicResource AppForegroundSecondary}"/>
-                    </StackPanel>
+                <!-- Partial Success Header (Transfer Cancelled with some saved items) -->
+                <StackPanel IsVisible="{Binding IsPartialSuccessMode}" Spacing="6">
+                    <PathIcon Data="{StaticResource WarningIcon}" Width="44" Height="44" Foreground="#F9E2AF" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <TextBlock Text="Transfer Cancelled" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding TransferFinalSizeText}" FontWeight="SemiBold" FontSize="14" Foreground="#F9E2AF" TextAlignment="Center"/>
+                    <TextBlock Text="Partial/incomplete files were removed. Completed items are saved:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
                 
-                <ScrollViewer MaxHeight="120" Margin="0,0,0,15" Background="{DynamicResource AppSurface}" CornerRadius="4">
-                    <TextBlock Text="{Binding CompletedElementsList}" Foreground="{DynamicResource AppForegroundSecondary}" Margin="10" TextWrapping="Wrap"/>
-                </ScrollViewer>
+                <!-- Transferred items box -->
+                <Border Background="{DynamicResource AppSurface}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,4,0,8" MaxHeight="130">
+                    <ScrollViewer>
+                        <TextBlock Text="{Binding CompletedElementsList}" Foreground="{DynamicResource AppForeground}" FontSize="13" LineHeight="20" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
                 
-                <Button Content="Done" Classes="Primary" Click="Done_Click" HorizontalAlignment="Center" Padding="32,8"/>
+                <Button Content="Done" Classes="Primary" Click="Done_Click" HorizontalAlignment="Center" Padding="36,8"/>
             </StackPanel>
 
         </Grid>
