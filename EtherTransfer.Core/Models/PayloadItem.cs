@@ -26,6 +26,6 @@ public class PayloadItem
     // UI Helpers
     public bool IsFolder => Type == PayloadItemType.Folder;
     public bool IsFile => Type == PayloadItemType.File;
-    public string DisplaySize => $"{TotalSize / 1024.0 / 1024.0:F1} MB";
+    public string DisplaySize => FormatHelper.FormatSize(TotalSize);
     public string DisplayCount => Type == PayloadItemType.Folder ? $"({FileCount} files)" : "";
 }
