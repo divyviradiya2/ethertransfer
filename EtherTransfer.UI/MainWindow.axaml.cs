@@ -392,6 +392,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (session.Files.Count == 0) return;
 
         var cts = new CancellationTokenSource();
+        cts.Token.Register(() =>
+        {
+            if (System.Net.IPAddress.TryParse(targetIp, out var targetAddr))
+            {
+                _ = _deviceService.SendTransferCancelAsync(targetAddr);
+            }
+        });
+
         var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
         _activeDialog = dialog;
 
@@ -412,17 +420,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (OperationCanceledException)
         {
-            if (System.Net.IPAddress.TryParse(targetIp, out var targetAddr))
-            {
-                _ = _deviceService.SendTransferCancelAsync(targetAddr);
-            }
-        }
-        finally
-        {
-            if (cts.IsCancellationRequested && System.Net.IPAddress.TryParse(targetIp, out var targetAddr))
-            {
-                _ = _deviceService.SendTransferCancelAsync(targetAddr);
-            }
         }
     }
 

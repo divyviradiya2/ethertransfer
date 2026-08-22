@@ -54,7 +54,32 @@ public class TransferReceiver
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
-                var (accepted, savePath, cancelToken) = await OnIncomingTransfer(request, appCt);
+                using var promptCts = CancellationTokenSource.CreateLinkedTokenSource(appCt);
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var buf = new byte[1];
+                        int read = await stream.ReadAsync(buf, 0, 1, promptCts.Token);
+                        if (read == 0) // Sender disconnected
+                        {
+                            promptCts.Cancel();
+                        }
+                    }
+                    catch { }
+                });
+
+                (bool accepted, string savePath, CancellationToken cancelToken) dialogResult;
+                try
+                {
+                    dialogResult = await OnIncomingTransfer(request, promptCts.Token);
+                }
+                finally
+                {
+                    promptCts.Cancel();
+                }
+
+                var (accepted, savePath, cancelToken) = dialogResult;
 
                 using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(appCt, cancelToken);
                 var transferCt = linkedCt.Token;
