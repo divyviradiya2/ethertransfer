@@ -216,11 +216,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 else
                 {
                     OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {result.ErrorMessage}", LogLevel.Error));
-                    _activeDialog.Close();
+                    
+                    var dialogToClose = _activeDialog;
+                    _activeDialog = null;
+                    dialogToClose.Close();
 
-                    if (result.ErrorMessage != "Transfer cancelled." && result.ErrorMessage != "User declined.")
+                    if (!string.IsNullOrEmpty(result.ErrorMessage) && 
+                        result.ErrorMessage != "Transfer cancelled." && 
+                        !result.ErrorMessage.Contains("cancelled", StringComparison.OrdinalIgnoreCase))
                     {
-                        var errorDialog = new ErrorDialog(result.ErrorMessage ?? "Transfer failed due to a network error.");
+                        var errorDialog = new ErrorDialog(result.ErrorMessage);
                         _ = errorDialog.ShowDialog(this);
                     }
                 }
@@ -398,6 +403,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
         _activeDialog = dialog;
 
+        dialog.Closed += (_, _) =>
+        {
+            if (_activeDialog == dialog)
+            {
+                _activeDialog = null;
+            }
+        };
+
         // Don't await the dialog, just show it. It will close itself on cancel, or we will close it when transfer finishes.
         _ = dialog.ShowDialog(this);
 
@@ -411,7 +424,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 _ = _deviceService.SendTransferCancelAsync(targetAddr);
             }
-            throw;
         }
         finally
         {
@@ -419,8 +431,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 _ = _deviceService.SendTransferCancelAsync(targetAddr);
             }
-            // Dialog manages its own closure on success via the Done button
-            _activeDialog = null;
         }
     }
 
