@@ -244,18 +244,14 @@ public class EthernetLinkMonitor : IDisposable
             try
             {
                 Console.WriteLine($"[EtherTransfer] Tearing down link-local config for {ifaceName}...");
-                using var p = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "nmcli",
-                    Arguments = $"device reapply {ifaceName}",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                });
                 
-                // CRITICAL: We must block and wait for this to exit. 
-                // If this is running during an app shutdown, firing and forgetting 
-                // will cause the OS to kill the nmcli child process before it finishes!
-                p?.WaitForExit(3000); 
+                // Delete dedicated connection profile if created
+                string conName = $"EtherTransfer-{ifaceName}";
+                RunCommand("nmcli", $"connection delete \"{conName}\"");
+
+                // Reapply original connection profile to the device
+                RunCommand("nmcli", $"device reapply {ifaceName}");
+                
                 Console.WriteLine($"[EtherTransfer] Teardown complete for {ifaceName}.");
             }
             catch (Exception ex)
@@ -277,16 +273,53 @@ public class EthernetLinkMonitor : IDisposable
                 return false;
             }
 
+            // Strategy 1: Try direct in-memory device modification (fastest if device is already active)
             var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
             if (devModResult.exitCode == 0)
             {
                 return true;
             }
-            else
+
+            // Strategy 2: If device is not activated, try connecting the device first and retry
+            var connectResult = RunCommand("nmcli", $"device connect {ifaceName}");
+            if (connectResult.exitCode == 0)
             {
-                errorMessage = devModResult.output;
-                return false;
+                var retryModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
+                if (retryModResult.exitCode == 0)
+                {
+                    return true;
+                }
             }
+
+            // Strategy 3: Create / activate a dedicated EtherTransfer link-local profile
+            // This is the most reliable approach on Linux when NetworkManager has no active profile on the unmanaged/disconnected port.
+            string conName = $"EtherTransfer-{ifaceName}";
+            
+            // Check if connection already exists, if so bring it up
+            var conUpResult = RunCommand("nmcli", $"connection up \"{conName}\"");
+            if (conUpResult.exitCode == 0)
+            {
+                return true;
+            }
+
+            // Add the link-local connection profile
+            var addResult = RunCommand("nmcli", $"connection add type ethernet ifname {ifaceName} con-name \"{conName}\" ipv4.method link-local autoconnect no");
+            if (addResult.exitCode == 0)
+            {
+                var upResult = RunCommand("nmcli", $"connection up \"{conName}\"");
+                if (upResult.exitCode == 0)
+                {
+                    return true;
+                }
+                else
+                {
+                    errorMessage = upResult.output;
+                    return false;
+                }
+            }
+
+            errorMessage = string.IsNullOrWhiteSpace(devModResult.output) ? addResult.output : devModResult.output;
+            return false;
         }
         catch (Exception ex)
         {
