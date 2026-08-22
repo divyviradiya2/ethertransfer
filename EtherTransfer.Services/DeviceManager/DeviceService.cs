@@ -17,6 +17,8 @@ public class DeviceService : IDisposable
 {
     private readonly DiscoveryService _discoveryService;
     private readonly ConcurrentDictionary<string, DiscoveredDevice> _devices = new();
+    private readonly ConcurrentDictionary<string, long> _offlineSessions = new();
+    private readonly ConcurrentDictionary<string, long> _highestSequenceBySession = new();
     private CancellationTokenSource? _cts;
     
     // Track last refresh attempt per interface to prevent spamming discovery restarts
@@ -195,14 +197,16 @@ public class DeviceService : IDisposable
         var sessionId = e.Message.SessionId;
         if (string.IsNullOrEmpty(sessionId)) 
         {
-            // Fallback for old versions
             sessionId = sourceIp;
         }
 
-        var updated = false;
+        var msgSeq = e.Message.SequenceNumber;
 
         if (e.Message.Type == "BYE")
         {
+            // Mark this session offline at this sequence number
+            _offlineSessions.AddOrUpdate(sessionId, msgSeq, (_, old) => Math.Max(old, msgSeq));
+
             bool removedAny = false;
 
             if (_devices.TryRemove(sessionId, out var removed))
@@ -231,7 +235,36 @@ public class DeviceService : IDisposable
             }
             return;
         }
+
+        // For HELLO packets:
+        // 1. If this session was previously marked offline, ignore stale in-flight HELLO packets
+        if (_offlineSessions.TryGetValue(sessionId, out var byeSeq))
+        {
+            if (msgSeq > 0 && msgSeq <= byeSeq)
+            {
+                // Stale out-of-order HELLO packet dispatched before BYE. Discard!
+                return;
+            }
+            else if (msgSeq > byeSeq)
+            {
+                // Legitimate new session from same peer with higher sequence -> re-admit
+                _offlineSessions.TryRemove(sessionId, out _);
+            }
+        }
+
+        // 2. Reject out-of-order older HELLO packets for an active device
+        if (msgSeq > 0)
+        {
+            var lastSeq = _highestSequenceBySession.GetOrAdd(sessionId, 0);
+            if (msgSeq < lastSeq && _devices.ContainsKey(sessionId))
+            {
+                return;
+            }
+            _highestSequenceBySession[sessionId] = Math.Max(lastSeq, msgSeq);
+        }
+
         var isNew = false;
+        var updated = false;
         var devicePort = e.Message.TcpPort > 0 ? e.Message.TcpPort : 55000;
         
         _devices.AddOrUpdate(sessionId,

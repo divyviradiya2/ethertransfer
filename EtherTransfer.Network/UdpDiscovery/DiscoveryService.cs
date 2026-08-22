@@ -37,6 +37,8 @@ public class DiscoveryService : IDisposable
     private int _tcpPort;
     private readonly string _sessionId = Guid.NewGuid().ToString();
     private readonly NetworkConfig _config = NetworkConfig.Default;
+    private long _sequenceNumber = 0;
+    private int _isStopped = 0;
 
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
     public event EventHandler<PeerDiscoveredEventArgs>? TransferCancelReceived;
@@ -52,6 +54,7 @@ public class DiscoveryService : IDisposable
     public async Task StartAsync(string computerName, int tcpPort, bool isRebind = false)
     {
         Stop(sendBye: false);
+        _isStopped = 0;
 
         _computerName = computerName;
         _tcpPort = tcpPort;
@@ -90,11 +93,16 @@ public class DiscoveryService : IDisposable
 
     public void Stop(bool sendBye = false)
     {
+        // 1. Cancel the broadcast loop FIRST so no more HELLO packets can be emitted
+        _cts?.Cancel();
+
         if (sendBye)
         {
-            SendBye();
+            if (Interlocked.Exchange(ref _isStopped, 1) == 0)
+            {
+                SendBye();
+            }
         }
-        _cts?.Cancel();
 
         try
         {
@@ -108,6 +116,7 @@ public class DiscoveryService : IDisposable
     {
         try
         {
+            var seq = Interlocked.Increment(ref _sequenceNumber);
             var message = new DiscoveryMessage
             {
                 Type = "BYE",
@@ -115,7 +124,8 @@ public class DiscoveryService : IDisposable
                 TcpPort = 0,
                 Id = AppId,
                 SessionId = _sessionId,
-                OS = GetCurrentOS()
+                OS = GetCurrentOS(),
+                SequenceNumber = seq
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
@@ -183,6 +193,7 @@ public class DiscoveryService : IDisposable
                 var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
 
                 // Re-build message each loop to pick up any custom name changes
+                var seq = Interlocked.Increment(ref _sequenceNumber);
                 var message = new DiscoveryMessage
                 {
                     Type = "HELLO",
@@ -190,7 +201,8 @@ public class DiscoveryService : IDisposable
                     TcpPort = tcpPort,
                     Id = AppId,
                     SessionId = _sessionId,
-                    OS = GetCurrentOS()
+                    OS = GetCurrentOS(),
+                    SequenceNumber = seq
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 

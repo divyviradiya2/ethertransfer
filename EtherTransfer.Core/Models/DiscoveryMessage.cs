@@ -8,4 +8,5 @@ public class DiscoveryMessage
     public string ComputerName { get; set; } = string.Empty;
     public int TcpPort { get; set; }
     public string OS { get; set; } = string.Empty;
+    public long SequenceNumber { get; set; }
 }
