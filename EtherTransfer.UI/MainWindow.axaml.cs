@@ -223,7 +223,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
                     if (!string.IsNullOrEmpty(result.ErrorMessage) && 
                         result.ErrorMessage != "Transfer cancelled." && 
-                        !result.ErrorMessage.Contains("cancelled", StringComparison.OrdinalIgnoreCase))
+                        !result.ErrorMessage.Contains("cancelled", StringComparison.OrdinalIgnoreCase) &&
+                        !result.ErrorMessage.Contains("declined", StringComparison.OrdinalIgnoreCase))
                     {
                         var errorDialog = new ErrorDialog(result.ErrorMessage);
                         _ = errorDialog.ShowDialog(this);
