@@ -186,7 +186,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         {
             _isCancelled = true;
             CancelTransfer();
-            ForceClose();
+            // Do not ForceClose immediately. OnTransferFinished will show Partial Success
+            // if any items finished, or close cleanly if 0 items finished.
         }
     }
 
@@ -320,9 +321,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             if (confirm)
             {
                 _isCancelled = true;
-                _isForceClosing = true;
                 CancelTransfer();
-                Close();
+                // Let OnTransferFinished handle whether to display Partial Success or close
             }
             return;
         }

@@ -202,14 +202,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (_activeDialog != null && _activeDialog.IsVisible)
             {
-                if (_activeDialog.IsCancelled)
-                {
-                    var dialogToClose = _activeDialog;
-                    _activeDialog = null;
-                    dialogToClose.ForceClose();
-                    return;
-                }
-
                 if (result.Success)
                 {
                     _activeDialog.IsSuccessMode = true;
@@ -220,7 +212,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 {
                     _activeDialog.IsSuccessMode = true;
                     _activeDialog.IsPartialSuccessMode = true;
-                    _activeDialog.TransferFinalSizeText = $"Completed {result.CompletedElementsCount} of {result.TotalElements} items.";
+                    _activeDialog.TransferFinalSizeText = $"Completed {result.CompletedElementsCount} of {result.TotalElements} items";
                     _activeDialog.SetCompletedElements(result.CompletedElementNames);
                 }
                 else
