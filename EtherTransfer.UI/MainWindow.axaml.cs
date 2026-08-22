@@ -34,7 +34,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DeviceService _deviceService;
     private readonly TransferService _transferService;
 
-    // View Model Properties
     private DiscoveredDevice? _selectedDevice;
     public DiscoveredDevice? SelectedDevice
     {
@@ -55,10 +54,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public bool CanSend => HasSelection && HasSelectedFiles;
 
-    // Current Dialog Reference
     private TransferDialog? _activeDialog;
-
-    // Incoming Request State
 
     private string _customDeviceName = "";
     public string CustomDeviceName { get => _customDeviceName; set { _customDeviceName = value; OnPropertyChanged(); } }
@@ -75,7 +71,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private bool _isStartupFatalError;
     public bool IsStartupFatalError { get => _isStartupFatalError; set { _isStartupFatalError = value; OnPropertyChanged(); } }
-    
+
     private string _startupFatalErrorMessage = "";
     public string StartupFatalErrorMessage { get => _startupFatalErrorMessage; set { _startupFatalErrorMessage = value; OnPropertyChanged(); } }
 
@@ -93,7 +89,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         CustomDeviceName = settings.CustomDeviceName;
 
-        // If running with Administrator privileges (e.g. Windows Portable edition), ensure inbound firewall rule
         _ = Task.Run(() =>
         {
             FirewallHelper.EnsureFirewallRule((msg, level) =>
@@ -106,7 +101,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _linkMonitor.StateChanged += OnLinkStateChanged;
         _linkMonitor.Start();
 
-        // Force UI to pick up the initial state
         OnPropertyChanged(nameof(LinkState));
         OnPropertyChanged(nameof(IsNoCable));
         OnPropertyChanged(nameof(IsConfiguring));
@@ -114,7 +108,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         OnPropertyChanged(nameof(IsReady));
         OnPropertyChanged(nameof(LinkErrorMessage));
 
-        // Start Transfer Service
         TransferService tempService;
         try
         {
@@ -123,7 +116,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch
         {
-            tempService = new TransferService(CustomDeviceName, 0); // Fallback to dynamic port
+            tempService = new TransferService(CustomDeviceName, 0);
             tempService.Start();
         }
         _transferService = tempService;
@@ -134,14 +127,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         int actualTcpPort = _transferService.TcpPort;
 
-        // Start Discovery
         _deviceService = new DeviceService();
         _deviceService.DevicesChanged += OnDevicesChanged;
         _deviceService.TransferCancelReceived += OnTransferCancelReceived;
         _deviceService.NetworkChanged += (_, _) => _ = Dispatcher.UIThread.InvokeAsync(() => OnPropertyChanged(nameof(HasActiveVpn)));
         _deviceService.DebugLog += OnDebugLog;
-        
-        // Start Discovery asynchronously to catch bind errors
+
         _ = StartDeviceServiceAsync(actualTcpPort);
     }
 
@@ -158,7 +149,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 var msg = $"Fatal error: Unable to bind to UDP discovery port 50000. Is another application using it?\n\n{ex.Message}";
                 OnDebugLog(this, new StructuredLogMessage("startup.fatal", msg, LogLevel.Error));
-                
+
                 IsStartupFatalError = true;
                 StartupFatalErrorMessage = msg;
             });
@@ -177,7 +168,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(LinkErrorMessage));
             OnPropertyChanged(nameof(HasActiveVpn));
 
-            // If we transition away from Ready while a transfer is active, abort it instantly.
             if (newState != EthernetLinkState.Ready && _activeDialog != null && _activeDialog.IsVisible)
             {
                 OnDebugLog(this, new StructuredLogMessage("network.lost", $"Link state changed to {newState}. Aborting active transfer.", LogLevel.Error));
@@ -193,8 +183,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _linkMonitor.ManualRetry();
     }
-
-
 
     private void OnTransferFinished(object? sender, EtherTransfer.Core.Models.TransferResult result)
     {
@@ -219,11 +207,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 else
                 {
-                    // 0 items completed (e.g. single item cancelled or aborted before any item finished)
+
                     OnDebugLog(this, new StructuredLogMessage("transfer.cancelled", $"Transfer cancelled/failed: {result.ErrorMessage}", LogLevel.Info));
 
-                    bool isConnectionLoss = !string.IsNullOrEmpty(result.ErrorMessage) && 
-                        (result.ErrorMessage.Contains("Connection", StringComparison.OrdinalIgnoreCase) || 
+                    bool isConnectionLoss = !string.IsNullOrEmpty(result.ErrorMessage) &&
+                        (result.ErrorMessage.Contains("Connection", StringComparison.OrdinalIgnoreCase) ||
                          result.ErrorMessage.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
                          result.ErrorMessage.Contains("network", StringComparison.OrdinalIgnoreCase));
 
@@ -248,12 +236,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 DiscoveredDevices.Add(device);
             }
 
-            // Auto-select if there is exactly 1 device
             if (DiscoveredDevices.Count == 1 && SelectedDevice == null)
             {
                 SelectedDevice = DiscoveredDevices[0];
             }
-            // Preserve selection by stable identity (SessionId) across IP changes
+
             else if (SelectedDevice != null)
             {
                 var liveDevice = DiscoveredDevices.FirstOrDefault(d => d.SessionId == SelectedDevice.SessionId);
@@ -262,7 +249,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     SelectedDevice = liveDevice;
                 }
             }
-            
+
             OnPropertyChanged(nameof(HasActiveVpn));
         });
     }
@@ -273,19 +260,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var cleanedMessage = logMsg.Message.Trim();
 
-            string color = "#A6ADC8"; // Default text (Catppuccin Subtext0)
+            string color = "#A6ADC8";
 
             if (logMsg.Level == LogLevel.Error)
             {
-                color = "#F38BA8"; // Red
+                color = "#F38BA8";
             }
             else if (logMsg.Level == LogLevel.Warning)
             {
-                color = "#F9E2AF"; // Yellow
+                color = "#F9E2AF";
             }
             else if (logMsg.EventId.StartsWith("device.new") || logMsg.EventId.StartsWith("ethernet.ready"))
             {
-                color = "#A6E3A1"; // Green
+                color = "#A6E3A1";
             }
             else if (logMsg.Level == LogLevel.Info)
             {
@@ -294,17 +281,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     cleanedMessage.Contains("listening", StringComparison.OrdinalIgnoreCase) ||
                     cleanedMessage.Contains("offline", StringComparison.OrdinalIgnoreCase))
                 {
-                    color = "#89B4FA"; // Blue
+                    color = "#89B4FA";
                 }
                 else if (cleanedMessage.Contains("network interface", StringComparison.OrdinalIgnoreCase))
                 {
-                    color = "#CBA6F7"; // Purple
+                    color = "#CBA6F7";
                 }
             }
 
             DebugMessages.Add(new LogMessage { Text = cleanedMessage, Color = color });
 
-            // Keep log size manageable by removing oldest
             if (DebugMessages.Count > 100)
             {
                 DebugMessages.RemoveAt(0);
@@ -367,7 +353,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (SelectedDevice == null || SelectedPayloads.Count == 0) return;
 
-        // Resolve target IP at send time against the live table using stable identity
         var liveDevice = _deviceService.GetActiveDevices().FirstOrDefault(d => d.SessionId == SelectedDevice.SessionId);
         if (liveDevice == null)
         {
@@ -423,7 +408,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         };
 
-        // Don't await the dialog, just show it. It will close itself on cancel, or we will close it when transfer finishes.
         _ = dialog.ShowDialog(this);
 
         try
@@ -460,7 +444,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void SendFilesButton_Click(object? sender, RoutedEventArgs e)
     {
-        // Open File Picker
+
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel == null) return;
 
@@ -709,9 +693,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        
-        // Force the window to the absolute foreground in case the UAC prompt 
-        // or netsh console stole focus during the startup sequence.
+
         this.Topmost = true;
         this.Topmost = false;
         this.Activate();

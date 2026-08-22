@@ -54,7 +54,6 @@ public class SettingsManagerTests
         };
         SettingsManager.Save(settingsToSave);
 
-        // Reset memory cache to force re-reading from disk
         SettingsManager.SetCustomSettingsDirectory(_tempTestDir);
         var loaded = SettingsManager.Load();
 

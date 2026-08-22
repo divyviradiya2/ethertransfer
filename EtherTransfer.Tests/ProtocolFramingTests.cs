@@ -78,7 +78,6 @@ public class ProtocolFramingTests
         await client.ConnectAsync(IPAddress.Loopback, port);
         var clientStream = client.GetStream();
 
-        // Write a 4-byte length prefix specifying 15 MB (exceeds 10 MB limit)
         var invalidLengthBytes = BitConverter.GetBytes(15 * 1024 * 1024);
         await clientStream.WriteAsync(invalidLengthBytes, 0, 4);
 
@@ -107,7 +106,6 @@ public class ProtocolFramingTests
         await client.ConnectAsync(IPAddress.Loopback, port);
         var clientStream = client.GetStream();
 
-        // Send in small fragments with tiny delay
         await clientStream.WriteAsync(testBytes.AsMemory(0, 2048));
         await Task.Delay(10);
         await clientStream.WriteAsync(testBytes.AsMemory(2048, 2048));

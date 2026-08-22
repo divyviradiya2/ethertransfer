@@ -2,12 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="EtherTransfer.UI.App"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
-                <!-- Light Theme Colors -->
+
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="AppBackground" Color="#F4F4F5"/>
                     <SolidColorBrush x:Key="SurfaceBackground" Color="#FFFFFF"/>
@@ -27,14 +26,13 @@
                     <SolidColorBrush x:Key="SuccessBackground" Color="#ECFDF5"/>
                     <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
                     <SolidColorBrush x:Key="WarningBackground" Color="#FFFBEB"/>
-                    
-                    <!-- Fluent Theme Overrides -->
+
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#F0F0F2"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#E4E4E7"/>
                     <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
                 </ResourceDictionary>
-                <!-- Dark Theme Colors -->
+
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="AppBackground" Color="#18181B"/>
                     <SolidColorBrush x:Key="SurfaceBackground" Color="#27272A"/>
@@ -54,8 +52,7 @@
                     <SolidColorBrush x:Key="SuccessBackground" Color="#132D22"/>
                     <SolidColorBrush x:Key="WarningColor" Color="#FBBF24"/>
                     <SolidColorBrush x:Key="WarningBackground" Color="#2E2413"/>
-                    
-                    <!-- Fluent Theme Overrides -->
+
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#3F3F46"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#52525B"/>
@@ -63,7 +60,6 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <!-- Vector Icons -->
             <StreamGeometry x:Key="FolderIcon">M10,4H4C2.9,4,2.01,4.9,2.01,6L2,18C2,19.1,2.9,20,4,20H20C21.1,20,22,19.1,22,18V8C22,6.9,21.1,6,20,6H12L10,4Z</StreamGeometry>
             <StreamGeometry x:Key="FolderOpenIcon">M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21.85C22.69,8 23.33,8.79 23.12,9.6L21.32,16.5C21.05,17.4 20.25,18 19.33,18H18.25L19,20M4,6V18H18.88L20.65,11H4.15L4,6Z</StreamGeometry>
             <StreamGeometry x:Key="FileIcon">M14,2H6C4.9,2,4.01,2.9,4.01,4L4,20C4,21.1,4.89,22,5.99,22H18C19.1,22,20,21.1,20,20V8L14,2M13,9V3.5L18.5,9H13Z</StreamGeometry>
@@ -81,8 +77,7 @@
 
     <Application.Styles>
         <FluentTheme />
-        
-        <!-- Global Button Style -->
+
         <Style Selector="Button">
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="12,6"/>
@@ -99,8 +94,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppForeground}"/>
         </Style>
-        
-        <!-- Primary Button Style -->
+
         <Style Selector="Button.Primary">
             <Setter Property="Background" Value="{DynamicResource AccentColor}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
@@ -118,7 +112,6 @@
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppForegroundSecondary}"/>
         </Style>
 
-        <!-- Danger Button Style -->
         <Style Selector="Button.Danger">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -130,7 +123,6 @@
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
         </Style>
 
-        <!-- Secondary Button Style -->
         <Style Selector="Button.Secondary">
             <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
@@ -143,7 +135,6 @@
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource AppForeground}"/>
         </Style>
 
-        <!-- ListBox Style -->
         <Style Selector="ListBox">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -160,8 +151,7 @@
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
         </Style>
-        
-        <!-- TextBox Style -->
+
         <Style Selector="TextBox">
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorder}"/>
@@ -175,13 +165,11 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentColor}"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
-        
-        <!-- ScrollViewer -->
+
         <Style Selector="ScrollViewer">
             <Setter Property="AllowAutoHide" Value="True"/>
         </Style>
 
-        <!-- Expander Style Override -->
         <Style Selector="Expander">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>

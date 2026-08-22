@@ -1,11 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // OS Detection for the primary download button
+
     const primaryBtn = document.getElementById('primary-download-btn');
-    
+
     let userOS = "Unknown OS";
     let is64Bit = false;
 
-    // Advanced OS string detection
     const ua = navigator.userAgent;
     if (ua.indexOf("Win") !== -1) {
         userOS = "Windows";
@@ -18,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
         userOS = "MacOS";
     }
 
-    // Update UI based on detected OS
     if (primaryBtn) {
         if (userOS === "Windows") {
             if (is64Bit) {
@@ -30,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (userOS === "Linux") {
             primaryBtn.textContent = "Install for Linux";
-            primaryBtn.href = "#"; // Prevent navigation
+            primaryBtn.href = "#";
             primaryBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const linuxModal = document.getElementById('linuxInstallModal');
@@ -44,10 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle');
-    
-    // Check for saved theme preference safely (avoids crash if localStorage is blocked)
+
     let savedTheme = null;
     try {
         savedTheme = localStorage.getItem('theme');
@@ -55,14 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('localStorage is blocked or unavailable.');
     }
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.setAttribute('data-theme', 'dark');
     } else {
         document.documentElement.setAttribute('data-theme', 'light');
     }
 
-    // Toggle theme on click
     themeToggleBtn.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme === 'dark') {
@@ -74,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Privacy Modal Logic
     const privacyModal = document.getElementById('privacyModal');
     const privacyOpenBtn = document.getElementById('privacyOpenBtn');
     const privacyCloseBtn = document.getElementById('privacyCloseBtn');
@@ -83,19 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
         privacyOpenBtn.addEventListener('click', (e) => {
             e.preventDefault();
             privacyModal.showModal();
-            document.body.style.overflow = 'hidden'; // Disable background scroll
+            document.body.style.overflow = 'hidden';
         });
 
         privacyCloseBtn.addEventListener('click', () => {
             privacyModal.close();
         });
 
-        // The native 'close' event fires when closed via button OR Esc key
         privacyModal.addEventListener('close', () => {
-            document.body.style.overflow = ''; // Restore background scroll
+            document.body.style.overflow = '';
         });
-        
-        // Close modal when clicking outside of it
+
         privacyModal.addEventListener('click', (e) => {
             const dialogDimensions = privacyModal.getBoundingClientRect();
             if (
@@ -109,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Linux Modal Logic
     const linuxModal = document.getElementById('linuxInstallModal');
     const linuxCloseBtn = document.getElementById('linuxInstallCloseBtn');
 
@@ -119,9 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         linuxModal.addEventListener('close', () => {
-            document.body.style.overflow = ''; 
+            document.body.style.overflow = '';
         });
-        
+
         linuxModal.addEventListener('click', (e) => {
             const dialogDimensions = linuxModal.getBoundingClientRect();
             if (
@@ -135,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Mobile Navigation Drawer Logic
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileNavDrawer = document.getElementById('mobile-nav-drawer');
     const mobileNavBackdrop = document.getElementById('mobile-nav-backdrop');
@@ -175,14 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Close on Escape key press
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && mobileNavDrawer.classList.contains('is-open')) {
                 closeMobileMenu();
             }
         });
 
-        // Close mobile drawer automatically if viewport resized to desktop
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768 && mobileNavDrawer.classList.contains('is-open')) {
                 closeMobileMenu();
@@ -190,14 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // FAQ Accordion Logic
     const faqQuestions = document.querySelectorAll('.faq-question');
     faqQuestions.forEach(btn => {
         btn.addEventListener('click', () => {
             const isExpanded = btn.getAttribute('aria-expanded') === 'true';
             const answer = btn.nextElementSibling;
 
-            // Optional: Close other FAQs for cleaner single-item view
             faqQuestions.forEach(otherBtn => {
                 if (otherBtn !== btn && otherBtn.getAttribute('aria-expanded') === 'true') {
                     otherBtn.setAttribute('aria-expanded', 'false');
@@ -207,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Toggle selected FAQ
             if (isExpanded) {
                 btn.setAttribute('aria-expanded', 'false');
                 answer.style.maxHeight = null;

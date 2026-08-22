@@ -45,9 +45,9 @@ public class TransferCancellationTests
     [Test]
     public async Task SingleFile_CancelledMidStream_DeletesPartialFileOnReceiver()
     {
-        // Arrange
+
         var testFilePath = Path.Combine(_tempSourceDir, "largefile.dat");
-        byte[] testData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] testData = new byte[10 * 1024 * 1024];
         new Random(42).NextBytes(testData);
         await File.WriteAllBytesAsync(testFilePath, testData);
 
@@ -77,10 +77,9 @@ public class TransferCancellationTests
             new() { AbsolutePath = testFilePath, RelativePath = "largefile.dat", RootName = "largefile.dat", Size = testData.Length }
         });
 
-        // Act: Cancel as soon as first progress report arrives
         sender.ProgressUpdated += (_, e) =>
         {
-            if (e.BytesSent > 1024 * 1024) // After 1MB
+            if (e.BytesSent > 1024 * 1024)
             {
                 cancelCts.Cancel();
             }
@@ -95,7 +94,6 @@ public class TransferCancellationTests
         var result = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(result.Success, Is.False, "Receiver result should be failure upon cancellation.");
         var receivedFilePath = Path.Combine(_tempDestDir, "largefile.dat");
         Assert.That(File.Exists(receivedFilePath), Is.False, "Partial in-flight file MUST be deleted from receiver disk!");
@@ -104,7 +102,7 @@ public class TransferCancellationTests
     [Test]
     public async Task SingleFolder_CancelledMidStream_RollsBackAllFilesForSingleFolder()
     {
-        // Arrange
+
         var testSubDir = Path.Combine(_tempSourceDir, "MyFolder");
         Directory.CreateDirectory(testSubDir);
 
@@ -112,7 +110,7 @@ public class TransferCancellationTests
         var file2Path = Path.Combine(testSubDir, "file2.dat");
 
         byte[] smallData = new byte[1024];
-        byte[] largeData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] largeData = new byte[10 * 1024 * 1024];
         await File.WriteAllBytesAsync(file1Path, smallData);
         await File.WriteAllBytesAsync(file2Path, largeData);
 
@@ -144,7 +142,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = file2Path, RelativePath = "MyFolder/file2.dat", RootName = "MyFolder", Size = largeData.Length }
         });
 
-        // Cancel during file2
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent > smallData.Length + 1024 * 1024)
@@ -162,11 +159,10 @@ public class TransferCancellationTests
         var result = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(result.Success, Is.False, "Transfer of single folder should be marked failed.");
         var receivedFile1 = Path.Combine(_tempDestDir, "MyFolder", "file1.dat");
         var receivedFile2 = Path.Combine(_tempDestDir, "MyFolder", "file2.dat");
-        
+
         Assert.That(File.Exists(receivedFile2), Is.False, "Partial in-flight file2 must be deleted.");
         Assert.That(File.Exists(receivedFile1), Is.False, "Single folder cancellation should roll back session files.");
     }
@@ -174,12 +170,12 @@ public class TransferCancellationTests
     [Test]
     public async Task MultiItemTransfer_CancelledDuringSecondItem_PreservesFirstItem()
     {
-        // Arrange
+
         var file1Path = Path.Combine(_tempSourceDir, "item1.dat");
         var file2Path = Path.Combine(_tempSourceDir, "item2.dat");
 
         byte[] smallData = new byte[1024];
-        byte[] largeData = new byte[30 * 1024 * 1024]; // 30 MB
+        byte[] largeData = new byte[30 * 1024 * 1024];
         await File.WriteAllBytesAsync(file1Path, smallData);
         await File.WriteAllBytesAsync(file2Path, largeData);
 
@@ -210,7 +206,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = file2Path, RelativePath = "item2.dat", RootName = "item2.dat", Size = largeData.Length }
         });
 
-        // Cancel during item2
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent > smallData.Length + 1024 * 1024)
@@ -228,7 +223,6 @@ public class TransferCancellationTests
         var result = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(result.Success, Is.False);
         Assert.That(result.CompletedElementsCount, Is.EqualTo(1));
         Assert.That(result.CompletedElementNames, Contains.Item("item1.dat"));
@@ -243,7 +237,7 @@ public class TransferCancellationTests
     [Test]
     public async Task MultiFolder_CancelledDuringSecondFolder_PreservesFirstFolderAndRollsBackSecondFolder()
     {
-        // Arrange
+
         var folder1 = Path.Combine(_tempSourceDir, "Folder1");
         var folder2 = Path.Combine(_tempSourceDir, "Folder2");
         Directory.CreateDirectory(folder1);
@@ -254,7 +248,7 @@ public class TransferCancellationTests
         var f2_file2 = Path.Combine(folder2, "f2_2.dat");
 
         byte[] smallData = new byte[1024];
-        byte[] largeData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] largeData = new byte[10 * 1024 * 1024];
 
         await File.WriteAllBytesAsync(f1_file1, smallData);
         await File.WriteAllBytesAsync(f2_file1, smallData);
@@ -289,7 +283,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = f2_file2, RelativePath = "Folder2/f2_2.dat", RootName = "Folder2", Size = largeData.Length }
         });
 
-        // Cancel during Folder2/f2_2.dat
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent > (smallData.Length * 2) + 1024 * 1024)
@@ -307,7 +300,6 @@ public class TransferCancellationTests
         var result = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(result.Success, Is.False);
         Assert.That(result.CompletedElementsCount, Is.EqualTo(1));
         Assert.That(result.CompletedElementNames, Contains.Item("Folder1"));
@@ -324,9 +316,9 @@ public class TransferCancellationTests
     [Test]
     public async Task SenderCancels_DuringSingleFileTransfer_ReceiverFailsAndDeletesPartialFile()
     {
-        // Arrange
+
         var testFilePath = Path.Combine(_tempSourceDir, "largefile.dat");
-        byte[] testData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] testData = new byte[10 * 1024 * 1024];
         new Random(42).NextBytes(testData);
         await File.WriteAllBytesAsync(testFilePath, testData);
 
@@ -334,7 +326,7 @@ public class TransferCancellationTests
 
         var receiver = new TransferReceiver();
         receiver.DebugLog += (_, msg) => Console.WriteLine($"[RECEIVER LOG] {msg.EventId}: {msg.Message}");
-        // Receiver does NOT cancel. Receiver is waiting normally.
+
         receiver.OnIncomingTransfer = (req, ct) =>
         {
             return Task.FromResult((true, _tempDestDir, CancellationToken.None));
@@ -357,7 +349,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = testFilePath, RelativePath = "largefile.dat", RootName = "largefile.dat", Size = testData.Length }
         });
 
-        // Sender cancels after 1MB
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent > 1024 * 1024)
@@ -370,10 +361,9 @@ public class TransferCancellationTests
         var receiverResult = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(senderResult.Success, Is.False, "Sender result should be false upon sender cancellation.");
         Assert.That(receiverResult.Success, Is.False, "Receiver MUST NOT be marked successful when sender cancels!");
-        
+
         var receivedFilePath = Path.Combine(_tempDestDir, "largefile.dat");
         Assert.That(File.Exists(receivedFilePath), Is.False, "Receiver must delete partial file when sender cancels!");
     }
@@ -381,7 +371,7 @@ public class TransferCancellationTests
     [Test]
     public async Task SenderCancels_DuringFolderTransfer_ReceiverFailsAndRollsBack()
     {
-        // Arrange
+
         var folder = Path.Combine(_tempSourceDir, "MyFolder");
         Directory.CreateDirectory(folder);
 
@@ -389,7 +379,7 @@ public class TransferCancellationTests
         var f2 = Path.Combine(folder, "f2.dat");
 
         byte[] smallData = new byte[1024];
-        byte[] largeData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] largeData = new byte[10 * 1024 * 1024];
 
         await File.WriteAllBytesAsync(f1, smallData);
         await File.WriteAllBytesAsync(f2, largeData);
@@ -421,7 +411,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = f2, RelativePath = "MyFolder/f2.dat", RootName = "MyFolder", Size = largeData.Length }
         });
 
-        // Sender cancels during f2
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent > smallData.Length + 1024 * 1024)
@@ -434,7 +423,6 @@ public class TransferCancellationTests
         var receiverResult = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(senderResult.Success, Is.False);
         Assert.That(receiverResult.Success, Is.False, "Receiver must not be marked successful when sender cancels!");
 
@@ -448,12 +436,12 @@ public class TransferCancellationTests
     [Test]
     public async Task SenderCancels_DuringMultiFileTransfer_ReceiverPopulatesCompletedElementsAndRollsBackIncomplete()
     {
-        // Arrange: 2 separate root files
+
         var file1 = Path.Combine(_tempSourceDir, "file1.dat");
         var file2 = Path.Combine(_tempSourceDir, "file2.dat");
 
-        byte[] file1Data = new byte[1024]; // 1 KB (finishes quickly)
-        byte[] file2Data = new byte[30 * 1024 * 1024]; // 30 MB (cancelled mid-stream)
+        byte[] file1Data = new byte[1024];
+        byte[] file2Data = new byte[30 * 1024 * 1024];
 
         await File.WriteAllBytesAsync(file1, file1Data);
         await File.WriteAllBytesAsync(file2, file2Data);
@@ -484,7 +472,6 @@ public class TransferCancellationTests
             new() { AbsolutePath = file2, RelativePath = "file2.dat", RootName = "file2.dat", Size = file2Data.Length }
         });
 
-        // Sender cancels immediately when starting file2.dat
         sender.ProgressUpdated += (_, e) =>
         {
             if (e.BytesSent >= file1Data.Length && e.CurrentElementIndex == 2)
@@ -497,7 +484,6 @@ public class TransferCancellationTests
         var receiverResult = await receiverTask;
         listener.Stop();
 
-        // Assert
         Assert.That(senderResult.Success, Is.False);
         Assert.That(senderResult.CompletedElementsCount, Is.EqualTo(1));
         Assert.That(senderResult.CompletedElementNames, Contains.Item("file1.dat"));

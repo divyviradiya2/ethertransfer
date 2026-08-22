@@ -17,15 +17,11 @@ public class NetworkInterfaceDetectorTests
         _mockEnv = new Mock<IPlatformEnvironment>();
     }
 
-    // A helper method to create a fake NetworkInterface (requires reflection or a wrapper if we were going all the way,
-    // but since we can't easily mock sealed classes in .NET without more tools, we'll test the Analyze method directly
-    // by passing in a dummy NetworkInterface if possible. Or we can just use Moq's ability to mock it if it's mockable.
-    // NetworkInterface is abstract, so we can mock it!)
     private Mock<NetworkInterface> CreateMockInterface(string name, NetworkInterfaceType type, string description = "")
     {
         var mockNi = new Mock<NetworkInterface>();
         mockNi.Setup(n => n.Name).Returns(name);
-        mockNi.Setup(n => n.Id).Returns(name); // Using name as ID for simplicity
+        mockNi.Setup(n => n.Id).Returns(name);
         mockNi.Setup(n => n.NetworkInterfaceType).Returns(type);
         mockNi.Setup(n => n.Description).Returns(description);
         return mockNi;
@@ -110,7 +106,7 @@ public class NetworkInterfaceDetectorTests
     {
         var mockNi = CreateMockInterface("Tailscale", NetworkInterfaceType.Ethernet, "Tailscale Tunnel");
         _mockEnv.Setup(e => e.IsWindows).Returns(true);
-        // Simulate registry read failure
+
         _mockEnv.Setup(e => e.GetRegistryValue(It.IsAny<string>(), It.IsAny<string>())).Returns((string?)null!);
 
         var (isPhysical, isVirtual, isWifi) = WindowsNetworkInterfaceDetector.Analyze(mockNi.Object, _mockEnv.Object);

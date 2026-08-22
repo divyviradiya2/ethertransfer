@@ -20,9 +20,7 @@ public class InterfaceAddressInfo
 
 public static class NetworkHelper
 {
-    /// <summary>
-    /// Returns all physical Ethernet interfaces that have a valid IPv4 address and subnet mask.
-    /// </summary>
+
     public static IEnumerable<InterfaceAddressInfo> GetEthernetInterfaces()
     {
         var interfaces = CrossPlatformNetworkDetector.GetInterfaces()
@@ -41,7 +39,6 @@ public static class NetworkHelper
                     var ipBytes = ip.Address.GetAddressBytes();
                     var mask = ip.IPv4Mask;
 
-                    // If mask is null or 0.0.0.0, fallback to standard link-local or class C defaults
                     if (mask == null || mask.GetAddressBytes().All(b => b == 0))
                     {
                         if (ipBytes[0] == 169 && ipBytes[1] == 254)
@@ -71,10 +68,6 @@ public static class NetworkHelper
         }
     }
 
-    /// <summary>
-    /// Diagnoses Ethernet interfaces and returns human-readable status messages.
-    /// Detects interfaces that are UP but have no IP (the Linux link-local problem).
-    /// </summary>
     public static List<string> DiagnoseInterfaces()
     {
         var results = new List<string>();
@@ -106,14 +99,10 @@ public static class NetworkHelper
         return results;
     }
 
-    /// <summary>
-    /// Checks if a given IP address is reachable via any of our active Ethernet subnets.
-    /// Useful for quickly evicting peers when a network link drops.
-    /// </summary>
     public static bool IsIpInActiveSubnets(string ipAddress)
     {
         if (!IPAddress.TryParse(ipAddress, out var targetIp)) return false;
-        if (targetIp.AddressFamily != AddressFamily.InterNetwork) return false; // Only support IPv4
+        if (targetIp.AddressFamily != AddressFamily.InterNetwork) return false;
 
         var targetBytes = targetIp.GetAddressBytes();
 
@@ -131,7 +120,6 @@ public static class NetworkHelper
                 {
                     var localBytes = ip.Address.GetAddressBytes();
 
-                    // RFC 3927: 169.254.0.0/16 Link-Local match
                     if (targetBytes[0] == 169 && targetBytes[1] == 254 &&
                         localBytes[0] == 169 && localBytes[1] == 254)
                     {

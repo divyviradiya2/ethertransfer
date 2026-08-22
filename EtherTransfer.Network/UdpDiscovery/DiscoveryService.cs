@@ -43,7 +43,6 @@ public class DiscoveryService : IDisposable
     public event EventHandler<PeerDiscoveredEventArgs>? PeerDiscovered;
     public event EventHandler<PeerDiscoveredEventArgs>? TransferCancelReceived;
 
-    // Debug log for the UI
     public event EventHandler<StructuredLogMessage>? DebugLog;
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "discovery.log")
@@ -60,28 +59,26 @@ public class DiscoveryService : IDisposable
         _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
 
-        // Global listener on 0.0.0.0:<DiscoveryPort> to receive ALL broadcast packets
         try
         {
             _globalListener = new UdpClient();
             _globalListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _globalListener.Client.Bind(new IPEndPoint(IPAddress.Any, _config.DiscoveryPort));
-            
+
             if (!isRebind)
             {
                 Log($"Starting discovery as '{computerName}' on port {_config.DiscoveryPort}");
                 Log("Listener bound to 0.0.0.0:" + _config.DiscoveryPort);
             }
-            
+
             _ = Task.Run(() => ListenAsync(_globalListener, _cts.Token));
         }
         catch (Exception ex)
         {
             Log($"FAILED to bind listener: {ex.Message}", LogLevel.Error, "discovery.bind.error");
-            throw; // Must throw to inform UI
+            throw;
         }
 
-        // Start broadcast loop
         _ = Task.Run(() => BroadcastLoopAsync(tcpPort, _cts.Token));
     }
 
@@ -93,7 +90,7 @@ public class DiscoveryService : IDisposable
 
     public void Stop(bool sendBye = false)
     {
-        // 1. Cancel the broadcast loop FIRST so no more HELLO packets can be emitted
+
         _cts?.Cancel();
 
         if (sendBye)
@@ -139,7 +136,6 @@ public class DiscoveryService : IDisposable
                 Log($"Failed to get interfaces during SendBye: {ex.Message}", LogLevel.Warning, "discovery.sendbye.error");
             }
 
-            // Send 3 bursts of UDP BYE packets to guarantee delivery on network teardown
             for (int burst = 0; burst < 3; burst++)
             {
                 foreach (var netIf in ethInterfaces)
@@ -171,17 +167,15 @@ public class DiscoveryService : IDisposable
             int loopCount = 0;
             while (!ct.IsCancellationRequested)
             {
-                // Get all physical Ethernet interface broadcast addresses
+
                 var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
 
-                // If NO Ethernet interfaces are active/connected, DO NOT BROADCAST (Strict Ethernet Only)
                 if (ethInterfaces.Count == 0)
                 {
                     await Task.Delay(2000, ct);
                     continue;
                 }
 
-                // Re-build message each loop to pick up any custom name changes
                 var seq = Interlocked.Increment(ref _sequenceNumber);
                 var message = new DiscoveryMessage
                 {
@@ -195,7 +189,6 @@ public class DiscoveryService : IDisposable
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
-                // Send strictly to each Ethernet interface's subnet broadcast
                 foreach (var netIf in ethInterfaces)
                 {
                     if (ct.IsCancellationRequested) break;
@@ -213,7 +206,7 @@ public class DiscoveryService : IDisposable
                     }
                     catch (SocketException sockEx) when (sockEx.SocketErrorCode == SocketError.AddressNotAvailable)
                     {
-                        // Transient Windows DAD / IP transition state (WSAEADDRNOTAVAIL 10049) - will bind automatically once settled
+
                     }
                     catch (Exception ex)
                     {
@@ -223,7 +216,6 @@ public class DiscoveryService : IDisposable
 
                 loopCount++;
 
-                // Fast discovery burst on startup/rebind: 250ms, 500ms, 1000ms, then normal interval
                 int delayMs;
                 if (loopCount <= 2)
                     delayMs = 250;
@@ -268,7 +260,6 @@ public class DiscoveryService : IDisposable
                                 {
                                     PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
 
-                                    // Immediate directed HELLO_ACK reply for broadcast HELLO only (prevents infinite echo loops)
                                     if (message.Type == "HELLO")
                                     {
                                         _ = SendDirectHelloAckAsync(result.RemoteEndPoint.Address);
@@ -280,7 +271,7 @@ public class DiscoveryService : IDisposable
                 }
                 catch (JsonException)
                 {
-                    // Ignore silently
+
                 }
             }
         }

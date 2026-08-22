@@ -33,19 +33,17 @@
     </Window.Styles>
 
     <Grid RowDefinitions="Auto,*,Auto">
-        
-        <!-- HEADER / TOOLBAR -->
+
         <Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="0,0,0,1" Padding="20,15">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
                     <TextBlock Text="EtherTransfer" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center"/>
                 </StackPanel>
-                
-                <!-- Debug Log Button -->
+
                 <Button Grid.Column="1" Click="ShowDebugLog_Click" Background="Transparent" BorderThickness="0" Margin="15,0,0,0" ToolTip.Tip="See Debug Logs">
                     <PathIcon Data="{StaticResource SettingsIcon}" Width="16" Height="16" Foreground="{DynamicResource AppForegroundSecondary}"/>
                 </Button>
-                
+
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Text="Device Name:" Foreground="{DynamicResource AppForegroundSecondary}" VerticalAlignment="Center" FontSize="12"/>
                     <TextBox Text="{Binding CustomDeviceName}" Width="200" PlaceholderText="Custom Device Name" VerticalAlignment="Center"/>
@@ -53,16 +51,14 @@
                 <Button Grid.Column="4" Content="Save" Classes="Primary" Click="SaveName_Click" Margin="10,0,0,0" VerticalAlignment="Center"/>
             </Grid>
         </Border>
-        
-        <!-- MAIN CONTENT (SPLIT LAYOUT) -->
+
         <Grid Grid.Row="1" ColumnDefinitions="300,1,*" Background="{DynamicResource AppBackground}">
-            
-            <!-- LEFT PANE: DEVICES -->
+
             <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="15">
                 <TextBlock Grid.Row="0" Text="Discovered Devices" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}" Margin="5,0,0,10"/>
-                
+
                 <Panel Grid.Row="1" IsVisible="{Binding !IsStartupFatalError}">
-                    <!-- Ready State -->
+
                     <StackPanel IsVisible="{Binding IsReady}">
                         <ListBox x:Name="DevicesList" ItemsSource="{Binding DiscoveredDevices}" SelectedItem="{Binding SelectedDevice, Mode=TwoWay}" Background="Transparent">
                             <ListBox.ItemTemplate>
@@ -79,18 +75,15 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        
-                        <!-- Empty States (when no devices found) -->
+
                         <Panel IsVisible="{Binding !DiscoveredDevices.Count}">
-                            
-                            <!-- VPN Blocked State -->
+
                             <StackPanel IsVisible="{Binding HasActiveVpn}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20,40,20,20">
                                 <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="{DynamicResource WarningColor}"/>
                                 <TextBlock Text="VPN Blocking Discovery" FontSize="16" Foreground="{DynamicResource WarningColor}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="A Corporate VPN is active. Your IT administrator is likely blocking local network discovery. Please disconnect the VPN." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                             </StackPanel>
 
-                            <!-- Normal Skeleton Loader -->
                             <StackPanel IsVisible="{Binding !HasActiveVpn}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
                                 <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
                                     <Grid ColumnDefinitions="Auto,*">
@@ -110,21 +103,18 @@
                         </Panel>
                     </StackPanel>
 
-                    <!-- No Cable State -->
                     <StackPanel IsVisible="{Binding IsNoCable}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
                         <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
                         <TextBlock Text="No Ethernet cable connected." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         <TextBlock Text="Please connect both devices directly to each other using an Ethernet cable." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <!-- Configuring State -->
                     <StackPanel IsVisible="{Binding IsConfiguring}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
                         <PathIcon Data="{StaticResource SyncIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
                         <TextBlock Text="Configuring network..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         <TextBlock Text="Assigning link-local address..." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <!-- Error State -->
                     <StackPanel IsVisible="{Binding IsConfigError}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
                         <PathIcon Data="{StaticResource ErrorIcon}" Width="48" Height="48" Foreground="{DynamicResource DangerColor}"/>
                         <TextBlock Text="Configuration Failed" FontSize="16" Foreground="{DynamicResource DangerColor}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -132,28 +122,24 @@
                         <Button Content="Retry" Classes="Primary" Click="RetryConfig_Click" HorizontalAlignment="Center" Margin="0,10,0,0"/>
                     </StackPanel>
                 </Panel>
-                
-                <!-- Fatal Error State -->
+
                 <StackPanel Grid.Row="1" IsVisible="{Binding IsStartupFatalError}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
                     <PathIcon Data="{StaticResource ErrorIcon}" Width="48" Height="48" Foreground="{DynamicResource DangerColor}"/>
                     <TextBlock Text="Startup Error" FontSize="16" Foreground="{DynamicResource DangerColor}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding StartupFatalErrorMessage}" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                 </StackPanel>
             </Grid>
-            
-            <!-- DIVIDER -->
+
             <Border Grid.Column="1" Background="{DynamicResource AppBorder}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
-            
-            <!-- RIGHT PANE: FILES -->
+
             <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Margin="20,15">
-                
-                <!-- File Actions Header -->
+
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,15">
                     <StackPanel Grid.Column="0" Orientation="Vertical" VerticalAlignment="Center" Spacing="2">
                         <TextBlock Text="Files to Transfer" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource AppForegroundSecondary}"/>
                         <TextBlock Text="{Binding TotalSelectionSizeText}" FontSize="12" Foreground="{DynamicResource AccentColor}" IsVisible="{Binding HasSelectedFiles}"/>
                     </StackPanel>
-                    
+
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
                         <Button Content="Clear" Classes="Danger" x:Name="ClearSelectionButton" Click="ClearSelectionButton_Click" IsVisible="{Binding HasSelectedFiles}"/>
                         <Button Content="Add Folder" x:Name="SendFolderButton" Click="SendFolderButton_Click">
@@ -178,8 +164,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-                
-                <!-- File List -->
+
                 <Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6">
                     <Grid>
                         <ListBox x:Name="SelectedItemsList" ItemsSource="{Binding SelectedPayloads}" Background="Transparent" Margin="5">
@@ -188,14 +173,14 @@
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,4">
                                         <PathIcon Grid.Column="0" Data="{StaticResource FolderIcon}" Width="16" Height="16" Foreground="{DynamicResource AccentColor}" Margin="0,0,12,0" VerticalAlignment="Center" IsVisible="{Binding IsFolder}"/>
                                         <PathIcon Grid.Column="0" Data="{StaticResource FileIcon}" Width="16" Height="16" Foreground="{DynamicResource AppForegroundSecondary}" Margin="0,0,12,0" VerticalAlignment="Center" IsVisible="{Binding IsFile}"/>
-                                        
+
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="{DynamicResource AppForeground}" TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding DisplayCount}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0" IsVisible="{Binding DisplayCount, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                         </StackPanel>
-                                        
+
                                         <TextBlock Grid.Column="2" Text="{Binding DisplaySize}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="15,0" VerticalAlignment="Center"/>
-                                        
+
                                         <Button Grid.Column="3" Classes="Danger" Click="RemovePayload_Click" CommandParameter="{Binding Id}" Padding="6" CornerRadius="4" VerticalAlignment="Center" ToolTip.Tip="Remove">
                                             <PathIcon Data="{StaticResource DeleteIcon}" Width="14" Height="14" Foreground="{DynamicResource DangerColor}"/>
                                         </Button>
@@ -203,8 +188,7 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        
-                        <!-- Empty State for Files -->
+
                         <StackPanel IsVisible="{Binding !HasSelectedFiles}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
                             <PathIcon Data="{StaticResource FileIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
                             <TextBlock Text="No files selected" FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -212,8 +196,7 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                
-                <!-- Transfer Summary -->
+
                 <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,15,0,0">
                     <TextBlock Grid.Column="0" Text="{Binding SelectionSummaryText}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="13" VerticalAlignment="Center"/>
                     <Button Grid.Column="1" Content="Send to Device" x:Name="ExecuteSendButton" Click="ExecuteSendButton_Click" Classes="Primary" FontSize="14" Padding="24,10" IsEnabled="{Binding CanSend}">

@@ -20,7 +20,6 @@ public class TransferService : IDisposable
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<TransferResult>? TransferFinished;
 
-    // Delegate to ask the UI for permission
     public Func<TransferRequestMessage, CancellationToken, Task<(bool accept, string savePath, CancellationToken cancelToken)>>? OnIncomingTransfer { get; set; }
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "transfer.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
@@ -79,7 +78,6 @@ public class TransferService : IDisposable
         sender.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
         sender.ProgressUpdated += (_, e) => ProgressUpdated?.Invoke(this, e);
 
-        // Run send in background task so UI doesn't block
         await Task.Run(async () =>
         {
             TransferResult result;

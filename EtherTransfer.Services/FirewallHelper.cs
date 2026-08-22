@@ -6,16 +6,10 @@ using EtherTransfer.Core.Models;
 
 namespace EtherTransfer.Services;
 
-/// <summary>
-/// Provides Windows Defender Firewall configuration helpers for EtherTransfer.
-/// </summary>
 public static class FirewallHelper
 {
     private const string RuleName = "EtherTransfer";
 
-    /// <summary>
-    /// Checks whether the current process is running with Administrator privileges on Windows.
-    /// </summary>
     public static bool IsAdministrator()
     {
         if (!OperatingSystem.IsWindows())
@@ -33,9 +27,6 @@ public static class FirewallHelper
         }
     }
 
-    /// <summary>
-    /// Checks if a firewall rule already exists for the specified executable path.
-    /// </summary>
     private static bool IsRuleConfiguredForPath(string exePath)
     {
         try
@@ -59,24 +50,18 @@ public static class FirewallHelper
 
             if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
             {
-                // Check if the current exePath is already present in the registered rules
+
                 return output.Contains(exePath, StringComparison.OrdinalIgnoreCase);
             }
         }
         catch
         {
-            // On any inspection error, fall back to false so add rule can proceed
+
         }
 
         return false;
     }
 
-    /// <summary>
-    /// Ensures that an inbound Windows Defender Firewall rule exists for the current executable path across private and public profiles.
-    /// Only runs when running on Windows with Administrator privileges (such as the Portable edition).
-    /// If an active rule for this path already exists, redundant additions are skipped.
-    /// </summary>
-    /// <param name="logger">Optional structured logger callback.</param>
     public static void EnsureFirewallRule(Action<string, LogLevel>? logger = null)
     {
         if (!OperatingSystem.IsWindows())
@@ -84,7 +69,7 @@ public static class FirewallHelper
 
         if (!IsAdministrator())
         {
-            // Regular installed builds run as standard user (asInvoker) where firewall was set during installation
+
             return;
         }
 
@@ -97,7 +82,6 @@ public static class FirewallHelper
                 return;
             }
 
-            // Check if rule already exists for this exact path
             if (IsRuleConfiguredForPath(exePath))
             {
                 logger?.Invoke($"Windows Firewall rule is already active for: {exePath}", LogLevel.Info);

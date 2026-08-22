@@ -6,7 +6,7 @@ namespace EtherTransfer.UI;
 public partial class ScanDialog : Window
 {
     public ObservableCollection<ScanProgressViewModel> ScanTasks { get; }
-    
+
     public System.Threading.CancellationTokenSource ScanCts { get; }
 
     public ScanDialog()
@@ -23,7 +23,7 @@ public partial class ScanDialog : Window
         ScanCts = cts;
         DataContext = this;
     }
-    
+
     private void Cancel_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         ScanCts.Cancel();

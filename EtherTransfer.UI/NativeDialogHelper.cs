@@ -14,9 +14,6 @@ public static class NativeDialogHelper
     private const uint MB_ICONWARNING = 0x00000030;
     private const int IDYES = 6;
 
-    /// <summary>
-    /// Shows a native OS confirmation dialog (Yes/No). Returns true if Yes is clicked.
-    /// </summary>
     public static async Task<bool> ShowConfirmCancelDialogAsync(string message, string title)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -31,7 +28,7 @@ public static class NativeDialogHelper
         {
             return await Task.Run(() =>
             {
-                // Try zenity first (GNOME/Ubuntu)
+
                 try
                 {
                     using var process = Process.Start(new ProcessStartInfo
@@ -46,7 +43,7 @@ public static class NativeDialogHelper
                 }
                 catch
                 {
-                    // Fallback to kdialog (KDE/Kubuntu)
+
                     try
                     {
                         using var process = Process.Start(new ProcessStartInfo
@@ -57,11 +54,11 @@ public static class NativeDialogHelper
                             CreateNoWindow = true
                         });
                         process?.WaitForExit();
-                        return process?.ExitCode == 0; // kdialog returns 0 for yes, 1 for no
+                        return process?.ExitCode == 0;
                     }
                     catch
                     {
-                        // If all fails, just return true so they can cancel
+
                         return true;
                     }
                 }
@@ -93,6 +90,6 @@ public static class NativeDialogHelper
             });
         }
 
-        return true; // Default fallback for unknown OS
+        return true;
     }
 }

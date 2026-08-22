@@ -16,7 +16,7 @@ public static class LinuxNetworkInterfaceDetector
         }
 
         string sysfsPath = $"/sys/class/net/{ni.Name}";
-        
+
         try
         {
             if (env.DirectoryExists(sysfsPath))
@@ -42,7 +42,7 @@ public static class LinuxNetworkInterfaceDetector
                     isPhysical = !isVirtual;
                 }
 
-                if (env.DirectoryExists($"{sysfsPath}/wireless") || 
+                if (env.DirectoryExists($"{sysfsPath}/wireless") ||
                     env.DirectoryExists($"{sysfsPath}/phy80211") ||
                     ni.Name.StartsWith("wl", StringComparison.OrdinalIgnoreCase) ||
                     ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||

@@ -35,7 +35,5 @@ namespace EtherTransfer.Tests
             Assert.That(_deviceService.GetActiveDevices().Count(), Is.EqualTo(0));
         }
 
-        // We can't easily mock the DiscoveryService internally without refactoring DeviceService to take it in constructor.
-        // For now, we rely on the fact that we can interact with DeviceService indirectly.
     }
 }

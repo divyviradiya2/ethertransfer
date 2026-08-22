@@ -30,8 +30,8 @@ public static class CrossPlatformNetworkDetector
             }
             else
             {
-                // Fallback for macOS or unknown
-                isVirtual = false; // Assume physical by default
+
+                isVirtual = false;
                 isPhysical = ni.NetworkInterfaceType != NetworkInterfaceType.Loopback;
                 isWifi = ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
             }
@@ -56,7 +56,7 @@ public static class CrossPlatformNetworkDetector
             }
             catch
             {
-                // Ignore if we can't get IPs
+
             }
 
             yield return new NetworkInterfaceInfo(

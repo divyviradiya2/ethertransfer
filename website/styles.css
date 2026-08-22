@@ -1,17 +1,17 @@
 :root {
-    /* Soft, modern colors */
+
     --bg-base: #f1f5f9;
     --bg-panel: #ffffff;
     --text-main: #0f172a;
     --text-muted: #475569;
     --border-color: #cbd5e1;
     --accent: #2563eb;
-    
+
     --font-sans: 'Inter', system-ui, sans-serif;
-    
+
     --radius-md: 12px;
     --radius-lg: 24px;
-    
+
     --nav-height: 62px;
 }
 
@@ -40,7 +40,6 @@ body {
     padding-top: var(--nav-height);
 }
 
-/* Typography */
 h1 {
     font-size: clamp(2.5rem, 3.5vw, 3.5rem);
     font-weight: 700;
@@ -68,14 +67,12 @@ p {
     font-size: 1.05rem;
 }
 
-/* Layout */
 .site-wrapper {
     max-width: 1300px;
     margin: 0 auto;
     padding: 2rem 4vw;
 }
 
-/* Header */
 .top-nav {
     position: fixed;
     top: 0;
@@ -144,7 +141,7 @@ p {
 
 html {
     scroll-behavior: smooth;
-    font-size: 90%; /* Reduces global scale by 10% */
+    font-size: 90%;
     scroll-padding-top: calc(var(--nav-height) + 15px);
 }
 
@@ -185,7 +182,6 @@ html {
     color: var(--text-main);
 }
 
-/* Mobile Navigation Button (Hidden on Desktop) */
 .mobile-menu-btn {
     display: none;
     flex-direction: column;
@@ -218,7 +214,6 @@ html {
     transform-origin: center;
 }
 
-/* Active hamburger animation (turns into X) */
 .mobile-menu-btn[aria-expanded="true"] .hamburger-bar:nth-child(1) {
     transform: translateY(6px) rotate(45deg);
 }
@@ -232,7 +227,6 @@ html {
     transform: translateY(-6px) rotate(-45deg);
 }
 
-/* Mobile Navigation Drawer (Hidden on Desktop) */
 .mobile-nav-drawer {
     display: none;
     position: fixed;
@@ -332,7 +326,6 @@ html {
     text-decoration: none;
 }
 
-/* Hero Section */
 .hero-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -400,7 +393,6 @@ html {
     color: var(--text-muted);
 }
 
-/* Diagram Visual */
 .hero-visual {
     width: 100%;
 }
@@ -415,8 +407,8 @@ html {
     align-items: center;
     justify-content: center;
     gap: 2rem;
-    /* Force GPU acceleration for smooth rendering */
-    transform: translateZ(0); 
+
+    transform: translateZ(0);
 }
 
 .concept-pc {
@@ -488,7 +480,7 @@ html {
     width: 60%;
     height: 100%;
     background-color: var(--accent);
-    /* 60 fps smooth loading using transform */
+
     animation: loadBar 2s infinite ease-in-out;
     transform-origin: left;
     will-change: transform;
@@ -564,7 +556,7 @@ html {
     margin-top: -12px;
     width: 24px;
     height: 24px;
-    background-color: var(--bg-panel); 
+    background-color: var(--bg-panel);
     color: var(--accent);
     display: flex;
     align-items: center;
@@ -572,8 +564,7 @@ html {
     border-radius: 4px;
     z-index: 2;
     box-shadow: -4px 0 0 4px var(--bg-panel), 4px 0 0 4px var(--bg-panel);
-    
-    /* 60 FPS Hardware Accelerated Animation */
+
     transform: translate3d(-50px, 0, 0);
     animation: shootPacket 2s infinite linear;
     will-change: transform;
@@ -685,7 +676,6 @@ html {
     100% { left: calc(100% - 20px); opacity: 0; transform: translateY(-50%) scale(0.5); }
 }
 
-/* Features List */
 .features-section {
     padding: 6rem 0;
 }
@@ -735,7 +725,6 @@ html {
     max-width: 700px;
 }
 
-/* Usage Grid Visuals */
 .usage-section {
     padding: 6rem 0;
     border-top: 1px solid var(--border-color);
@@ -817,7 +806,6 @@ html {
     stroke: var(--text-muted);
 }
 
-/* UI Mockups */
 .ui-mockup {
     background-color: var(--bg-base);
     border: 1px solid var(--border-color);
@@ -940,7 +928,6 @@ html {
     padding: 2px 4px;
 }
 
-/* Dialog Body */
 .dialog-body {
     flex-direction: column;
     align-items: center;
@@ -1008,7 +995,6 @@ html {
 }
 .mt-2 { margin-top: 8px; }
 
-/* Downloads Section */
 .downloads-section {
     padding: 6rem 0;
     border-top: 1px solid var(--border-color);
@@ -1116,7 +1102,6 @@ html {
 .copy-btn:hover { background-color: #d1d5db; }
 [data-theme="dark"] .copy-btn:hover { background-color: #333333; }
 
-/* Section Headers */
 .section-header {
     text-align: center;
     margin-bottom: 3.5rem;
@@ -1131,7 +1116,6 @@ html {
     margin: 0 auto;
 }
 
-/* Comparison Section */
 .comparison-section {
     padding: 6rem 0;
     border-top: 1px solid var(--border-color);
@@ -1210,7 +1194,6 @@ html {
     white-space: nowrap;
 }
 
-/* FAQ Section */
 .faq-section {
     padding: 6rem 0;
     border-top: 1px solid var(--border-color);
@@ -1360,7 +1343,6 @@ html {
     border: 1px solid var(--border-color);
 }
 
-/* Footer */
 .footer {
     padding: 4rem 0 2rem;
     border-top: 1px solid var(--border-color);
@@ -1410,11 +1392,6 @@ html {
     color: var(--text-main);
 }
 
-/* ==========================================================================
-   Responsive Design System (Mobile & Tablet)
-   ========================================================================== */
-
-/* Keyframe for Vertical Data Flow on Mobile */
 @keyframes shootPacketVertical {
     0% {
         transform: translate3d(0, -25px, 0);
@@ -1432,13 +1409,11 @@ html {
     }
 }
 
-/* Base Content Safeguards */
 .site-wrapper {
     overflow-x: clip;
     width: 100%;
 }
 
-/* Medium Tablets & Small Laptops (<= 1024px) */
 @media (max-width: 1024px) {
     .site-wrapper {
         padding: 1.5rem 4vw;
@@ -1450,11 +1425,11 @@ html {
         gap: 3rem;
         padding: 3rem 0 6rem;
     }
-    
+
     .hero-subtitle {
         margin: 0 auto 2.5rem;
     }
-    
+
     .action-row {
         justify-content: center;
     }
@@ -1465,9 +1440,8 @@ html {
     }
 }
 
-/* Tablet Portrait & Large Mobile (<= 900px) */
 @media (max-width: 900px) {
-    .visual-step, 
+    .visual-step,
     .visual-step.reverse {
         grid-template-columns: 1fr;
         direction: ltr;
@@ -1480,9 +1454,8 @@ html {
     }
 }
 
-/* Standard Mobile & Small Tablets (<= 768px) */
 @media (max-width: 768px) {
-    /* Navigation Bar */
+
     .top-nav {
         position: fixed;
         top: 0;
@@ -1525,7 +1498,6 @@ html {
         display: block;
     }
 
-    /* Hero Section */
     .hero-section {
         padding: 2rem 0 4.5rem;
         gap: 2.5rem;
@@ -1543,7 +1515,6 @@ html {
         max-width: 100%;
     }
 
-    /* Hero Concept Diagram (Clean Vertical Flow) */
     .concept-diagram {
         flex-direction: column;
         padding: 2.25rem 1.5rem;
@@ -1634,7 +1605,6 @@ html {
         box-shadow: 0 -3px 0 3px var(--bg-panel), 0 3px 0 3px var(--bg-panel);
     }
 
-    /* Features Section */
     .features-section {
         padding: 4.5rem 0;
     }
@@ -1664,7 +1634,6 @@ html {
         max-width: 100%;
     }
 
-    /* Visual Guide Section */
     .usage-section {
         padding: 4.5rem 0;
     }
@@ -1679,7 +1648,7 @@ html {
         margin-top: 2rem;
     }
 
-    .visual-step, 
+    .visual-step,
     .visual-step.reverse {
         grid-template-columns: 1fr;
         direction: ltr;
@@ -1720,7 +1689,6 @@ html {
         white-space: nowrap;
     }
 
-    /* Downloads Section */
     .downloads-section {
         padding: 4.5rem 0;
     }
@@ -1754,7 +1722,6 @@ html {
         gap: 0.85rem;
     }
 
-    /* Comparison Section */
     .comparison-section,
     .faq-section {
         padding: 4.5rem 0;
@@ -1784,7 +1751,6 @@ html {
         font-size: 0.92rem;
     }
 
-    /* Footer */
     .footer {
         padding: 3.5rem 0 2rem;
     }
@@ -1802,7 +1768,6 @@ html {
     }
 }
 
-/* Compact Mobile (<= 520px) */
 @media (max-width: 520px) {
     .site-wrapper {
         padding: 1.25rem 4vw;
@@ -1852,7 +1817,6 @@ html {
         padding: 0.25rem 0.75rem;
     }
 
-    /* Step Mockups Scaling */
     .visual-box {
         padding: 1.25rem 0.75rem;
     }
@@ -1885,7 +1849,7 @@ html {
         padding: 6px;
     }
 
-    .ui-sidebar-title, 
+    .ui-sidebar-title,
     .ui-main-title {
         font-size: 0.6rem;
     }
@@ -1918,7 +1882,6 @@ html {
         padding: 2px;
     }
 
-    /* Dialog mockups */
     .ui-mockup.dialog {
         width: 100%;
         max-width: 260px;
@@ -1937,7 +1900,6 @@ html {
         font-size: 0.65rem;
     }
 
-    /* Download Cards on Mobile */
     .download-card {
         padding: 1.5rem 1.25rem;
     }
@@ -1948,7 +1910,7 @@ html {
         gap: 0.75rem;
     }
 
-    .dl-btn, 
+    .dl-btn,
     .dl-btn-alt {
         width: 100%;
         justify-content: center;
@@ -1975,7 +1937,6 @@ html {
         font-size: 0.85rem;
     }
 
-    /* Modals on Mobile */
     .privacy-modal {
         width: 94%;
         max-height: 88vh;
@@ -2003,14 +1964,12 @@ html {
         font-size: 0.9rem;
     }
 
-    /* Footer on Small Mobile */
     .footer-links {
         grid-template-columns: 1fr;
         gap: 0.9rem;
     }
 }
 
-/* Extra Small Devices (<= 360px) */
 @media (max-width: 360px) {
     .site-wrapper {
         padding: 1rem 3vw;

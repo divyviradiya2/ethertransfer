@@ -100,24 +100,24 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public string TransferItemCountText { get => _transferItemCountText; set { _transferItemCountText = value; OnPropertyChanged(); } }
 
     private long _transferTotalBytes;
-    public long TransferTotalBytes 
-    { 
-        get => _transferTotalBytes; 
-        set 
-        { 
-            _transferTotalBytes = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(TransferProgressText)); 
-            OnPropertyChanged(nameof(TransferPercentageText)); 
-            OnPropertyChanged(nameof(TransferFinalSizeText)); 
-        } 
+    public long TransferTotalBytes
+    {
+        get => _transferTotalBytes;
+        set
+        {
+            _transferTotalBytes = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TransferProgressText));
+            OnPropertyChanged(nameof(TransferPercentageText));
+            OnPropertyChanged(nameof(TransferFinalSizeText));
+        }
     }
 
     private string _transferFinalSizeText = "";
-    public string TransferFinalSizeText 
-    { 
-        get => string.IsNullOrEmpty(_transferFinalSizeText) ? EtherTransfer.Core.FormatHelper.FormatSize(_transferTotalBytes) : _transferFinalSizeText; 
-        set { _transferFinalSizeText = value; OnPropertyChanged(); } 
+    public string TransferFinalSizeText
+    {
+        get => string.IsNullOrEmpty(_transferFinalSizeText) ? EtherTransfer.Core.FormatHelper.FormatSize(_transferTotalBytes) : _transferFinalSizeText;
+        set { _transferFinalSizeText = value; OnPropertyChanged(); }
     }
 
     private string _completedElementsList = "";
@@ -166,16 +166,16 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     }
 
     private long _transferSentBytes;
-    public long TransferSentBytes 
-    { 
-        get => _transferSentBytes; 
-        set 
-        { 
-            _transferSentBytes = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(TransferProgressText)); 
-            OnPropertyChanged(nameof(TransferPercentageText)); 
-        } 
+    public long TransferSentBytes
+    {
+        get => _transferSentBytes;
+        set
+        {
+            _transferSentBytes = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(TransferProgressText));
+            OnPropertyChanged(nameof(TransferPercentageText));
+        }
     }
 
     public string TransferPercentageText
@@ -214,7 +214,6 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         DataContext = this;
     }
 
-    // Factory method for Sender Mode
     public static TransferDialog CreateSender(string targetName, CancellationTokenSource cts)
     {
         var dialog = new TransferDialog
@@ -226,7 +225,6 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         return dialog;
     }
 
-    // Factory method for Receiver Mode
     public static TransferDialog CreateReceiver(string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
     {
         var dialog = new TransferDialog
@@ -258,8 +256,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         {
             _isCancelled = true;
             CancelTransfer();
-            // Do not ForceClose immediately. OnTransferFinished will show Partial Success
-            // if any items finished, or close cleanly if 0 items finished.
+
         }
     }
 
@@ -306,13 +303,13 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             {
                 Directory.CreateDirectory(dir);
             }
-            
+
             var driveInfo = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir)) ?? dir);
             if (driveInfo.AvailableFreeSpace < TransferTotalBytes)
             {
                 var neededStr = EtherTransfer.Core.FormatHelper.FormatSize(TransferTotalBytes);
                 var freeStr = EtherTransfer.Core.FormatHelper.FormatSize(driveInfo.AvailableFreeSpace);
-                
+
                 var errorDialog = new ErrorDialog($"Not enough free space on the selected disk.\n\nRequired: {neededStr}\nAvailable: {freeStr}");
                 await errorDialog.ShowDialog(this);
                 return;
@@ -320,12 +317,10 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            // Fallback if drive check fails (e.g. permission issues or unknown path format)
+
             System.Diagnostics.Debug.WriteLine($"Drive check failed: {ex.Message}");
         }
 
-        // Don't close! Just return the path so the transfer starts.
-        // We will switch to progress mode automatically when the first ProgressUpdated event fires.
         _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
     }
 
@@ -409,25 +404,23 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             return;
         }
 
-        // Only prompt for confirmation if files are actively streaming
         if (IsProgressMode)
         {
-            e.Cancel = true; // Prevent immediate close while confirming
-            
+            e.Cancel = true;
+
             bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync(
-                "Are you sure you want to cancel the transfer?", 
+                "Are you sure you want to cancel the transfer?",
                 "Cancel Transfer");
-                
+
             if (confirm)
             {
                 _isCancelled = true;
                 CancelTransfer();
-                // Let OnTransferFinished handle whether to display Partial Success or close
+
             }
             return;
         }
 
-        // In Sender mode (waiting for accept) or Receiver mode (incoming prompt), close immediately
         _isCancelled = true;
         _isForceClosing = true;
         CancelTransfer();
@@ -438,8 +431,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     protected override void OnClosed(EventArgs e)
     {
         _isCancelled = true;
-        _receiverCancelCts?.Cancel(); // Cancel any ongoing transfer
-        // Ensure TCS is completed if window is closed via any route
+        _receiverCancelCts?.Cancel();
+
         _receiverTcs?.TrySetResult((false, "", default));
         base.OnClosed(e);
     }

@@ -17,13 +17,11 @@ public class PayloadItem
     public string Path { get; set; } = string.Empty;
     public PayloadItemType Type { get; set; }
 
-    // Deep scanned items for actual transmission
     public List<FileSelectionItem> DeepScannedFiles { get; set; } = new();
 
     public long TotalSize => DeepScannedFiles.Sum(f => f.Size);
     public int FileCount => DeepScannedFiles.Count;
 
-    // UI Helpers
     public bool IsFolder => Type == PayloadItemType.Folder;
     public bool IsFile => Type == PayloadItemType.File;
     public string DisplaySize => FormatHelper.FormatSize(TotalSize);

@@ -8,13 +8,13 @@
         Background="{DynamicResource SurfaceBackground}"
         Foreground="{DynamicResource AppForeground}"
         WindowStartupLocation="CenterOwner">
-    
+
     <Grid RowDefinitions="Auto,*" Margin="20">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
             <TextBlock Grid.Column="0" Text="Developer Logs" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center"/>
             <Button Grid.Column="1" Content="Copy Logs" Click="CopyLog_Click" Classes="Secondary" Padding="14,6" FontSize="12"/>
         </Grid>
-        
+
         <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="10">
             <ListBox x:Name="DebugLogList" Background="Transparent" ItemsSource="{Binding DebugMessages}" FontSize="12" FontFamily="Consolas, monospace">
                 <ListBox.ItemTemplate>

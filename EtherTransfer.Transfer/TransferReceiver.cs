@@ -33,14 +33,12 @@ public class TransferReceiver
                 client.ReceiveBufferSize = 1024 * 1024;
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
-                // 1. Wait for Request
                 var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, appCt, 2000);
                 if (request == null)
                     throw new Exception("Did not receive TransferRequest.");
 
                 Log($"Incoming: {request.SenderName} — {request.TotalFiles} files, {request.TotalSize / 1024 / 1024} MB");
 
-                // 2. Ask UI
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
@@ -49,7 +47,6 @@ public class TransferReceiver
                 using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(appCt, cancelToken);
                 var transferCt = linkedCt.Token;
 
-                // 3. Send Response
                 var response = new TransferResponseMessage
                 {
                     Accepted = accepted,
@@ -67,7 +64,6 @@ public class TransferReceiver
                 Directory.CreateDirectory(savePath);
                 Log($"Transfer accepted. Saving to: {savePath}");
 
-                // 4. Receive Files
                 long totalReceived = 0;
                 int filesReceived = 0;
                 int filesSkipped = 0;
@@ -120,13 +116,12 @@ public class TransferReceiver
                         if (baseMsg.Type != "FILE_BEGIN")
                             continue;
 
-                        // FILE_BEGIN — read metadata
                         var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt, 2000);
                         if (fileMeta == null)
                         {
                             throw new IOException("Connection lost while reading file metadata.");
                         }
-                    
+
                         if (fileMeta.RootName != currentRootName)
                         {
                             if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
@@ -137,7 +132,6 @@ public class TransferReceiver
                             currentElementIndex++;
                         }
 
-                        // === PATH SECURITY ===
                         var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
                         if (safePath == null)
                         {
@@ -147,7 +141,6 @@ public class TransferReceiver
                             continue;
                         }
 
-                        // === COLLISION RESOLUTION ===
                         safePath = PathSanitizer.ResolveCollision(safePath);
 
                         var dirPath = Path.GetDirectoryName(safePath);
@@ -218,7 +211,7 @@ public class TransferReceiver
                             fs = null;
 
                             filesReceived++;
-                            
+
                             var rootKey = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName;
                             if (!filesByRootElement.ContainsKey(rootKey))
                             {
@@ -226,7 +219,6 @@ public class TransferReceiver
                             }
                             filesByRootElement[rootKey].Add(safePath);
 
-                            // For individual file items in multi-item transfers, mark completed immediately
                             if (totalElements > 1 && (fileMeta.RelativePath == fileMeta.RootName || string.IsNullOrEmpty(fileMeta.RootName)))
                             {
                                 if (!result.CompletedElementNames.Contains(rootKey))
@@ -239,14 +231,12 @@ public class TransferReceiver
                         {
                             Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
 
-                            // 1. MUST dispose and release OS handle first!
                             if (fs != null)
                             {
                                 try { await fs.DisposeAsync(); } catch { }
                                 fs = null;
                             }
 
-                            // 2. Delete the partial/corrupt file from disk
                             try
                             {
                                 if (File.Exists(safePath))
@@ -260,7 +250,6 @@ public class TransferReceiver
                                 Log($"Failed to delete partial file: {delEx.Message}", LogLevel.Warning);
                             }
 
-                            // Always rethrow so session is marked failed and rolled back
                             throw;
                         }
                         finally
@@ -282,7 +271,7 @@ public class TransferReceiver
                     {
                         result.CompletedElementNames.Add(currentRootName);
                     }
-                
+
                     result.Success = true;
                     watch.Stop();
                     var summary = $"Transfer complete! Received {totalReceived / 1024 / 1024} MB ({filesReceived} files) in {watch.Elapsed.TotalSeconds:F1}s.";
@@ -291,14 +280,13 @@ public class TransferReceiver
                 catch (Exception ex)
                 {
                     result.Success = false;
-                    result.ErrorMessage = ex is OperationCanceledException 
-                        ? "Transfer cancelled." 
+                    result.ErrorMessage = ex is OperationCanceledException
+                        ? "Transfer cancelled."
                         : (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException ? "Connection lost (sender aborted or network disconnected)." : ex.Message);
 
-                    // Roll back files based on single-item vs multi-item transfer rules
                     if (totalElements <= 1)
                     {
-                        // Single-item session was aborted -> roll back all files created in this session
+
                         foreach (var kvp in filesByRootElement)
                         {
                             foreach (var file in kvp.Value)
@@ -317,7 +305,7 @@ public class TransferReceiver
                     }
                     else
                     {
-                        // Multi-item transfer -> roll back only incomplete elements
+
                         foreach (var kvp in filesByRootElement)
                         {
                             if (!result.CompletedElementNames.Contains(kvp.Key))
@@ -362,8 +350,8 @@ public class TransferReceiver
         catch (Exception ex)
         {
             result.Success = false;
-            result.ErrorMessage = ex is System.IO.IOException || ex is System.Net.Sockets.SocketException 
-                ? "Connection lost (Ethernet cable disconnected or sender aborted)." 
+            result.ErrorMessage = ex is System.IO.IOException || ex is System.Net.Sockets.SocketException
+                ? "Connection lost (Ethernet cable disconnected or sender aborted)."
                 : ex.Message;
             try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
         }
@@ -374,14 +362,14 @@ public class TransferReceiver
     private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)
     {
         long drained = 0;
-        
+
         while (drained < count)
         {
             int toRead = (int)Math.Min(buffer.Length, count - drained);
-            
+
             if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct, 5000))
                 throw new IOException("Connection lost while draining skipped file data.");
-            
+
             drained += toRead;
         }
     }

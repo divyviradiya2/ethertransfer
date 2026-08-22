@@ -20,8 +20,7 @@ public class DeviceService : IDisposable
     private readonly ConcurrentDictionary<string, long> _offlineSessions = new();
     private readonly ConcurrentDictionary<string, long> _highestSequenceBySession = new();
     private CancellationTokenSource? _cts;
-    
-    // Track last refresh attempt per interface to prevent spamming discovery restarts
+
     private readonly Dictionary<string, DateTime> _lastRefreshAttempt = new();
     private HashSet<string> _lastKnownIps = new();
     private string _computerName = string.Empty;
@@ -61,11 +60,9 @@ public class DeviceService : IDisposable
         NetworkChange.NetworkAddressChanged += OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAddressChanged;
 
-        // Start cleanup task for stale devices
         _ = Task.Run(() => CleanupLoopAsync(_cts.Token));
         _lastKnownIps = GetCurrentLocalIps();
-        
-        // Initial diagnostic log
+
         var diags = NetworkHelper.DiagnoseInterfaces();
         foreach (var diag in diags)
         {
@@ -88,11 +85,11 @@ public class DeviceService : IDisposable
 
                 bool vpnStateChanged = false;
                 bool oldVpnState = HasActiveVpn;
-                
+
                 var currentIps = GetCurrentLocalIps();
                 bool ipSetChanged = !_lastKnownIps.SetEquals(currentIps);
                 _lastKnownIps = currentIps;
-                
+
                 if (oldVpnState != HasActiveVpn)
                 {
                     vpnStateChanged = true;
@@ -100,11 +97,10 @@ public class DeviceService : IDisposable
 
                 if (!ipSetChanged && !vpnStateChanged)
                 {
-                    // Ignore spurious OS routing changes if our IPv4 addresses and VPN state haven't changed
+
                     return;
                 }
 
-                // Log diagnostics
                 var diags = NetworkHelper.DiagnoseInterfaces();
                 foreach (var diag in diags)
                 {
@@ -113,7 +109,6 @@ public class DeviceService : IDisposable
 
                 NetworkChanged?.Invoke(this, EventArgs.Empty);
 
-                // Restart discovery to bind UDP sockets to new interfaces (without sending false BYE packets)
                 _discoveryService.Stop(sendBye: false);
                 await _discoveryService.StartAsync(_computerName, _tcpPort, isRebind: true);
             }
@@ -137,8 +132,7 @@ public class DeviceService : IDisposable
 
     public IEnumerable<DiscoveredDevice> GetActiveDevices()
     {
-        // Group by Name to deduplicate devices broadcasting from multiple network interfaces 
-        // (e.g. connected to multiple Ethernet networks simultaneously). Pick the most recently seen IP address.
+
         return _devices.Values
             .GroupBy(d => d.Name)
             .Select(g => g.OrderByDescending(d => d.LastSeen).First())
@@ -151,10 +145,10 @@ public class DeviceService : IDisposable
     {
         var ips = new HashSet<string>();
         var interfaces = CrossPlatformNetworkDetector.GetInterfaces().ToList();
-        
-        bool vpnActive = interfaces.Any(n => 
-            n.IsVirtual && 
-            n.OperationalStatus == OperationalStatus.Up && 
+
+        bool vpnActive = interfaces.Any(n =>
+            n.IsVirtual &&
+            n.OperationalStatus == OperationalStatus.Up &&
             (n.Description.Contains("cisco", StringComparison.OrdinalIgnoreCase) ||
              n.Description.Contains("anyconnect", StringComparison.OrdinalIgnoreCase) ||
              n.Description.Contains("globalprotect", StringComparison.OrdinalIgnoreCase) ||
@@ -171,7 +165,7 @@ public class DeviceService : IDisposable
         {
             Log("A Corporate VPN is currently active. If you cannot see other devices, your IT administrator may be blocking local network discovery.", LogLevel.Warning, "network.vpn_warning");
         }
-        
+
         HasActiveVpn = vpnActive;
 
         foreach (var ni in interfaces.Where(n => n.IsEthernet && n.IsPhysical))
@@ -188,20 +182,18 @@ public class DeviceService : IDisposable
     {
         var sourceIp = e.SourceAddress.ToString();
 
-        // 1. Use cached IPs to avoid re-querying OS on every packet
         if (_lastKnownIps.Contains(sourceIp))
         {
             return;
         }
 
-        // 2. STRICT ETHERNET ONLY: Drop any packet arriving from a non-Ethernet or Wi-Fi route
         if (!NetworkHelper.IsIpInActiveSubnets(sourceIp))
         {
             return;
         }
-        
+
         var sessionId = e.Message.SessionId;
-        if (string.IsNullOrEmpty(sessionId)) 
+        if (string.IsNullOrEmpty(sessionId))
         {
             sessionId = sourceIp;
         }
@@ -210,7 +202,7 @@ public class DeviceService : IDisposable
 
         if (e.Message.Type == "BYE")
         {
-            // Mark this session offline at this sequence number
+
             _offlineSessions.AddOrUpdate(sessionId, msgSeq, (_, old) => Math.Max(old, msgSeq));
 
             bool removedAny = false;
@@ -242,23 +234,20 @@ public class DeviceService : IDisposable
             return;
         }
 
-        // For HELLO packets:
-        // 1. If this session was previously marked offline, ignore stale in-flight HELLO packets
         if (_offlineSessions.TryGetValue(sessionId, out var byeSeq))
         {
             if (msgSeq > 0 && msgSeq <= byeSeq)
             {
-                // Stale out-of-order HELLO packet dispatched before BYE. Discard!
+
                 return;
             }
             else if (msgSeq > byeSeq)
             {
-                // Legitimate new session from same peer with higher sequence -> re-admit
+
                 _offlineSessions.TryRemove(sessionId, out _);
             }
         }
 
-        // 2. Reject out-of-order older HELLO packets for an active device
         if (msgSeq > 0)
         {
             var lastSeq = _highestSequenceBySession.GetOrAdd(sessionId, 0);
@@ -272,7 +261,7 @@ public class DeviceService : IDisposable
         var isNew = false;
         var updated = false;
         var devicePort = e.Message.TcpPort > 0 ? e.Message.TcpPort : 55000;
-        
+
         _devices.AddOrUpdate(sessionId,
             _ =>
             {
@@ -327,7 +316,6 @@ public class DeviceService : IDisposable
                 var staleThreshold = NetworkConfig.Default.PeerStaleThreshold;
                 var removedAny = false;
 
-                // 1. Detect dynamic IP changes / interface swaps that OS events might have missed
                 var currentIps = GetCurrentLocalIps();
                 if (!_lastKnownIps.SetEquals(currentIps))
                 {
@@ -340,9 +328,8 @@ public class DeviceService : IDisposable
                     NetworkChanged?.Invoke(this, EventArgs.Empty);
                 }
 
-                // 2. Remove peers that are stale OR no longer in our active Ethernet subnets
-                var keysToRemove = _devices.Where(kvp => 
-                    now - kvp.Value.LastSeen > staleThreshold || 
+                var keysToRemove = _devices.Where(kvp =>
+                    now - kvp.Value.LastSeen > staleThreshold ||
                     !NetworkHelper.IsIpInActiveSubnets(kvp.Value.Address)).Select(kvp => kvp.Key).ToList();
                 foreach (var key in keysToRemove)
                 {

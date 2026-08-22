@@ -37,14 +37,13 @@ public class TransferSender
                 var localBytes = iface.LocalAddress.GetAddressBytes();
                 if (targetBytes.Length == 4 && localBytes.Length == 4)
                 {
-                    // Match link-local 169.254.x.x
+
                     if (targetBytes[0] == 169 && targetBytes[1] == 254 &&
                         localBytes[0] == 169 && localBytes[1] == 254)
                     {
                         return new TcpClient(new System.Net.IPEndPoint(iface.LocalAddress, 0));
                     }
 
-                    // Match same /24 subnet
                     if (targetBytes[0] == localBytes[0] && targetBytes[1] == localBytes[1] && targetBytes[2] == localBytes[2])
                     {
                         return new TcpClient(new System.Net.IPEndPoint(iface.LocalAddress, 0));
@@ -119,8 +118,8 @@ public class TransferSender
     public async Task<TransferResult> TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
     {
         var rootElements = session.Files.Select(f => f.RootName).Distinct().ToList();
-        var result = new TransferResult 
-        { 
+        var result = new TransferResult
+        {
             TotalElements = session.PayloadFolderCount + session.PayloadFileCount,
             AllElementNames = rootElements
         };
@@ -168,10 +167,8 @@ public class TransferSender
             RootElementNames = rootElements
         };
 
-        // 1. Send Request
         await ProtocolHelper.SendMessageAsync(stream, request, ct, 2000);
 
-        // 2. Wait for Response
         Log("Waiting for receiver to accept...");
         var response = await ProtocolHelper.ReceiveMessageAsync<TransferResponseMessage>(stream, ct);
 
@@ -186,12 +183,11 @@ public class TransferSender
 
         Log($"Transfer accepted! Streaming {session.TotalFiles} files...");
 
-        // 3. Stream Files
         long totalSent = 0;
         int filesSent = 0;
         int filesSkipped = 0;
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024); // 1 MB read buffer
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024);
 
         int totalElements = session.PayloadFolderCount + session.PayloadFileCount;
         int currentElementIndex = 0;
@@ -217,7 +213,6 @@ public class TransferSender
 
                 ct.ThrowIfCancellationRequested();
 
-            // Attempt to open the file — handle locks, deletions, permission issues gracefully
             FileStream? fs;
             try
             {
@@ -282,7 +277,7 @@ public class TransferSender
 
                 while ((read = await fs.ReadAsync(buffer, ct)) > 0)
                 {
-                    watchdogCts.CancelAfter(5000); // 5 seconds to write 1MB before considering connection dead
+                    watchdogCts.CancelAfter(5000);
                     try
                     {
                         await stream.WriteAsync(buffer, 0, read, watchdogCts.Token);
@@ -327,7 +322,6 @@ public class TransferSender
             }
         }
 
-            // 4. End of Transfer
             var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
             await ProtocolHelper.SendMessageAsync(stream, endMsg, ct, 2000);
 
@@ -337,10 +331,10 @@ public class TransferSender
         {
             result.Success = false;
             result.ErrorMessage = ex is OperationCanceledException ? "Transfer cancelled." : ex.Message;
-            try 
-            { 
+            try
+            {
                 client.LingerState = new LingerOption(true, 0);
-                client.Close(); 
+                client.Close();
             } catch { }
         }
         finally
@@ -353,7 +347,7 @@ public class TransferSender
         if (filesSkipped > 0)
             summary += $" ({filesSkipped} skipped)";
         Log(summary);
-        
+
         result.FailedElementNames = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(result.AllElementNames, name => !result.CompletedElementNames.Contains(name)));
         return result;
     }

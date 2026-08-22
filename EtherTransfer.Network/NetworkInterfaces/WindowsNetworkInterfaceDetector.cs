@@ -28,7 +28,7 @@ public static class WindowsNetworkInterfaceDetector
         {
             string keyPath = $@"SYSTEM\CurrentControlSet\Control\Network\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\{ni.Id}\Connection";
             var pnpInstanceId = env.GetRegistryValue(keyPath, "PnpInstanceID");
-            
+
             if (!string.IsNullOrEmpty(pnpInstanceId))
             {
                 if (pnpInstanceId.StartsWith(@"BTH\", StringComparison.OrdinalIgnoreCase) ||
@@ -52,16 +52,14 @@ public static class WindowsNetworkInterfaceDetector
         }
         catch
         {
-            // Ignore registry access errors
+
         }
 
-        // Fallback heuristics if registry check failed or didn't match
         if (!isPhysical && !isVirtual)
         {
             var desc = ni.Description.ToLowerInvariant();
             var name = ni.Name.ToLowerInvariant();
 
-            // Enterprise VPNs, tunnels, virtual adapters, container networks, Bluetooth, and packet filters
             if (desc.Contains("bluetooth") || desc.Contains("bth") ||
                 name.Contains("bluetooth") || name.Contains("bth") ||
                 desc.Contains("virtual") || desc.Contains("pseudo") || desc.Contains("vpn") ||
@@ -88,7 +86,7 @@ public static class WindowsNetworkInterfaceDetector
             }
             else
             {
-                // Optimistic fallback
+
                 isPhysical = true;
                 isVirtual = false;
             }

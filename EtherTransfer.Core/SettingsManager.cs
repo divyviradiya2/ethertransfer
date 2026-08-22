@@ -15,9 +15,6 @@ public static class SettingsManager
     private static AppSettings? _cachedSettings;
     private static string? _customSettingsDirectory;
 
-    /// <summary>
-    /// Gets the active directory path where configuration settings are stored (%AppData%\EtherTransfer).
-    /// </summary>
     public static string SettingsFolder
     {
         get
@@ -29,9 +26,6 @@ public static class SettingsManager
         }
     }
 
-    /// <summary>
-    /// Gets the full file path to the active settings.json file.
-    /// </summary>
     public static string SettingsFile => Path.Combine(SettingsFolder, "settings.json");
 
     public static AppSettings Load()
@@ -79,14 +73,11 @@ public static class SettingsManager
             }
             catch
             {
-                // Fail silently if we can't save settings, we'll just use defaults
+
             }
         }
     }
 
-    /// <summary>
-    /// Overrides the settings directory for automated testing purposes.
-    /// </summary>
     public static void SetCustomSettingsDirectory(string? directory)
     {
         lock (_lock)
@@ -96,9 +87,6 @@ public static class SettingsManager
         }
     }
 
-    /// <summary>
-    /// Resets cached state for unit testing.
-    /// </summary>
     public static void ResetForTesting()
     {
         lock (_lock)

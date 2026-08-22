@@ -26,10 +26,9 @@ public class EthernetLinkMonitor : IDisposable
 
     private readonly object _lock = new();
     private EthernetLinkState _currentState = EthernetLinkState.NoCable;
-    
-    // Track configured interfaces to teardown later
+
     private readonly HashSet<string> _modifiedInterfaces = new();
-    
+
     private CancellationTokenSource? _monitorCts;
     private CancellationTokenSource? _configAttemptCts;
     private DateTime? _configStartTime;
@@ -63,8 +62,7 @@ public class EthernetLinkMonitor : IDisposable
         NetworkChange.NetworkAvailabilityChanged += OnNetworkChanged;
 
         _ = Task.Run(() => PollLoopAsync(_monitorCts.Token));
-        
-        // Initial evaluation
+
         EvaluateState();
     }
 
@@ -79,7 +77,7 @@ public class EthernetLinkMonitor : IDisposable
         {
             if (_currentState == EthernetLinkState.ConfigError)
             {
-                // Force it back to configuring
+
                 TransitionTo(EthernetLinkState.Configuring);
             }
         }
@@ -95,7 +93,7 @@ public class EthernetLinkMonitor : IDisposable
 
             if (upInterfaces.Count == 0)
             {
-                // Instant transition to NoCable on unplug
+
                 TransitionTo(EthernetLinkState.NoCable);
                 return;
             }
@@ -108,21 +106,21 @@ public class EthernetLinkMonitor : IDisposable
             }
             else
             {
-                // Has UP interfaces, but no IPv4. 
+
                 if (_currentState == EthernetLinkState.NoCable || _currentState == EthernetLinkState.Ready)
                 {
                     TransitionTo(EthernetLinkState.Configuring);
                 }
                 else if (_currentState == EthernetLinkState.Configuring)
                 {
-                    // Check for timeout
+
                     if (_configStartTime.HasValue && (DateTime.UtcNow - _configStartTime.Value) > _configTimeout)
                     {
                         LastErrorMessage = "Configuration timed out. Check NetworkManager logs or try manually.";
                         TransitionTo(EthernetLinkState.ConfigError);
                     }
                 }
-                // If ConfigError, we don't auto-retry just because it's still Up with no IP. User must hit Retry, or it must go Down -> Up.
+
             }
         }
     }
@@ -136,11 +134,6 @@ public class EthernetLinkMonitor : IDisposable
         {
             if (_currentState == newState) return;
 
-            // Debouncing: We only debounce going out of Configuring to NoCable? 
-            // "A short debounce (150–300ms) applies only to smoothing a brief renegotiation blip during Configuring."
-            // "It must NOT delay the NoCable transition."
-            // Wait, if we get an event saying Down, and we are Configuring, do we transition to NoCable instantly? Yes!
-            
             _currentState = newState;
             changed = true;
 
@@ -179,7 +172,7 @@ public class EthernetLinkMonitor : IDisposable
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            // Windows/Mac handle link-local natively quite well, just wait.
+
             return;
         }
 
@@ -192,7 +185,6 @@ public class EthernetLinkMonitor : IDisposable
             interfacesToConfig.AddRange(interfaces.Select(i => i.Name));
         }
 
-        // Apply a short debounce here before actually triggering nmcli, in case NM is just resetting the interface
         try
         {
             await Task.Delay(_debounceInterval, ct);
@@ -244,14 +236,12 @@ public class EthernetLinkMonitor : IDisposable
             try
             {
                 Console.WriteLine($"[EtherTransfer] Tearing down link-local config for {ifaceName}...");
-                
-                // Delete dedicated connection profile if created
+
                 string conName = $"EtherTransfer-{ifaceName}";
                 RunCommand("nmcli", $"connection delete \"{conName}\"");
 
-                // Reapply original connection profile to the device
                 RunCommand("nmcli", $"device reapply {ifaceName}");
-                
+
                 Console.WriteLine($"[EtherTransfer] Teardown complete for {ifaceName}.");
             }
             catch (Exception ex)
@@ -273,14 +263,12 @@ public class EthernetLinkMonitor : IDisposable
                 return false;
             }
 
-            // Strategy 1: Try direct in-memory device modification (fastest if device is already active)
             var devModResult = RunCommand("nmcli", $"device modify {ifaceName} ipv4.method link-local");
             if (devModResult.exitCode == 0)
             {
                 return true;
             }
 
-            // Strategy 2: If device is not activated, try connecting the device first and retry
             var connectResult = RunCommand("nmcli", $"device connect {ifaceName}");
             if (connectResult.exitCode == 0)
             {
@@ -291,18 +279,14 @@ public class EthernetLinkMonitor : IDisposable
                 }
             }
 
-            // Strategy 3: Create / activate a dedicated EtherTransfer link-local profile
-            // This is the most reliable approach on Linux when NetworkManager has no active profile on the unmanaged/disconnected port.
             string conName = $"EtherTransfer-{ifaceName}";
-            
-            // Check if connection already exists, if so bring it up
+
             var conUpResult = RunCommand("nmcli", $"connection up \"{conName}\"");
             if (conUpResult.exitCode == 0)
             {
                 return true;
             }
 
-            // Add the link-local connection profile
             var addResult = RunCommand("nmcli", $"connection add type ethernet ifname {ifaceName} con-name \"{conName}\" ipv4.method link-local autoconnect no");
             if (addResult.exitCode == 0)
             {
@@ -347,7 +331,7 @@ public class EthernetLinkMonitor : IDisposable
 
             var output = process.StandardOutput.ReadToEnd();
             var error = process.StandardError.ReadToEnd();
-            
+
             bool exited = process.WaitForExit(5000);
             if (!exited)
             {
@@ -384,7 +368,7 @@ public class EthernetLinkMonitor : IDisposable
         _monitorCts?.Dispose();
         _configAttemptCts?.Cancel();
         _configAttemptCts?.Dispose();
-        
+
         TeardownConfiguration();
     }
 }
