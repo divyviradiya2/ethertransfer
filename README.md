@@ -354,51 +354,23 @@ EtherTransfer requires open local communication on two ports:
 
 ---
 
-## 21. Architecture
+## 21. Contributing & Developer Guide
 
-```text
-EtherTransfer Solution Structure
-├── EtherTransfer.Core          # Shared data models, protocol schemas, and SettingsManager
-├── EtherTransfer.Network       # UDP discovery service, TCP server, interface detection & link state monitor
-├── EtherTransfer.Transfer      # TCP streaming protocol, file scanning, ArrayPool buffers & PathSanitizer
-├── EtherTransfer.Services      # DeviceService, TransferService orchestration, and FirewallHelper
-├── EtherTransfer.UI            # Avalonia UI XAML views, view models, and asset converters
-└── EtherTransfer.Tests         # NUnit test suites for link monitoring, path security, and framing
-```
+Contributions, bug reports, and optimizations are welcome!
 
----
+For detailed developer setup, complete architecture breakdown, building from source, running tests, and publishing releases, please refer to the **[Contributing Guide](CONTRIBUTING.md)**.
 
-## 22. Development
-
-### Prerequisites
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- Visual Studio 2026, JetBrains Rider, or VS Code with C# Dev Kit.
-
-### Building & Running Locally
 ```bash
-# Clone the repository
+# Quick start for developers
 git clone https://github.com/divyviradiya2/ethertransfer.git
 cd ethertransfer
-
-# Run all unit and integration tests
 dotnet test
-
-# Launch the desktop UI in debug mode
 dotnet run --project EtherTransfer.UI
 ```
 
-### Publishing Standalone Releases
-```bash
-# Self-contained Windows x64 single-file executable
-dotnet publish EtherTransfer.UI -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-
-# Self-contained Linux x64 single-file executable
-dotnet publish EtherTransfer.UI -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
-```
-
 ---
 
-## 23. Roadmap
+## 22. Roadmap
 
 - [ ] **On-The-Wire SHA-256 Checksum Verification**: Integrate `FileChecksumMessage` into the active receive loop to verify file integrity cryptographically.
 - [ ] **Multi-Stream TCP Transmission**: Implement concurrent TCP streams for 10GbE / multi-gigabit connections to maximize utilization on high-bandwidth links.
@@ -408,7 +380,7 @@ dotnet publish EtherTransfer.UI -c Release -r linux-x64 --self-contained true -p
 
 ---
 
-## 24. License & Open-Source Philosophy
+## 23. License & Open-Source Philosophy
 
 EtherTransfer is free and open-source software provided under the **[MIT License](LICENSE)**.
 
@@ -416,3 +388,4 @@ EtherTransfer is free and open-source software provided under the **[MIT License
 > EtherTransfer was built to solve a concrete real-world problem with maximum simplicity: moving large files directly across an Ethernet cable without network administration overhead. 
 > 
 > Under the MIT License, you have the full freedom to use it, inspect it, modify it, or completely ignore it if your existing tools (SMB, LocalSend, Syncthing, Netcat) already satisfy your needs. EtherTransfer exists for anyone who values a zero-fuss, plug-and-transfer application that just works out of the box.
+
