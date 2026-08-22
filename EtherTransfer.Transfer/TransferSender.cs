@@ -25,6 +25,38 @@ public class TransferSender
 
     private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "sender.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
+    private static TcpClient CreateBoundClient(System.Net.IPAddress targetAddress)
+    {
+        try
+        {
+            var targetBytes = targetAddress.GetAddressBytes();
+            var interfaces = EtherTransfer.Network.NetworkInterfaces.NetworkHelper.GetEthernetInterfaces();
+
+            foreach (var iface in interfaces)
+            {
+                var localBytes = iface.LocalAddress.GetAddressBytes();
+                if (targetBytes.Length == 4 && localBytes.Length == 4)
+                {
+                    // Match link-local 169.254.x.x
+                    if (targetBytes[0] == 169 && targetBytes[1] == 254 &&
+                        localBytes[0] == 169 && localBytes[1] == 254)
+                    {
+                        return new TcpClient(new System.Net.IPEndPoint(iface.LocalAddress, 0));
+                    }
+
+                    // Match same /24 subnet
+                    if (targetBytes[0] == localBytes[0] && targetBytes[1] == localBytes[1] && targetBytes[2] == localBytes[2])
+                    {
+                        return new TcpClient(new System.Net.IPEndPoint(iface.LocalAddress, 0));
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return new TcpClient();
+    }
+
     public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         return Task.Run(() =>
@@ -94,14 +126,15 @@ public class TransferSender
         }
 
         Log($"Connecting to {targetIp}:{targetPort}...");
-        using var client = new TcpClient();
+        var parsedTargetIp = System.Net.IPAddress.Parse(targetIp);
+        using var client = CreateBoundClient(parsedTargetIp);
 
         using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         connectCts.CancelAfter(5000);
 
         try
         {
-            await client.ConnectAsync(targetIp, targetPort, connectCts.Token);
+            await client.ConnectAsync(parsedTargetIp, targetPort, connectCts.Token);
         }
         catch (OperationCanceledException)
         {
