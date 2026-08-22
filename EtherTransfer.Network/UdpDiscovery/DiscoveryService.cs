@@ -305,10 +305,29 @@ public class DiscoveryService : IDisposable
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(msg));
 
-            using var sender = new UdpClient();
-            sender.EnableBroadcast = true;
-            await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
-            await sender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+            var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+            if (ethInterfaces.Count > 0)
+            {
+                foreach (var netIf in ethInterfaces)
+                {
+                    try
+                    {
+                        using var sender = new UdpClient(netIf.LocalAddress.AddressFamily);
+                        sender.EnableBroadcast = true;
+                        sender.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                        await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+                        await sender.SendAsync(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                using var sender = new UdpClient();
+                sender.EnableBroadcast = true;
+                await sender.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+                await sender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+            }
         }
         catch { }
     }
@@ -328,9 +347,27 @@ public class DiscoveryService : IDisposable
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(reply));
 
-            using var responder = new UdpClient();
-            responder.EnableBroadcast = true;
-            await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+            var ethInterfaces = NetworkHelper.GetEthernetInterfaces().ToList();
+            if (ethInterfaces.Count > 0)
+            {
+                foreach (var netIf in ethInterfaces)
+                {
+                    try
+                    {
+                        using var responder = new UdpClient(netIf.LocalAddress.AddressFamily);
+                        responder.EnableBroadcast = true;
+                        responder.Client.Bind(new IPEndPoint(netIf.LocalAddress, 0));
+                        await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                using var responder = new UdpClient();
+                responder.EnableBroadcast = true;
+                await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+            }
         }
         catch { }
     }

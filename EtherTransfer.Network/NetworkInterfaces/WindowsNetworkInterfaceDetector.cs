@@ -48,10 +48,24 @@ public static class WindowsNetworkInterfaceDetector
             var desc = ni.Description.ToLowerInvariant();
             var name = ni.Name.ToLowerInvariant();
 
+            // Enterprise VPNs, tunnels, virtual adapters, container networks, and packet filters
             if (desc.Contains("virtual") || desc.Contains("pseudo") || desc.Contains("vpn") ||
-                desc.Contains("tailscale") || desc.Contains("wireguard") || desc.Contains("tap-") ||
-                desc.Contains("hyper-v") || desc.Contains("wan miniport") ||
-                desc.Contains("wfp ") || desc.Contains("qos ") || desc.Contains("filter") ||
+                desc.Contains("tunnel") || desc.Contains("tap") || desc.Contains("tun") || desc.Contains("wintun") ||
+                desc.Contains("tailscale") || desc.Contains("wireguard") || desc.Contains("zerotier") ||
+                desc.Contains("openvpn") || desc.Contains("nord") || desc.Contains("expressvpn") ||
+                desc.Contains("cisco") || desc.Contains("anyconnect") || desc.Contains("secure client") ||
+                desc.Contains("fortinet") || desc.Contains("forticlient") || desc.Contains("fortissl") ||
+                desc.Contains("globalprotect") || desc.Contains("palo alto") || desc.Contains("panos") ||
+                desc.Contains("checkpoint") || desc.Contains("pulse secure") || desc.Contains("ivanti") ||
+                desc.Contains("softether") || desc.Contains("cloudflare") || desc.Contains("warp") ||
+                desc.Contains("hamachi") || desc.Contains("radmin") || desc.Contains("ztna") ||
+                desc.Contains("hyper-v") || desc.Contains("vethernet") || desc.Contains("vmware") ||
+                desc.Contains("virtualbox") || desc.Contains("vbox") || desc.Contains("wsl") ||
+                desc.Contains("docker") || desc.Contains("container") || desc.Contains("multipass") ||
+                desc.Contains("wan miniport") || desc.Contains("wfp ") || desc.Contains("qos ") || desc.Contains("filter") ||
+                name.Contains("virtual") || name.Contains("vpn") || name.Contains("tailscale") || name.Contains("wireguard") ||
+                name.Contains("zerotier") || name.Contains("openvpn") || name.Contains("cisco") || name.Contains("anyconnect") ||
+                name.Contains("forticlient") || name.Contains("globalprotect") || name.Contains("wsl") || name.Contains("docker") ||
                 name.Contains("wfp ") || name.Contains("qos ") || name.Contains("filter"))
             {
                 isVirtual = true;
