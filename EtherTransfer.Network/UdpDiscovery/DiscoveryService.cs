@@ -34,6 +34,7 @@ public class DiscoveryService : IDisposable
     private CancellationTokenSource? _cts;
     private UdpClient? _globalListener;
     private string _computerName = string.Empty;
+    private int _tcpPort;
     private readonly string _sessionId = Guid.NewGuid().ToString();
     private readonly NetworkConfig _config = NetworkConfig.Default;
 
@@ -49,9 +50,10 @@ public class DiscoveryService : IDisposable
 
     public async Task StartAsync(string computerName, int tcpPort, bool isRebind = false)
     {
-        Stop();
+        Stop(sendBye: false);
 
         _computerName = computerName;
+        _tcpPort = tcpPort;
         _cts = new CancellationTokenSource();
 
         // Global listener on 0.0.0.0:<DiscoveryPort> to receive ALL broadcast packets
@@ -85,9 +87,9 @@ public class DiscoveryService : IDisposable
         Log($"Discovery name updated to '{newName}'");
     }
 
-    public void Stop()
+    public void Stop(bool sendBye = false)
     {
-        if (_cts != null && !_cts.IsCancellationRequested)
+        if (sendBye && _cts != null && !_cts.IsCancellationRequested)
         {
             SendBye();
         }
@@ -139,9 +141,17 @@ public class DiscoveryService : IDisposable
                     var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                     sender.Send(payload, payload.Length, target);
                 }
-                catch { }
+                catch
+                {
+                    try
+                    {
+                        using var fallbackSender = new UdpClient();
+                        fallbackSender.EnableBroadcast = true;
+                        fallbackSender.Send(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
+                    }
+                    catch { }
+                }
             }
-
         }
         catch { }
     }
@@ -150,6 +160,7 @@ public class DiscoveryService : IDisposable
     {
         try
         {
+            int loopCount = 0;
             while (!ct.IsCancellationRequested)
             {
                 // Get all Ethernet interface broadcast addresses
@@ -167,7 +178,7 @@ public class DiscoveryService : IDisposable
                 };
                 var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
 
-                // Strategy 1: Send to each Ethernet interface's subnet broadcast
+                // Send to each Ethernet interface's subnet broadcast
                 foreach (var netIf in ethInterfaces)
                 {
                     try
@@ -181,13 +192,49 @@ public class DiscoveryService : IDisposable
                         var target = new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort);
                         await sender.SendAsync(payload, payload.Length, target);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        Log($"Send failed on {netIf.LocalAddress}: {ex.Message}", LogLevel.Warning, "discovery.send.failed");
+                        // Fallback if local address is in tentative/DAD transition on Windows
+                        try
+                        {
+                            using var fallbackSender = new UdpClient();
+                            fallbackSender.EnableBroadcast = true;
+                            await fallbackSender.SendAsync(payload, payload.Length, new IPEndPoint(netIf.BroadcastAddress, _config.DiscoveryPort));
+                            await fallbackSender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+                        }
+                        catch (Exception fallbackEx)
+                        {
+                            Log($"Send failed on {netIf.LocalAddress}: {fallbackEx.Message}", LogLevel.Warning, "discovery.send.failed");
+                        }
                     }
                 }
 
-                await Task.Delay(_config.BroadcastIntervalMs, ct);
+                // If no specific Ethernet interfaces resolved yet, attempt global broadcast
+                if (ethInterfaces.Count == 0)
+                {
+                    try
+                    {
+                        using var globalSender = new UdpClient();
+                        globalSender.EnableBroadcast = true;
+                        await globalSender.SendAsync(payload, payload.Length, new IPEndPoint(IPAddress.Broadcast, _config.DiscoveryPort));
+                    }
+                    catch { }
+                }
+
+                loopCount++;
+
+                // Fast discovery burst on startup/rebind: 250ms, 500ms, 1000ms, then normal interval
+                int delayMs;
+                if (loopCount <= 2)
+                    delayMs = 250;
+                else if (loopCount <= 4)
+                    delayMs = 500;
+                else if (loopCount <= 6)
+                    delayMs = 1000;
+                else
+                    delayMs = _config.BroadcastIntervalMs;
+
+                await Task.Delay(delayMs, ct);
             }
         }
         catch (OperationCanceledException) { }
@@ -210,16 +257,16 @@ public class DiscoveryService : IDisposable
                     {
                         if (message.SessionId != _sessionId)
                         {
-                            // Enterprise Rule: Strictly verify the packet originated from a known Ethernet subnet.
-                            // This drops any discovery packets that leaked in via Wi-Fi adapters.
                             var sourceIpStr = result.RemoteEndPoint.Address.ToString();
                             if (NetworkHelper.IsIpInActiveSubnets(sourceIpStr))
                             {
                                 PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
-                            }
-                            else
-                            {
-                                // Log($"Dropped packet from {sourceIpStr}: Not on an active Ethernet subnet", LogLevel.Debug, "discovery.listen.filtered");
+
+                                // Immediate directed HELLO reply for instant discovery handshake
+                                if (message.Type == "HELLO")
+                                {
+                                    _ = SendDirectHelloAsync(result.RemoteEndPoint.Address);
+                                }
                             }
                         }
                     }
@@ -235,15 +282,35 @@ public class DiscoveryService : IDisposable
         catch (ObjectDisposedException) { }
     }
 
+    private async Task SendDirectHelloAsync(IPAddress targetAddress)
+    {
+        try
+        {
+            var reply = new DiscoveryMessage
+            {
+                Type = "HELLO",
+                ComputerName = _computerName,
+                TcpPort = _tcpPort,
+                Id = AppId,
+                SessionId = _sessionId,
+                OS = GetCurrentOS()
+            };
+            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(reply));
+
+            using var responder = new UdpClient();
+            responder.EnableBroadcast = true;
+            await responder.SendAsync(payload, payload.Length, new IPEndPoint(targetAddress, _config.DiscoveryPort));
+        }
+        catch { }
+    }
+
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
         {
-            Stop();
+            Stop(sendBye: true);
             _cts?.Dispose();
             _globalListener?.Dispose();
-
-
         }
     }
 

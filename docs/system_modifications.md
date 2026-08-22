@@ -36,16 +36,16 @@ The universal Linux installation script requires `sudo` (root) privileges and pe
   - Creates a symbolic link at `/usr/local/bin/ethertransfer` allowing the app to be launched directly from any terminal.
 
 - **Dynamic Firewall Configuration**:
-  The script detects the active firewall manager and opens **Port 8840 (TCP/UDP)**, which is required for peer discovery and default transfer binding.
-  - If **UFW** (Ubuntu/Debian) is detected: Runs `ufw allow 8840/tcp` and `udp`.
-  - If **Firewalld** (Fedora/RHEL/CentOS) is detected: Runs `firewall-cmd --permanent --add-port=8840`.
+  The script detects the active firewall manager and opens **Port 50000 (UDP Discovery)** and **Port 55000 (TCP File Transfer)**, which are required for peer discovery and high-speed direct transfers.
+  - If **UFW** (Ubuntu/Debian) is detected: Runs `ufw allow 50000/udp` and `ufw allow 55000/tcp`.
+  - If **Firewalld** (Fedora/RHEL/CentOS) is detected: Runs `firewall-cmd --permanent --add-port=50000/udp` and `--add-port=55000/tcp`.
   - If **iptables** is detected: Appends ACCEPT rules directly to the INPUT chain.
 
 - **Dependency Injection (NetworkManager)**:
   EtherTransfer relies on `nmcli` for low-level network interface monitoring. The script checks for it, and if missing, it detects the system's package manager (`apt`, `dnf`, `pacman`, `zypper`, or `yum`) to automatically download and install the `network-manager` package. It then uses `systemctl` to enable and start the service.
 
 ### Runtime Behavior
-- **Socket Binding**: Binds to `0.0.0.0` or specific interface IPs on port 8840 for UDP broadcasts.
+- **Socket Binding**: Binds to `0.0.0.0:50000` for UDP peer discovery broadcasts and `0.0.0.0:55000` for incoming TCP transfer streams.
 - **Path Sanitization**: When saving received files, EtherTransfer heavily sanitizes paths to prevent malicious directory traversal attacks against Linux filesystems (e.g., stripping `../` attempts to prevent overwriting `/etc/` or `/usr/` files).
 
 ---

@@ -373,7 +373,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OnDebugLog(this, new StructuredLogMessage("transfer.ip_resolved", $"Resolved fresh IP {targetIp} for {liveDevice.Name} before sending.", LogLevel.Info));
         }
 
-        var targetPort = 55000;
+        var targetPort = liveDevice.Port > 0 ? liveDevice.Port : 55000;
 
         var session = new TransferSession();
         foreach (var payload in SelectedPayloads)

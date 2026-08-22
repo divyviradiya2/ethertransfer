@@ -717,7 +717,7 @@
                 <p>EtherTransfer operates 100% offline. However, the installer modifies specific system settings to allow seamless computer-to-computer transfers.</p>
                 
                 <h4>Network & Firewall</h4>
-                <p>The installer automatically whitelists EtherTransfer in the Windows Defender Firewall. On Linux, it detects and modifies UFW, Firewalld, or iptables to open Port 8840 (TCP/UDP) for peer discovery.</p>
+                <p>The installer automatically whitelists EtherTransfer in the Windows Defender Firewall. On Linux, it detects and modifies UFW, Firewalld, or iptables to open Port 50000 (UDP Discovery) and Port 55000 (TCP Transfer) for direct peer transfers.</p>
                 
                 <h4>System Dependencies</h4>
                 <p>On Linux, the script automatically uses your package manager (apt, dnf, pacman, etc.) to install the <code>network-manager</code> package if it is missing, as it is required for monitoring interface connectivity.</p>

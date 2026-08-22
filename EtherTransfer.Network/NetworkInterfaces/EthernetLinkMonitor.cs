@@ -130,7 +130,6 @@ public class EthernetLinkMonitor : IDisposable
     private void TransitionTo(EthernetLinkState newState)
     {
         var changed = false;
-        var needsTeardown = false;
         var needsConfig = false;
 
         lock (_lock)
@@ -150,7 +149,6 @@ public class EthernetLinkMonitor : IDisposable
                 _configAttemptCts?.Cancel();
                 _configAttemptCts = null;
                 _configStartTime = null;
-                needsTeardown = true;
             }
             else if (newState == EthernetLinkState.Configuring)
             {
@@ -168,11 +166,6 @@ public class EthernetLinkMonitor : IDisposable
         if (changed)
         {
             StateChanged?.Invoke(this, newState);
-        }
-
-        if (needsTeardown)
-        {
-            TeardownConfiguration();
         }
 
         if (needsConfig)

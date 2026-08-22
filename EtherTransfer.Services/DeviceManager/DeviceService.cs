@@ -74,8 +74,7 @@ public class DeviceService : IDisposable
         {
             try
             {
-
-                await Task.Delay(1000, token);
+                await Task.Delay(300, token);
                 if (token.IsCancellationRequested) return;
 
                 bool vpnStateChanged = false;
@@ -88,25 +87,6 @@ public class DeviceService : IDisposable
                 if (oldVpnState != HasActiveVpn)
                 {
                     vpnStateChanged = true;
-                }
-
-                // Evict devices that are no longer reachable via active subnets
-                var removedAny = false;
-                foreach (var kvp in _devices)
-                {
-                    if (!NetworkHelper.IsIpInActiveSubnets(kvp.Value.Address))
-                    {
-                        if (_devices.TryRemove(kvp.Key, out var removed))
-                        {
-                            Log($"EVICTED (Network unreachable): {removed.Name} at {removed.Address}", LogLevel.Warning, "device.evicted.unreachable");
-                            removedAny = true;
-                        }
-                    }
-                }
-
-                if (removedAny)
-                {
-                    DevicesChanged?.Invoke(this, EventArgs.Empty);
                 }
 
                 if (!ipSetChanged && !vpnStateChanged)
@@ -124,8 +104,8 @@ public class DeviceService : IDisposable
 
                 NetworkChanged?.Invoke(this, EventArgs.Empty);
 
-                // Restart discovery to bind UDP sockets to new interfaces
-                _discoveryService.Stop();
+                // Restart discovery to bind UDP sockets to new interfaces (without sending false BYE packets)
+                _discoveryService.Stop(sendBye: false);
                 await _discoveryService.StartAsync(_computerName, _tcpPort, isRebind: true);
             }
             catch { }
@@ -141,8 +121,9 @@ public class DeviceService : IDisposable
     public void Stop()
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAddressChanged;
         _cts?.Cancel();
-        _discoveryService.Stop();
+        _discoveryService.Stop(sendBye: true);
     }
 
     public IEnumerable<DiscoveredDevice> GetActiveDevices()
@@ -223,6 +204,7 @@ public class DeviceService : IDisposable
             return;
         }
         var isNew = false;
+        var devicePort = e.Message.TcpPort > 0 ? e.Message.TcpPort : 55000;
         
         _devices.AddOrUpdate(sessionId,
             _ =>
@@ -234,6 +216,7 @@ public class DeviceService : IDisposable
                     SessionId = sessionId,
                     Name = e.Message.ComputerName,
                     Address = sourceIp,
+                    Port = devicePort,
                     OS = e.Message.OS,
                     LastSeen = DateTime.UtcNow
                 };
@@ -241,7 +224,7 @@ public class DeviceService : IDisposable
             (_, existing) =>
             {
                 existing.LastSeen = DateTime.UtcNow;
-                if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS || existing.Address != sourceIp)
+                if (existing.Name != e.Message.ComputerName || existing.OS != e.Message.OS || existing.Address != sourceIp || existing.Port != devicePort)
                 {
                     if (existing.Address != sourceIp)
                     {
@@ -250,6 +233,7 @@ public class DeviceService : IDisposable
                     existing.Name = e.Message.ComputerName;
                     existing.OS = e.Message.OS;
                     existing.Address = sourceIp;
+                    existing.Port = devicePort;
                     updated = true;
                 }
                 return existing;

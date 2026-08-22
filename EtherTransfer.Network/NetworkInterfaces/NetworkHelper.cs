@@ -30,18 +30,31 @@ public static class NetworkHelper
 
         foreach (var ni in interfaces)
         {
-            // We still need the original NetworkInterface to get subnet masks
-            // NetworkInterfaceInfo doesn't store subnet mask, so we re-fetch IP properties.
             var origNi = NetworkInterface.GetAllNetworkInterfaces().FirstOrDefault(n => n.Id == ni.Id);
             if (origNi == null) continue;
 
             var ipProps = origNi.GetIPProperties();
             foreach (var ip in ipProps.UnicastAddresses)
             {
-                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
                 {
                     var ipBytes = ip.Address.GetAddressBytes();
-                    var maskBytes = ip.IPv4Mask.GetAddressBytes();
+                    var mask = ip.IPv4Mask;
+
+                    // If mask is null or 0.0.0.0, fallback to standard link-local or class C defaults
+                    if (mask == null || mask.GetAddressBytes().All(b => b == 0))
+                    {
+                        if (ipBytes[0] == 169 && ipBytes[1] == 254)
+                        {
+                            mask = IPAddress.Parse("255.255.0.0");
+                        }
+                        else
+                        {
+                            mask = IPAddress.Parse("255.255.255.0");
+                        }
+                    }
+
+                    var maskBytes = mask.GetAddressBytes();
 
                     if (maskBytes.Length == 4 && ipBytes.Length == 4)
                     {
@@ -51,10 +64,7 @@ public static class NetworkHelper
                             broadcastBytes[i] = (byte)(ipBytes[i] | ~maskBytes[i]);
                         }
 
-                        if (!maskBytes.All(b => b == 0))
-                        {
-                            yield return new InterfaceAddressInfo(ip.Address, new IPAddress(broadcastBytes));
-                        }
+                        yield return new InterfaceAddressInfo(ip.Address, new IPAddress(broadcastBytes));
                     }
                 }
             }
@@ -117,23 +127,33 @@ public static class NetworkHelper
 
             foreach (var ip in origNi.GetIPProperties().UnicastAddresses)
             {
-                if (ip.Address.AddressFamily == AddressFamily.InterNetwork && ip.IPv4Mask != null)
+                if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    var maskBytes = ip.IPv4Mask.GetAddressBytes();
                     var localBytes = ip.Address.GetAddressBytes();
 
-                    if (maskBytes.Length == 4 && localBytes.Length == 4)
+                    // RFC 3927: 169.254.0.0/16 Link-Local match
+                    if (targetBytes[0] == 169 && targetBytes[1] == 254 &&
+                        localBytes[0] == 169 && localBytes[1] == 254)
                     {
-                        bool matches = true;
-                        for (int i = 0; i < 4; i++)
+                        return true;
+                    }
+
+                    if (ip.IPv4Mask != null)
+                    {
+                        var maskBytes = ip.IPv4Mask.GetAddressBytes();
+                        if (maskBytes.Length == 4 && localBytes.Length == 4 && !maskBytes.All(b => b == 0))
                         {
-                            if ((localBytes[i] & maskBytes[i]) != (targetBytes[i] & maskBytes[i]))
+                            bool matches = true;
+                            for (int i = 0; i < 4; i++)
                             {
-                                matches = false;
-                                break;
+                                if ((localBytes[i] & maskBytes[i]) != (targetBytes[i] & maskBytes[i]))
+                                {
+                                    matches = false;
+                                    break;
+                                }
                             }
+                            if (matches) return true;
                         }
-                        if (matches) return true;
                     }
                 }
             }
