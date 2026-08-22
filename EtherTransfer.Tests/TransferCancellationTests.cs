@@ -453,7 +453,7 @@ public class TransferCancellationTests
         var file2 = Path.Combine(_tempSourceDir, "file2.dat");
 
         byte[] file1Data = new byte[1024]; // 1 KB (finishes quickly)
-        byte[] file2Data = new byte[10 * 1024 * 1024]; // 10 MB (cancelled mid-stream)
+        byte[] file2Data = new byte[30 * 1024 * 1024]; // 30 MB (cancelled mid-stream)
 
         await File.WriteAllBytesAsync(file1, file1Data);
         await File.WriteAllBytesAsync(file2, file2Data);
@@ -484,10 +484,10 @@ public class TransferCancellationTests
             new() { AbsolutePath = file2, RelativePath = "file2.dat", RootName = "file2.dat", Size = file2Data.Length }
         });
 
-        // Sender cancels during file2.dat
+        // Sender cancels immediately when starting file2.dat
         sender.ProgressUpdated += (_, e) =>
         {
-            if (e.BytesSent > file1Data.Length + 1024 * 1024)
+            if (e.BytesSent >= file1Data.Length && e.CurrentElementIndex == 2)
             {
                 senderCts.Cancel();
             }
@@ -504,7 +504,7 @@ public class TransferCancellationTests
 
         Assert.That(receiverResult.Success, Is.False);
         Assert.That(receiverResult.TotalElements, Is.EqualTo(2));
-        Assert.That(receiverResult.CompletedElementsCount, Is.EqualTo(1), "Receiver must have 1 completed element recorded!");
+        Assert.That(receiverResult.CompletedElementsCount, Is.EqualTo(1), $"Receiver completed elements were: [{string.Join(", ", receiverResult.CompletedElementNames)}]");
         Assert.That(receiverResult.CompletedElementNames, Contains.Item("file1.dat"), "Receiver completed elements must contain file1.dat!");
 
         var receivedFile1 = Path.Combine(_tempDestDir, "file1.dat");

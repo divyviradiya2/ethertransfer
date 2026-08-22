@@ -206,22 +206,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 {
                     _activeDialog.IsSuccessMode = true;
                     _activeDialog.IsPartialSuccessMode = false;
+                    _activeDialog.IsFailureMode = false;
                     _activeDialog.SetCompletedElements(result.CompletedElementNames);
                 }
                 else if (result.TotalElements > 1 && result.CompletedElementsCount > 0)
                 {
                     _activeDialog.IsSuccessMode = true;
                     _activeDialog.IsPartialSuccessMode = true;
+                    _activeDialog.IsFailureMode = false;
                     _activeDialog.TransferFinalSizeText = $"Completed {result.CompletedElementsCount} of {result.TotalElements} items";
                     _activeDialog.SetCompletedElements(result.CompletedElementNames);
                 }
                 else
                 {
-                    OnDebugLog(this, new StructuredLogMessage("transfer.stopped", $"Transfer stopped: {result.ErrorMessage}", LogLevel.Info));
-                    
-                    var dialogToClose = _activeDialog;
-                    _activeDialog = null;
-                    dialogToClose.ForceClose();
+                    // 0 items completed (e.g. single item cancelled or aborted before any item finished)
+                    OnDebugLog(this, new StructuredLogMessage("transfer.cancelled", $"Transfer cancelled/failed: {result.ErrorMessage}", LogLevel.Info));
+
+                    bool isConnectionLoss = !string.IsNullOrEmpty(result.ErrorMessage) && 
+                        (result.ErrorMessage.Contains("Connection", StringComparison.OrdinalIgnoreCase) || 
+                         result.ErrorMessage.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                         result.ErrorMessage.Contains("network", StringComparison.OrdinalIgnoreCase));
+
+                    _activeDialog.IsSuccessMode = false;
+                    _activeDialog.IsFailureMode = true;
+                    _activeDialog.FailureTitle = isConnectionLoss ? "Transfer Failed" : "Transfer Cancelled";
+                    _activeDialog.FailureMessage = string.IsNullOrWhiteSpace(result.ErrorMessage) ? "The transfer was cancelled." : result.ErrorMessage;
+                    _activeDialog.FailureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
                 }
             }
         });
@@ -434,15 +444,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 if (_activeDialog.IsReceiverMode)
                 {
                     OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer request.", LogLevel.Info));
-                    var dialogToClose = _activeDialog;
-                    _activeDialog = null;
-                    dialogToClose.ForceClose();
+                    _activeDialog.IsFailureMode = true;
+                    _activeDialog.FailureTitle = "Request Cancelled";
+                    _activeDialog.FailureMessage = $"Sender '{e.Message.ComputerName}' cancelled the transfer request.";
+                    _activeDialog.FailureSubDetail = "No transfer was initiated.";
                 }
                 else if (_activeDialog.IsProgressMode)
                 {
                     OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled active transfer.", LogLevel.Info));
                     _activeDialog.CancelTransfer();
-                    // Do not ForceClose here — let OnTransferFinished display the Partial Success screen
                 }
             }
         });

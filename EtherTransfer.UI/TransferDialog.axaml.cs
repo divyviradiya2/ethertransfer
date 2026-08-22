@@ -15,16 +15,16 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isSenderMode;
     public bool IsSenderMode
     {
-        get => _isSenderMode && !IsProgressMode && !IsSuccessMode;
+        get => _isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
         set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); }
     }
 
-    public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode;
+    public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
 
     private bool _isProgressMode;
     public bool IsProgressMode
     {
-        get => _isProgressMode && !IsSuccessMode;
+        get => _isProgressMode && !IsSuccessMode && !IsFailureMode;
         set
         {
             _isProgressMode = value;
@@ -37,7 +37,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isSuccessMode;
     public bool IsSuccessMode
     {
-        get => _isSuccessMode;
+        get => _isSuccessMode && !IsFailureMode;
         set
         {
             _isSuccessMode = value;
@@ -46,6 +46,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsReceiverMode));
             OnPropertyChanged(nameof(IsProgressMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
+            OnPropertyChanged(nameof(IsFailureMode));
         }
     }
 
@@ -57,6 +58,31 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     }
 
     public bool IsFullSuccessMode => IsSuccessMode && !IsPartialSuccessMode;
+
+    private bool _isFailureMode;
+    public bool IsFailureMode
+    {
+        get => _isFailureMode;
+        set
+        {
+            _isFailureMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSenderMode));
+            OnPropertyChanged(nameof(IsReceiverMode));
+            OnPropertyChanged(nameof(IsProgressMode));
+            OnPropertyChanged(nameof(IsSuccessMode));
+            OnPropertyChanged(nameof(IsFullSuccessMode));
+        }
+    }
+
+    private string _failureTitle = "Transfer Cancelled";
+    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); } }
+
+    private string _failureMessage = "The transfer was cancelled.";
+    public string FailureMessage { get => _failureMessage; set { _failureMessage = value; OnPropertyChanged(); } }
+
+    private string _failureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
+    public string FailureSubDetail { get => _failureSubDetail; set { _failureSubDetail = value; OnPropertyChanged(); } }
 
     private string _transferFileName = "";
     public string TransferFileName { get => _transferFileName; set { _transferFileName = value; OnPropertyChanged(); } }
@@ -308,7 +334,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
-        if (_isForceClosing || IsSuccessMode)
+        if (_isForceClosing || IsSuccessMode || IsFailureMode)
         {
             base.OnClosing(e);
             return;
