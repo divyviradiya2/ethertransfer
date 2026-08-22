@@ -429,12 +429,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
-            if (_activeDialog != null && (_activeDialog.IsReceiverMode || _activeDialog.IsProgressMode))
+            if (_activeDialog != null)
             {
-                OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer.", LogLevel.Info));
-                var dialogToClose = _activeDialog;
-                _activeDialog = null;
-                dialogToClose.ForceClose();
+                if (_activeDialog.IsReceiverMode)
+                {
+                    OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled the transfer request.", LogLevel.Info));
+                    var dialogToClose = _activeDialog;
+                    _activeDialog = null;
+                    dialogToClose.ForceClose();
+                }
+                else if (_activeDialog.IsProgressMode)
+                {
+                    OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled active transfer.", LogLevel.Info));
+                    _activeDialog.CancelTransfer();
+                    // Do not ForceClose here — let OnTransferFinished display the Partial Success screen
+                }
             }
         });
     }

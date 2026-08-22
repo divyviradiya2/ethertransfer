@@ -444,4 +444,73 @@ public class TransferCancellationTests
         Assert.That(File.Exists(receivedF2), Is.False, "Partial f2 must be deleted.");
         Assert.That(File.Exists(receivedF1), Is.False, "Single folder transfer must roll back f1 when sender cancels.");
     }
+
+    [Test]
+    public async Task SenderCancels_DuringMultiFileTransfer_ReceiverPopulatesCompletedElementsAndRollsBackIncomplete()
+    {
+        // Arrange: 2 separate root files
+        var file1 = Path.Combine(_tempSourceDir, "file1.dat");
+        var file2 = Path.Combine(_tempSourceDir, "file2.dat");
+
+        byte[] file1Data = new byte[1024]; // 1 KB (finishes quickly)
+        byte[] file2Data = new byte[10 * 1024 * 1024]; // 10 MB (cancelled mid-stream)
+
+        await File.WriteAllBytesAsync(file1, file1Data);
+        await File.WriteAllBytesAsync(file2, file2Data);
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) =>
+        {
+            return Task.FromResult((true, _tempDestDir, CancellationToken.None));
+        };
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        using var senderCts = new CancellationTokenSource();
+        var session = new TransferSession
+        {
+            PayloadFileCount = 2
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = file1, RelativePath = "file1.dat", RootName = "file1.dat", Size = file1Data.Length },
+            new() { AbsolutePath = file2, RelativePath = "file2.dat", RootName = "file2.dat", Size = file2Data.Length }
+        });
+
+        // Sender cancels during file2.dat
+        sender.ProgressUpdated += (_, e) =>
+        {
+            if (e.BytesSent > file1Data.Length + 1024 * 1024)
+            {
+                senderCts.Cancel();
+            }
+        };
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "TestSender", session, senderCts.Token);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        // Assert
+        Assert.That(senderResult.Success, Is.False);
+        Assert.That(senderResult.CompletedElementsCount, Is.EqualTo(1));
+        Assert.That(senderResult.CompletedElementNames, Contains.Item("file1.dat"));
+
+        Assert.That(receiverResult.Success, Is.False);
+        Assert.That(receiverResult.TotalElements, Is.EqualTo(2));
+        Assert.That(receiverResult.CompletedElementsCount, Is.EqualTo(1), "Receiver must have 1 completed element recorded!");
+        Assert.That(receiverResult.CompletedElementNames, Contains.Item("file1.dat"), "Receiver completed elements must contain file1.dat!");
+
+        var receivedFile1 = Path.Combine(_tempDestDir, "file1.dat");
+        var receivedFile2 = Path.Combine(_tempDestDir, "file2.dat");
+
+        Assert.That(File.Exists(receivedFile1), Is.True, "Completed file1.dat must be preserved on receiver disk!");
+        Assert.That(File.Exists(receivedFile2), Is.False, "Cancelled file2.dat must be deleted from receiver disk!");
+    }
 }
