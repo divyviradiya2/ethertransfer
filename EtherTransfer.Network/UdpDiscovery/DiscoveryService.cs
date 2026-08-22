@@ -264,14 +264,14 @@ public class DiscoveryService : IDisposable
                                 {
                                     TransferCancelReceived?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
                                 }
-                                else if (message.Type == "HELLO" || message.Type == "BYE")
+                                else if (message.Type == "HELLO" || message.Type == "HELLO_ACK" || message.Type == "BYE")
                                 {
                                     PeerDiscovered?.Invoke(this, new PeerDiscoveredEventArgs(message, result.RemoteEndPoint.Address));
 
-                                    // Immediate directed HELLO reply for instant discovery handshake
+                                    // Immediate directed HELLO_ACK reply for broadcast HELLO only (prevents infinite echo loops)
                                     if (message.Type == "HELLO")
                                     {
-                                        _ = SendDirectHelloAsync(result.RemoteEndPoint.Address);
+                                        _ = SendDirectHelloAckAsync(result.RemoteEndPoint.Address);
                                     }
                                 }
                             }
@@ -323,18 +323,20 @@ public class DiscoveryService : IDisposable
         catch { }
     }
 
-    private async Task SendDirectHelloAsync(IPAddress targetAddress)
+    private async Task SendDirectHelloAckAsync(IPAddress targetAddress)
     {
         try
         {
+            var seq = Interlocked.Increment(ref _sequenceNumber);
             var reply = new DiscoveryMessage
             {
-                Type = "HELLO",
+                Type = "HELLO_ACK",
                 ComputerName = _computerName,
                 TcpPort = _tcpPort,
                 Id = AppId,
                 SessionId = _sessionId,
-                OS = GetCurrentOS()
+                OS = GetCurrentOS(),
+                SequenceNumber = seq
             };
             var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(reply));
 

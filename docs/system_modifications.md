@@ -50,7 +50,16 @@ The universal Linux installation script requires `sudo` (root) privileges and pe
 
 ---
 
-## 3. Storage & Artifacts (All Platforms)
+## 3. Configuration & Settings Storage (All Platforms)
 
-- **Temporary Buffers**: During active transfers, EtherTransfer streams directly from disk to network and network to disk. It uses strict 1MB memory buffers per chunk to prevent RAM bloat, meaning system RAM usage remains stable regardless of file size.
+- User preferences (custom device name) are stored in standard user application data paths:
+  - **Windows**: `%AppData%\EtherTransfer\settings.json`
+  - **Linux**: `~/.config/EtherTransfer/settings.json`
+- This applies to both installed and portable versions so your peer identity remains stable even if you move the portable executable across folders or launch from removable drives.
+
+---
+
+## 4. Storage & Artifacts (All Platforms)
+
+- **Temporary Buffers**: During active transfers, EtherTransfer streams directly from disk to network and network to disk. It uses strict 1MB memory buffers per chunk via `ArrayPool<byte>` to prevent RAM bloat, meaning system RAM usage remains stable regardless of file size.
 - **No Telemetry**: EtherTransfer does not install any background tracking services, telemetry agents, or startup analytics hooks. It only runs when explicitly launched by the user.

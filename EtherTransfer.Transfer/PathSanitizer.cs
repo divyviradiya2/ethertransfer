@@ -84,8 +84,8 @@ public static class PathSanitizer
         // Remove control characters (0x00-0x1F)
         segment = new string(segment.Where(c => !char.IsControl(c)).ToArray());
 
-        // Trim leading/trailing dots and spaces (Windows rejects these)
-        segment = segment.Trim('.', ' ');
+        // Trim leading spaces and trailing dots/spaces (Windows rejects trailing dots/spaces, but leading dots for .gitignore are valid)
+        segment = segment.TrimStart(' ').TrimEnd('.', ' ');
 
         if (string.IsNullOrWhiteSpace(segment))
             return string.Empty;

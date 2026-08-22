@@ -152,6 +152,9 @@ public class TransferSender
         }
 
         var stream = client.GetStream();
+        client.NoDelay = true;
+        client.SendBufferSize = 1024 * 1024;
+        client.ReceiveBufferSize = 1024 * 1024;
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
         var request = new TransferRequestMessage

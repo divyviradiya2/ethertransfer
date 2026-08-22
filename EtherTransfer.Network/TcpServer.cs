@@ -88,9 +88,9 @@ public class TcpServer : IDisposable
                         catch (Exception ex)
                         {
                             Log($"Error in client handler for {remoteEp}: {ex.Message}");
-                            client.Dispose();
+                            try { client.Dispose(); } catch { }
                         }
-                    }, ct);
+                    });
                 }
                 else
                 {

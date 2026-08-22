@@ -48,13 +48,21 @@ public class TransferService : IDisposable
 
     private async void HandleIncomingClient(System.Net.Sockets.TcpClient client)
     {
-        var receiver = new TransferReceiver();
-        receiver.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
-        receiver.ProgressUpdated += (_, e) => ProgressUpdated?.Invoke(this, e);
-        receiver.OnIncomingTransfer = OnIncomingTransfer;
+        try
+        {
+            var receiver = new TransferReceiver();
+            receiver.DebugLog += (_, msg) => DebugLog?.Invoke(this, msg);
+            receiver.ProgressUpdated += (_, e) => ProgressUpdated?.Invoke(this, e);
+            receiver.OnIncomingTransfer = OnIncomingTransfer;
 
-        var result = await receiver.HandleClientAsync(client, _cts.Token);
-        TransferFinished?.Invoke(this, result);
+            var result = await receiver.HandleClientAsync(client, _cts.Token);
+            TransferFinished?.Invoke(this, result);
+        }
+        catch (Exception ex)
+        {
+            Log($"Unhandled error in incoming client handler: {ex.Message}", LogLevel.Error);
+            try { client.Dispose(); } catch { }
+        }
     }
 
     public Task<PayloadItem> ScanItemAsync(string path, IProgress<int>? progress = null, CancellationToken ct = default)

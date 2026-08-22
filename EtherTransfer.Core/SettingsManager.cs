@@ -11,49 +11,100 @@ public class AppSettings
 
 public static class SettingsManager
 {
-    private static readonly string SettingsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EtherTransfer");
-    private static readonly string SettingsFile = Path.Combine(SettingsFolder, "settings.json");
+    private static readonly object _lock = new();
     private static AppSettings? _cachedSettings;
+    private static string? _customSettingsDirectory;
+
+    /// <summary>
+    /// Gets the active directory path where configuration settings are stored (%AppData%\EtherTransfer).
+    /// </summary>
+    public static string SettingsFolder
+    {
+        get
+        {
+            if (_customSettingsDirectory != null)
+                return _customSettingsDirectory;
+
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EtherTransfer");
+        }
+    }
+
+    /// <summary>
+    /// Gets the full file path to the active settings.json file.
+    /// </summary>
+    public static string SettingsFile => Path.Combine(SettingsFolder, "settings.json");
 
     public static AppSettings Load()
     {
-        if (_cachedSettings != null)
+        lock (_lock)
+        {
+            if (_cachedSettings != null)
+                return _cachedSettings;
+
+            var filePath = SettingsFile;
+            if (!File.Exists(filePath))
+            {
+                _cachedSettings = new AppSettings();
+                return _cachedSettings;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                _cachedSettings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            catch
+            {
+                _cachedSettings = new AppSettings();
+            }
+
             return _cachedSettings;
-
-        if (!File.Exists(SettingsFile))
-        {
-            _cachedSettings = new AppSettings();
-            return _cachedSettings;
         }
-
-        try
-        {
-            var json = File.ReadAllText(SettingsFile);
-            _cachedSettings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-        }
-        catch
-        {
-            _cachedSettings = new AppSettings();
-        }
-
-        return _cachedSettings;
     }
 
     public static void Save(AppSettings settings)
     {
-        _cachedSettings = settings;
-        try
+        lock (_lock)
         {
-            if (!Directory.Exists(SettingsFolder))
+            _cachedSettings = settings;
+            try
             {
-                Directory.CreateDirectory(SettingsFolder);
+                var folder = SettingsFolder;
+                if (!Directory.Exists(folder))
+                {
+                    Directory.CreateDirectory(folder);
+                }
+                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(SettingsFile, json);
             }
-            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFile, json);
+            catch
+            {
+                // Fail silently if we can't save settings, we'll just use defaults
+            }
         }
-        catch
+    }
+
+    /// <summary>
+    /// Overrides the settings directory for automated testing purposes.
+    /// </summary>
+    public static void SetCustomSettingsDirectory(string? directory)
+    {
+        lock (_lock)
         {
-            // Fail silently if we can't save settings, we'll just use defaults
+            _customSettingsDirectory = directory;
+            _cachedSettings = null;
+        }
+    }
+
+    /// <summary>
+    /// Resets cached state for unit testing.
+    /// </summary>
+    public static void ResetForTesting()
+    {
+        lock (_lock)
+        {
+            _cachedSettings = null;
+            _customSettingsDirectory = null;
         }
     }
 }

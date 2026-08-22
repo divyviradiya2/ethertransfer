@@ -28,6 +28,9 @@ public class TransferReceiver
             using (client)
             {
                 var stream = client.GetStream();
+                client.NoDelay = true;
+                client.SendBufferSize = 1024 * 1024;
+                client.ReceiveBufferSize = 1024 * 1024;
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
                 // 1. Wait for Request

@@ -179,7 +179,7 @@ public class TransferCancellationTests
         var file2Path = Path.Combine(_tempSourceDir, "item2.dat");
 
         byte[] smallData = new byte[1024];
-        byte[] largeData = new byte[10 * 1024 * 1024]; // 10 MB
+        byte[] largeData = new byte[30 * 1024 * 1024]; // 30 MB
         await File.WriteAllBytesAsync(file1Path, smallData);
         await File.WriteAllBytesAsync(file2Path, largeData);
 
