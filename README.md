@@ -8,7 +8,7 @@
 
 Fast, zero-configuration local data movement without routers, cloud servers, or setup.
 
-[![Version](https://img.shields.io/badge/version-0.1.1-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey?style=flat-square)](#downloads)
 
