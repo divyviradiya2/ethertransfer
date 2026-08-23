@@ -1,6 +1,6 @@
 /**
  * EtherTransfer Documentation Engine
- * Handles Category Tab Switching, Hash Routing, Instant Search, Multi-OS Switcher, and Theme Sync
+ * Handles Category Tab Switching, Hash Routing, Instant Search, Multi-OS Switcher, Theme Sync, and Live ScrollSpy
  */
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -11,8 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarLinks = document.querySelectorAll('.sidebar-doc-link');
     const tocList = document.getElementById('tocNavList');
 
-    let currentCategoryId = 'getting-started';
+    let currentCategoryId = null;
     let currentActiveTargetId = null;
+    let isProgrammaticScroll = false;
+    let scrollRafId = null;
 
     // Calculate dynamic header height offset
     function getHeaderOffset() {
@@ -42,11 +44,71 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        isProgrammaticScroll = true;
         window.scrollTo({
             top: clampedTargetY,
             behavior: 'smooth'
         });
+
+        setTimeout(() => {
+            isProgrammaticScroll = false;
+            updateScrollSpy();
+        }, 500);
     }
+
+    // Live ScrollSpy: Updates TOC and sidebar active links as user manually scrolls
+    function updateScrollSpy() {
+        if (isProgrammaticScroll) return;
+
+        const activePane = document.getElementById(`pane-${currentCategoryId}`);
+        if (!activePane) return;
+
+        const headings = Array.from(activePane.querySelectorAll('h2[id], h3[id]'));
+        if (headings.length === 0) return;
+
+        const offset = getHeaderOffset() + 35;
+        const scrollY = window.pageYOffset;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+
+        let activeHeadingId = null;
+
+        // If at the very bottom of the document, activate the last heading
+        if (scrollY + windowHeight >= documentHeight - 50) {
+            activeHeadingId = headings[headings.length - 1].id;
+        } else {
+            for (let i = 0; i < headings.length; i++) {
+                const rect = headings[i].getBoundingClientRect();
+                if (rect.top <= offset) {
+                    activeHeadingId = headings[i].id;
+                } else {
+                    break;
+                }
+            }
+
+            // If user is at the top of the page before first heading, default to first heading
+            if (!activeHeadingId && headings.length > 0) {
+                activeHeadingId = headings[0].id;
+            }
+        }
+
+        if (activeHeadingId && activeHeadingId !== currentActiveTargetId) {
+            currentActiveTargetId = activeHeadingId;
+            highlightActiveTocLink(activeHeadingId);
+            highlightActiveSidebarLink(activeHeadingId);
+        }
+    }
+
+    function onScrollThrottled() {
+        if (scrollRafId) return;
+        scrollRafId = requestAnimationFrame(() => {
+            updateScrollSpy();
+            scrollRafId = null;
+        });
+    }
+
+    window.addEventListener('scroll', onScrollThrottled, { passive: true });
+    window.addEventListener('resize', onScrollThrottled, { passive: true });
 
     // Build Table of Contents for the active category
     function updateTOC(catId) {
@@ -84,10 +146,14 @@ document.addEventListener('DOMContentLoaded', () => {
             li.appendChild(a);
             tocList.appendChild(li);
         });
+
+        // Initialize active state for TOC
+        requestAnimationFrame(() => {
+            updateScrollSpy();
+        });
     }
 
     function highlightActiveTocLink(targetId) {
-        currentActiveTargetId = targetId;
         document.querySelectorAll('.toc-nav-link').forEach(link => {
             if (link.getAttribute('href') === `#${targetId}`) {
                 link.classList.add('active');
@@ -98,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightActiveSidebarLink(targetId) {
-        currentActiveTargetId = targetId;
         sidebarLinks.forEach(link => {
             if (link.getAttribute('href') === `#${targetId}`) {
                 link.classList.add('active');
@@ -171,7 +236,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentActiveTargetId = null;
             if (window.pageYOffset > 10) {
+                isProgrammaticScroll = true;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                setTimeout(() => {
+                    isProgrammaticScroll = false;
+                    updateScrollSpy();
+                }, 500);
+            } else {
+                updateScrollSpy();
             }
         }
     }
@@ -223,8 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const catId = tab.dataset.category;
             
-            // If already on this category tab and no sub-heading target, DO ABSOLUTELY NOTHING
-            if (currentCategoryId === catId && !currentActiveTargetId) {
+            // If already on this category tab and at the top, DO ABSOLUTELY NOTHING
+            if (currentCategoryId === catId && window.pageYOffset < 10) {
                 return;
             }
 
@@ -244,7 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // If this sidebar link is ALREADY active/selected, DO ABSOLUTELY NOTHING
                 if (currentActiveTargetId === targetId || link.classList.contains('active')) {
-                    // Close mobile sidebar if open
                     const sidebar = document.getElementById('docsSidebarNav');
                     if (sidebar) sidebar.classList.remove('is-open');
                     return;
@@ -254,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 history.pushState(null, null, `#${targetId}`);
                 navigateToHash(targetId);
 
-                // Close mobile sidebar if open
                 const sidebar = document.getElementById('docsSidebarNav');
                 if (sidebar) sidebar.classList.remove('is-open');
             }

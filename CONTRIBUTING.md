@@ -86,7 +86,7 @@ EtherTransfer/
  EtherTransfer.Network/     # UDP discovery, TCP listener, interface detection & link state monitor
  EtherTransfer.Transfer/    # Streaming engine, framing serializer, ArrayPool buffers & PathSanitizer
  EtherTransfer.Services/    # High-level orchestration (DeviceService, TransferService, FirewallHelper)
- EtherTransfer.UI/          # Avalonia UI (MVVM) desktop client, views, viewmodels, and assets
+ EtherTransfer.UI/          # Avalonia UI desktop client, views, dialogs, and assets
  EtherTransfer.Tests/       # NUnit unit & integration test suites
 ```
 
@@ -98,7 +98,7 @@ EtherTransfer/
 | **`EtherTransfer.Network`** | Low-level networking: UDP peer discovery, TCP server hosting, adapter classification, and platform link state detection. | `DiscoveryService.cs`, `TcpServer.cs`, `EthernetLinkMonitor.cs`, `WindowsNetworkInterfaceDetector.cs`, `LinuxNetworkInterfaceDetector.cs` |
 | **`EtherTransfer.Transfer`** | File scanning, binary stream transmission, 4-byte length-prefix framing, path sanitization, and transfer cancellation. | `TransferSender.cs`, `TransferReceiver.cs`, `ProtocolHelper.cs`, `PathSanitizer.cs` |
 | **`EtherTransfer.Services`** | Application service layer tying network discovery and transfer state machines to the UI. | `DeviceService.cs`, `TransferService.cs`, `FirewallHelper.cs` |
-| **`EtherTransfer.UI`** | Cross-platform desktop interface built on Avalonia UI using the MVVM pattern. | `MainWindow.axaml`, `MainViewModel.cs`, `SettingsWindow.axaml` |
+| **`EtherTransfer.UI`** | Cross-platform desktop interface built on Avalonia UI. | `MainWindow.axaml.cs`, `TransferDialog.axaml.cs`, `DebugWindow.axaml.cs`, `ScanDialog.axaml.cs` |
 | **`EtherTransfer.Tests`** | Automated tests for protocol framing, path traversal security, link state transitions, and cancellation tokens. | `PathSanitizerTests.cs`, `ProtocolFramingTests.cs`, `TransferCancellationTests.cs` |
 
 ---

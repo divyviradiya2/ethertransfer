@@ -39,8 +39,9 @@
                     <a href="index.html#guide" class="nav-link">Guide</a>
                     <a href="docs.html" class="nav-link" style="color: var(--accent); font-weight: 600;">Docs</a>
                     <a href="index.html#comparison" class="nav-link">Comparison</a>
+                    <a href="index.html#roadmap" class="nav-link">Roadmap</a>
+                    <a href="index.html#downloads" class="nav-link">Downloads</a>
                     <a href="index.html#faq" class="nav-link">FAQ</a>
-                    <a href="index.html#downloads" class="nav-link">All Downloads</a>
                     <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
                 </div>
                 <div class="nav-actions">
@@ -80,12 +81,16 @@
                     <span>Speed Comparison</span>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
-                <a href="index.html#faq" class="mobile-nav-link">
-                    <span>FAQ</span>
+                <a href="index.html#roadmap" class="mobile-nav-link">
+                    <span>Roadmap</span>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
                 <a href="index.html#downloads" class="mobile-nav-link">
                     <span>All Downloads</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="index.html#faq" class="mobile-nav-link">
+                    <span>FAQ</span>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
                 <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="mobile-nav-link external">
@@ -175,7 +180,7 @@
                 <div class="sidebar-category-title">Performance & Hardware</div>
                 <a href="#speed-matrix" class="sidebar-doc-link">Ethernet Throughput Matrix</a>
                 <a href="#bottlenecks-analysis" class="sidebar-doc-link">Bottleneck Deep-Dive</a>
-                <a href="#multi-stream-pipelining" class="sidebar-doc-link">Multi-Stream Pipelining</a>
+                <a href="#multi-stream-pipelining" class="sidebar-doc-link">Multi-Stream Roadmap</a>
                 <a href="#storage-prerequisites" class="sidebar-doc-link">Storage Requirements</a>
             </div>
 
@@ -227,10 +232,7 @@
                         EtherTransfer operates as a dedicated, self-contained transport system. It uses decentralized <a href="#udp-discovery" class="source-route-link">UDP Port 50000 Broadcast</a> for peer detection and a hardened <a href="#tcp-streaming-protocol" class="source-route-link">TCP Port 55000 Streaming Engine</a> for raw binary payloads.
                     </p>
 
-                    <div class="docs-diagram-box">
-                        <img src="assets/network_diagram.jpg" alt="EtherTransfer Direct Point-to-Point Topology">
-                        <p class="docs-diagram-caption">Point-to-Point physical topology operating over RFC 3927 Link-Local Addressing without external infrastructure.</p>
-                    </div>
+
                 </section>
 
                 <!-- 1.2 Why EtherTransfer Exists -->
@@ -247,15 +249,9 @@
                         <li><strong>Cloud & Relay Solutions</strong>: Route local data across external internet connections, capped by ISP upload limits and third-party servers.</li>
                     </ul>
 
-                    <div class="docs-callout">
-                        <div class="docs-callout-icon">
-                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                        </div>
-                        <div class="docs-callout-content">
-                            <div class="docs-callout-title">Interface Pinning Guarantee</div>
-                            <p>EtherTransfer isolates physical Ethernet adapters from active Wi-Fi connections. You can continue browsing the web on Wi-Fi while massive gigabyte transfers saturate the physical cable at wire speeds.</p>
-                        </div>
-                    </div>
+                    <blockquote class="docs-note">
+                        <strong>Interface Pinning:</strong> EtherTransfer isolates physical Ethernet adapters from active Wi-Fi connections. You can continue browsing the web on Wi-Fi while gigabyte transfers saturate the physical cable at wire speeds.
+                    </blockquote>
                 </section>
 
                 <!-- 1.3 Quick Start Guide -->
@@ -265,14 +261,7 @@
                         To perform a direct transfer between two computers:
                     </p>
 
-                    <div class="code-box">
-                        <pre><code>         Ethernet Cable (Cat 5e/6/6a/7/8)        
-     Sender Computer         Receiver Computer    
-  (EtherTransfer open)     UDP Discovery (Port 50000 Broadcast)     (EtherTransfer open)   
-   IP: 169.254.x.x         Framed TCP Stream (Port 55000)      IP: 169.254.x.x       
-                                                 </code></pre>
-                        <button class="copy-btn" type="button">Copy</button>
-                    </div>
+
 
                     <ol>
                         <li><strong>Launch</strong>: Open EtherTransfer on both computers.</li>
@@ -365,7 +354,6 @@
                 </section>
 
                 <div class="docs-page-stepper">
-                    <div></div>
                     <button class="docs-stepper-btn next" data-target-category="architecture-networking">
                         <span class="stepper-label">Next Chapter &rarr;</span>
                         <span class="stepper-title">Architecture & Networking</span>
@@ -396,7 +384,7 @@
                     </p>
                     <ul>
                         <li><strong>Windows</strong>: Native Automatic Private IP Addressing (APIPA) assigns an IP address within 2–6 seconds.</li>
-                        <li><strong>Linux</strong>: NetworkManager historically does not enable link-local negotiation automatically on unmanaged ports. EtherTransfer includes an active state machine in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a> that automatically executes <code>nmcli device modify &lt;iface&gt; ipv4.method link-local</code> when a physical carrier is detected, and restores prior settings on exit.</li>
+                        <li><strong>Linux</strong>: NetworkManager historically does not enable link-local negotiation automatically on unmanaged ports. EtherTransfer includes an active state machine in <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a> that automatically executes <code>nmcli device modify &lt;iface&gt; ipv4.method link-local</code> when a physical carrier is detected, and restores prior settings on exit.</li>
                     </ul>
                 </section>
 
@@ -404,7 +392,7 @@
                 <section class="docs-chapter-section">
                     <h2 id="udp-discovery">UDP Peer Discovery Protocol (Port 50000)</h2>
                     <p>
-                        Decentralized peer discovery is managed by <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="source-route-link">DiscoveryService.cs</a> using UDP broadcasts on port <strong>50000</strong>:
+                        Decentralized peer discovery is managed by <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="source-route-link">DiscoveryService.cs</a> using UDP broadcasts on port <strong>50000</strong>:
                     </p>
 
                     <div class="code-box">
@@ -444,7 +432,7 @@
                 <section class="docs-chapter-section">
                     <h2 id="link-monitor">Physical Link Monitor State Machine</h2>
                     <p>
-                        The network layer runs a deterministic state machine defined in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a>:
+                        The network layer runs a deterministic state machine defined in <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a>:
                     </p>
 
                     <div class="docs-table-container">
@@ -486,7 +474,7 @@
                 <section class="docs-chapter-section">
                     <h2 id="interface-isolation">Subnet Interface Isolation</h2>
                     <p>
-                        To prevent file transfer traffic from accidentally routing across slower Wi-Fi networks, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/NetworkHelper.cs" target="_blank" class="source-route-link">NetworkHelper.cs</a> inspects network interfaces and enforces active subnet matching:
+                        To prevent file transfer traffic from accidentally routing across slower Wi-Fi networks, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/NetworkInterfaces/NetworkHelper.cs" target="_blank" class="source-route-link">NetworkHelper.cs</a> inspects network interfaces and enforces active subnet matching:
                     </p>
                     <div class="code-box">
                         <pre><code>public static bool IsIpInActiveSubnets(string ipAddress)
@@ -556,28 +544,22 @@
                 <section class="docs-chapter-section">
                     <h2 id="framing-serialization">Length-Prefixed Framing & DoS Protection</h2>
                     <p>
-                        All metadata messages in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/ProtocolHelper.cs" target="_blank" class="source-route-link">ProtocolHelper.cs</a> are serialized with a <strong>4-byte little-endian length prefix</strong> (Int32) followed by UTF-8 encoded JSON:
+                        All metadata messages in <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/ProtocolHelper.cs" target="_blank" class="source-route-link">ProtocolHelper.cs</a> are serialized with a <strong>4-byte little-endian length prefix</strong> (Int32) followed by UTF-8 encoded JSON:
                     </p>
                     <div class="code-box">
                         <pre><code>[ 4-Byte Payload Length (LE Int32) ] [ UTF-8 JSON Metadata Body ] [ Binary File Data Chunks... ]</code></pre>
                         <button class="copy-btn" type="button">Copy</button>
                     </div>
-                    <div class="docs-callout security">
-                        <div class="docs-callout-icon">
-                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </div>
-                        <div class="docs-callout-content">
-                            <div class="docs-callout-title">10 MB Sanity Allocation Guard</div>
-                            <p>To prevent memory exhaustion denial-of-service attacks, the receiver strictly enforces a 10 MB maximum header size. Any length prefix exceeding 10 MB causes immediate socket termination.</p>
-                        </div>
-                    </div>
+                    <blockquote class="docs-note">
+                        <strong>Allocation Guard:</strong> To prevent memory exhaustion denial-of-service attacks, the receiver strictly enforces a 10 MB maximum header size. Any length prefix exceeding 10 MB causes immediate socket termination.
+                    </blockquote>
                 </section>
 
                 <!-- 3.3 Zero-Allocation Pipeline -->
                 <section class="docs-chapter-section">
                     <h2 id="memory-pipeline">Zero-Allocation Memory Pipeline (ArrayPool)</h2>
                     <p>
-                        Instead of allocating new <code>byte[]</code> arrays per chunk, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="source-route-link">TransferSender.cs</a> and <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferReceiver.cs" target="_blank" class="source-route-link">TransferReceiver.cs</a> rent <strong>1 MB buffers</strong> from <code>System.Buffers.ArrayPool&lt;byte&gt;.Shared</code>:
+                        Instead of allocating new <code>byte[]</code> arrays per chunk, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="source-route-link">TransferSender.cs</a> and <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/TransferReceiver.cs" target="_blank" class="source-route-link">TransferReceiver.cs</a> rent <strong>1 MB buffers</strong> from <code>System.Buffers.ArrayPool&lt;byte&gt;.Shared</code>:
                     </p>
                     <div class="code-box">
                         <pre><code>byte[] buffer = ArrayPool&lt;byte&gt;.Shared.Rent(1024 * 1024); // 1 MB buffer
@@ -665,8 +647,8 @@ finally
                                     <th>Ethernet Tier</th>
                                     <th>Line Rate</th>
                                     <th>TCP Theoretical Max</th>
-                                    <th>Single-Stream Speed</th>
-                                    <th>Multi-Stream / Pipeline</th>
+                                    <th>Single-Stream Speed (Current)</th>
+                                    <th>Multi-Stream (Planned Roadmap)</th>
                                     <th>Storage Requirement</th>
                                 </tr>
                             </thead>
@@ -700,15 +682,15 @@ finally
                                     <td>1250.0 MB/s</td>
                                     <td>~1184.0 MB/s</td>
                                     <td><strong>450 – 850 MB/s</strong></td>
-                                    <td><strong>1,100 – 1,150 MB/s</strong></td>
+                                    <td><strong>1,100 – 1,150 MB/s</strong> (Roadmap)</td>
                                     <td>PCIe Gen 3/4 NVMe SSD</td>
                                 </tr>
                                 <tr>
                                     <td><strong>10 GbE (Jumbo 9000)</strong></td>
                                     <td>1250.0 MB/s</td>
                                     <td>~1235.0 MB/s</td>
-                                    <td><strong>850 – 1,100 MB/s</strong></td>
-                                    <td><strong>1,180 – 1,220 MB/s</strong></td>
+                                    <td><strong>850 – 1,050 MB/s</strong></td>
+                                    <td><strong>1,180 – 1,220 MB/s</strong> (Roadmap)</td>
                                     <td>PCIe Gen 4 NVMe SSD</td>
                                 </tr>
                             </tbody>
@@ -729,16 +711,16 @@ finally
                     </p>
                 </section>
 
-                <!-- 4.3 Multi-Stream Pipelining -->
+                <!-- 4.3 Multi-Stream Pipelining Roadmap -->
                 <section class="docs-chapter-section">
-                    <h2 id="multi-stream-pipelining">Multi-Stream Pipelining & Optimization</h2>
+                    <h2 id="multi-stream-pipelining">Architecture Roadmap: Multi-Stream Pipelining (10 GbE)</h2>
                     <p>
-                        To reach maximum throughput (1,150+ MB/s) on 10 GbE links:
+                        EtherTransfer v0.1.1 transmits data over a high-performance single TCP stream (delivering <strong>110–115 MB/s on 1 GbE</strong>, <strong>270–285 MB/s on 2.5 GbE</strong>, and <strong>450–850 MB/s on 10 GbE</strong>). To achieve full 10 GbE line-rate saturation (1,150+ MB/s), the following multi-stream architecture is scheduled for milestone <strong>v0.3.0</strong> (see our interactive <a href="index.html#roadmap" class="text-link">Engineering Roadmap</a>):
                     </p>
                     <ul>
-                        <li><strong>Multi-Stream TCP (4–8 Sockets)</strong>: Distributes packet processing across multiple CPU cores.</li>
-                        <li><strong>Asynchronous Channels (<code>System.Threading.Channels</code>)</strong>: Decouples disk reading from network transmission, allowing simultaneous 100% duty cycles on both NVMe storage and network PHY.</li>
-                        <li><strong>Socket Tuning</strong>: Disabling Nagle's algorithm (<code>NoDelay = true</code>) and configuring 4 MB socket buffer windows prevents window stalls across high bandwidth-delay product links.</li>
+                        <li><strong>Multi-Socket Connection Pooling (4–8 Sockets)</strong>: Distribute payload packet processing across multiple CPU cores to eliminate single-core interrupt bottlenecks on standard 1500 MTU links.</li>
+                        <li><strong>Asynchronous Channels (<code>System.Threading.Channels</code>)</strong>: Decouple concurrent NVMe disk reading from network transmission loops, maintaining simultaneous 100% duty cycles on storage and network PHY.</li>
+                        <li><strong>High Bandwidth-Delay Window Tuning</strong>: Expand socket send/receive buffer windows to prevent TCP window stalls across high-throughput multi-gigabit connections.</li>
                     </ul>
                 </section>
 
@@ -826,7 +808,7 @@ finally
 
                 <!-- 5.2 Sandboxing & Path Sanitization -->
                 <section class="docs-chapter-section">
-                    <h2 id="path-sanitizer">Sandboxing & Path Sanitization (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a>)</h2>
+                    <h2 id="path-sanitizer">Sandboxing & Path Sanitization (<a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a>)</h2>
                     <p>
                         Untrusted path strings from the network are strictly sanitized before any file handles are created:
                     </p>
@@ -882,8 +864,8 @@ sudo firewall-cmd --reload</code></pre>
                         We maintain complete transparency regarding changes made by installers:
                     </p>
                     <ul>
-                        <li><strong>Windows Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.iss" target="_blank" class="source-route-link">EtherTransfer.iss</a>)</strong>: Installs binaries to <code>C:\Program Files\EtherTransfer</code>, adds start menu shortcuts, and registers the firewall whitelist rule. Uninstallation cleanly removes all binaries and deletes the firewall rule.</li>
-                        <li><strong>Linux Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/install_linux.sh" target="_blank" class="source-route-link">install_linux.sh</a>)</strong>: Installs to <code>/opt/ethertransfer</code>, registers <code>/usr/share/applications/ethertransfer.desktop</code>, symlinks to <code>/usr/local/bin/ethertransfer</code>, opens firewall ports, and installs <code>network-manager</code> if missing.</li>
+                        <li><strong>Windows Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.iss" target="_blank" class="source-route-link">EtherTransfer.iss</a>)</strong>: Installs binaries to <code>C:\Program Files\EtherTransfer</code>, adds start menu shortcuts, and registers the firewall whitelist rule. Uninstallation cleanly removes all binaries and deletes the firewall rule.</li>
+                        <li><strong>Linux Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/master/install_linux.sh" target="_blank" class="source-route-link">install_linux.sh</a>)</strong>: Installs to <code>/opt/ethertransfer</code>, registers <code>/usr/share/applications/ethertransfer.desktop</code>, symlinks to <code>/usr/local/bin/ethertransfer</code>, opens firewall ports, and installs <code>network-manager</code> if missing.</li>
                         <li><strong>Zero Telemetry Guarantee</strong>: EtherTransfer contains zero tracking services, telemetry agents, or background analytics hooks. Absolutely no data leaves your local machine.</li>
                     </ul>
                 </section>
@@ -948,34 +930,34 @@ sudo firewall-cmd --reload</code></pre>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Core" target="_blank" class="source-route-link">EtherTransfer.Core</a></strong></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.Core" target="_blank" class="source-route-link">EtherTransfer.Core</a></strong></td>
                                     <td>Data contracts, protocol schemas, network constants, and settings manager.</td>
-                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Core/Models/TransferProtocol.cs" target="_blank" class="text-link">TransferProtocol.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Core/SettingsManager.cs" target="_blank" class="text-link">SettingsManager.cs</a></td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Core/Models/TransferProtocol.cs" target="_blank" class="text-link">TransferProtocol.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Core/SettingsManager.cs" target="_blank" class="text-link">SettingsManager.cs</a></td>
                                 </tr>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Network" target="_blank" class="source-route-link">EtherTransfer.Network</a></strong></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.Network" target="_blank" class="source-route-link">EtherTransfer.Network</a></strong></td>
                                     <td>UDP discovery, TCP server hosting, adapter classification, and link state detector.</td>
-                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="text-link">DiscoveryService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="text-link">EthernetLinkMonitor.cs</a></td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="text-link">DiscoveryService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="text-link">EthernetLinkMonitor.cs</a></td>
                                 </tr>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Transfer" target="_blank" class="source-route-link">EtherTransfer.Transfer</a></strong></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.Transfer" target="_blank" class="source-route-link">EtherTransfer.Transfer</a></strong></td>
                                     <td>File scanning, binary stream transmission, 4-byte LE framing, and path sanitization.</td>
-                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="text-link">TransferSender.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a></td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="text-link">TransferSender.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a></td>
                                 </tr>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Services" target="_blank" class="source-route-link">EtherTransfer.Services</a></strong></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.Services" target="_blank" class="source-route-link">EtherTransfer.Services</a></strong></td>
                                     <td>Application orchestration layer tying network discovery and transfer state to UI.</td>
-                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Services/DeviceManager/DeviceService.cs" target="_blank" class="text-link">DeviceService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Services/FirewallHelper.cs" target="_blank" class="text-link">FirewallHelper.cs</a></td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Services/DeviceManager/DeviceService.cs" target="_blank" class="text-link">DeviceService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Services/FirewallHelper.cs" target="_blank" class="text-link">FirewallHelper.cs</a></td>
                                 </tr>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.UI" target="_blank" class="source-route-link">EtherTransfer.UI</a></strong></td>
-                                    <td>Cross-platform Avalonia UI (MVVM) desktop client and viewmodels.</td>
-                                    <td><code>MainWindow.axaml</code>, <code>MainViewModel.cs</code></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.UI" target="_blank" class="source-route-link">EtherTransfer.UI</a></strong></td>
+                                    <td>Cross-platform Avalonia UI desktop client, dialogs, and code-behind models.</td>
+                                    <td><code>MainWindow.axaml.cs</code>, <code>TransferDialog.axaml.cs</code>, <code>DebugWindow.axaml.cs</code></td>
                                 </tr>
                                 <tr>
-                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Tests" target="_blank" class="source-route-link">EtherTransfer.Tests</a></strong></td>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/master/EtherTransfer.Tests" target="_blank" class="source-route-link">EtherTransfer.Tests</a></strong></td>
                                     <td>Automated test suites for protocol framing, path traversal security, and cancellations.</td>
-                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Tests/PathSanitizerTests.cs" target="_blank" class="text-link">PathSanitizerTests.cs</a>, <code>ProtocolFramingTests.cs</code></td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Tests/PathSanitizerTests.cs" target="_blank" class="text-link">PathSanitizerTests.cs</a>, <code>ProtocolFramingTests.cs</code></td>
                                 </tr>
                             </tbody>
                         </table>
