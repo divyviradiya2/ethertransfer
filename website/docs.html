@@ -715,7 +715,7 @@ finally
                 <section class="docs-chapter-section">
                     <h2 id="multi-stream-pipelining">Architecture Roadmap: Multi-Stream Pipelining (10 GbE)</h2>
                     <p>
-                        EtherTransfer v0.1.1 transmits data over a high-performance single TCP stream (delivering <strong>110–115 MB/s on 1 GbE</strong>, <strong>270–285 MB/s on 2.5 GbE</strong>, and <strong>450–850 MB/s on 10 GbE</strong>). To achieve full 10 GbE line-rate saturation (1,150+ MB/s), the following multi-stream architecture is scheduled for milestone <strong>v0.3.0</strong> (see our interactive <a href="index.html#roadmap" class="text-link">Engineering Roadmap</a>):
+                        EtherTransfer v0.2.0 transmits data over a high-performance single TCP stream (delivering <strong>110–115 MB/s on 1 GbE</strong>, <strong>270–285 MB/s on 2.5 GbE</strong>, and <strong>450–850 MB/s on 10 GbE</strong>). To achieve full 10 GbE line-rate saturation (1,150+ MB/s), the following multi-stream architecture is scheduled for milestone <strong>v0.3.0</strong> (see our interactive <a href="index.html#roadmap" class="text-link">Engineering Roadmap</a>):
                     </p>
                     <ul>
                         <li><strong>Multi-Socket Connection Pooling (4–8 Sockets)</strong>: Distribute payload packet processing across multiple CPU cores to eliminate single-core interrupt bottlenecks on standard 1500 MTU links.</li>
