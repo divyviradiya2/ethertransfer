@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 360" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1.5; }
+      .device-box { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; rx: 8px; }
+      .device-header { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1.5; }
+      .nic-box { fill: #ffffff; stroke: #e2e8f0; stroke-width: 1; rx: 4px; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; fill: #0f172a; }
+      .text-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 500; fill: #334155; }
+      .text-muted { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 400; fill: #64748b; }
+      .text-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 600; fill: #2563eb; }
+      .text-mono-green { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; font-weight: 600; fill: #16a34a; }
+      .text-badge { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+      
+      .cable-line { stroke: #2563eb; stroke-width: 3; stroke-linecap: round; }
+      .tcp-stream-bg { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.5; stroke-dasharray: 4 2; rx: 6px; }
+      .udp-disc-bg { fill: #faf5ff; stroke: #a855f7; stroke-width: 1; rx: 4px; }
+      .wifi-line { stroke: #94a3b8; stroke-width: 1.5; stroke-dasharray: 3 3; }
+      .wifi-badge { fill: #f1f5f9; stroke: #cbd5e1; rx: 4px; }
+      .wire-tag { fill: #2563eb; }
+
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0b0f19; stroke: #1e293b; }
+        .device-box { fill: #111827; stroke: #334155; }
+        .device-header { fill: #1f2937; stroke: #334155; }
+        .nic-box { fill: #0f172a; stroke: #334155; }
+        .text-title { fill: #f8fafc; }
+        .text-body { fill: #e2e8f0; }
+        .text-muted { fill: #94a3b8; }
+        .text-mono { fill: #60a5fa; }
+        .text-mono-green { fill: #4ade80; }
+        .cable-line { stroke: #3b82f6; }
+        .tcp-stream-bg { fill: #1e293b; stroke: #3b82f6; }
+        .udp-disc-bg { fill: #2e1065; stroke: #c084fc; }
+        .wifi-line { stroke: #475569; }
+        .wifi-badge { fill: #1e293b; stroke: #334155; }
+      }
+    </style>
+    <marker id="arrow-tcp" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-udp-left" viewBox="0 0 10 10" refX="4" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 10 1 L 0 5 L 10 9 z" fill="#a855f7"/>
+    </marker>
+    <marker id="arrow-udp-right" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#a855f7"/>
+    </marker>
+  </defs>
+
+  <!-- Container Canvas -->
+  <rect x="2" y="2" width="856" height="356" rx="10" class="bg"/>
+
+  <!-- ================= DEVICE A (SENDER) ================= -->
+  <g transform="translate(30, 45)">
+    <!-- Device Card Background -->
+    <rect x="0" y="0" width="220" height="265" class="device-box"/>
+    <!-- Header Bar -->
+    <path d="M 0 8 Q 0 0 8 0 L 212 0 Q 220 0 220 8 L 220 38 L 0 38 Z" class="device-header"/>
+    
+    <!-- Header Content -->
+    <circle cx="18" cy="19" r="6" fill="#16a34a"/>
+    <text x="32" y="23" class="text-title">Device A (Sender)</text>
+    <text x="14" y="58" class="text-muted">OS: Windows 10/11 or Linux</text>
+    <text x="14" y="74" class="text-muted">App: EtherTransfer Desktop</text>
+
+    <!-- Ethernet Interface Block -->
+    <g transform="translate(12, 90)">
+      <rect x="0" y="0" width="196" height="74" class="nic-box"/>
+      <text x="10" y="20" class="text-body" font-weight="600">Physical Ethernet (NIC)</text>
+      <text x="10" y="38" class="text-muted">Link-Local (RFC 3927 / APIPA)</text>
+      <rect x="10" y="46" width="115" height="18" rx="3" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="16" y="59" class="text-mono">169.254.42.105</text>
+      <!-- Green Port Dot -->
+      <circle cx="178" cy="37" r="5" fill="#22c55e"/>
+    </g>
+
+    <!-- Wi-Fi Interface Block (Isolated) -->
+    <g transform="translate(12, 178)">
+      <rect x="0" y="0" width="196" height="68" class="nic-box" stroke-dasharray="3 3"/>
+      <text x="10" y="20" class="text-body" font-weight="600">Active Wi-Fi Adapter</text>
+      <text x="10" y="38" class="text-muted">Internet Route (Uninterrupted)</text>
+      <text x="10" y="55" class="text-muted" font-size="10px">Subnet: 192.168.1.x &bull; Isolated</text>
+    </g>
+  </g>
+
+  <!-- ================= DIRECT PHYSICAL LINK (CENTER) ================= -->
+  <g transform="translate(250, 45)">
+    <!-- Top Isolation Banner -->
+    <g transform="translate(15, 8)">
+      <path d="M 0 10 L 330 10" class="wifi-line"/>
+      <rect x="85" y="0" width="160" height="20" class="wifi-badge"/>
+      <text x="165" y="14" text-anchor="middle" class="text-muted" font-size="10px" font-weight="600">Wi-Fi &amp; Internet Coexistence</text>
+    </g>
+
+    <!-- Main Cable Spine -->
+    <line x1="0" y1="127" x2="360" y2="127" class="cable-line"/>
+
+    <!-- Direct Cable Tag -->
+    <g transform="translate(85, 82)">
+      <rect x="0" y="0" width="190" height="26" rx="13" fill="#2563eb"/>
+      <text x="95" y="17" text-anchor="middle" fill="#ffffff" class="text-badge">Direct Ethernet Cable</text>
+    </g>
+
+    <!-- Channel 1: UDP Discovery Box -->
+    <g transform="translate(20, 140)">
+      <rect x="0" y="0" width="320" height="34" class="udp-disc-bg"/>
+      <line x1="12" y1="17" x2="40" y2="17" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow-udp-right)"/>
+      <line x1="308" y1="17" x2="280" y2="17" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrow-udp-left)"/>
+      <text x="160" y="21" text-anchor="middle" class="text-body" font-size="11px" font-weight="600">
+        <tspan fill="#a855f7">Port 50000 UDP</tspan> &bull; Peer Discovery &amp; Session UUID
+      </text>
+    </g>
+
+    <!-- Channel 2: TCP High-Speed Stream Box -->
+    <g transform="translate(20, 185)">
+      <rect x="0" y="0" width="320" height="54" class="tcp-stream-bg"/>
+      <!-- Arrow Line -->
+      <line x1="15" y1="18" x2="305" y2="18" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-tcp)"/>
+      
+      <text x="160" y="34" text-anchor="middle" class="text-title" font-size="12px">
+        Port 55000 TCP Framed Binary Stream
+      </text>
+      <text x="160" y="47" text-anchor="middle" class="text-mono-green" font-size="10.5px">
+        110 &ndash; 115 MB/s (1 GbE Wire-Speed) &bull; 1 MB ArrayPool
+      </text>
+    </g>
+
+    <!-- Bottom Protocol Spec Footer -->
+    <text x="180" y="260" text-anchor="middle" class="text-muted" font-size="10.5px">
+      No Router &bull; No DHCP Server &bull; Zero Cloud &bull; Auto-MDI/MDIX
+    </text>
+  </g>
+
+  <!-- ================= DEVICE B (RECEIVER) ================= -->
+  <g transform="translate(610, 45)">
+    <!-- Device Card Background -->
+    <rect x="0" y="0" width="220" height="265" class="device-box"/>
+    <!-- Header Bar -->
+    <path d="M 0 8 Q 0 0 8 0 L 212 0 Q 220 0 220 8 L 220 38 L 0 38 Z" class="device-header"/>
+    
+    <!-- Header Content -->
+    <circle cx="18" cy="19" r="6" fill="#2563eb"/>
+    <text x="32" y="23" class="text-title">Device B (Receiver)</text>
+    <text x="14" y="58" class="text-muted">OS: Windows 10/11 or Linux</text>
+    <text x="14" y="74" class="text-muted">App: EtherTransfer Desktop</text>
+
+    <!-- Ethernet Interface Block -->
+    <g transform="translate(12, 90)">
+      <rect x="0" y="0" width="196" height="74" class="nic-box"/>
+      <!-- Green Port Dot -->
+      <circle cx="18" cy="37" r="5" fill="#22c55e"/>
+      <text x="32" y="20" class="text-body" font-weight="600">Physical Ethernet (NIC)</text>
+      <text x="32" y="38" class="text-muted">Link-Local (RFC 3927 / APIPA)</text>
+      <rect x="32" y="46" width="115" height="18" rx="3" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="38" y="59" class="text-mono">169.254.89.210</text>
+    </g>
+
+    <!-- Wi-Fi Interface Block (Isolated) -->
+    <g transform="translate(12, 178)">
+      <rect x="0" y="0" width="196" height="68" class="nic-box" stroke-dasharray="3 3"/>
+      <text x="10" y="20" class="text-body" font-weight="600">Active Wi-Fi Adapter</text>
+      <text x="10" y="38" class="text-muted">Internet Route (Uninterrupted)</text>
+      <text x="10" y="55" class="text-muted" font-size="10px">Subnet: 192.168.1.x &bull; Isolated</text>
+    </g>
+  </g>
+</svg>

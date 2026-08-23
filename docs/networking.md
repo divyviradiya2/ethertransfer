@@ -5,6 +5,10 @@
 ## Overview
 EtherTransfer relies on UDP broadcasts for peer discovery and high-performance TCP streaming for file transfers. The network layer has been heavily hardened and re-architected to guarantee absolute reliability over direct, unmanaged physical Ethernet links.
 
+<div align="center">
+  <img src="network_diagram.svg" alt="EtherTransfer Network Topology" width="860" />
+</div>
+
 ---
 
 ## 1. UDP Peer Discovery (`DiscoveryService.cs`)

@@ -8,15 +8,21 @@
 
 Fast, zero-configuration local data movement without routers, cloud servers, or setup.
 
+[![Version](https://img.shields.io/badge/version-0.1.1-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
-[![License MIT](https://img.shields.io/badge/License-MIT-22C55E?style=flat-square)](LICENSE)
-[![Website](https://img.shields.io/badge/Website-Live-2563EB?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/)
-[![Docs](https://img.shields.io/badge/Docs-Interactive_Portal-8B5CF6?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/docs.html)
-[![Release](https://img.shields.io/badge/Download-Latest_Releases-0078D4?style=flat-square&logo=windows)](https://github.com/divyviradiya2/ethertransfer/releases/latest)
+[![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey?style=flat-square)](#downloads)
+
+<p align="center">
+  <a href="https://divyviradiya2.github.io/ethertransfer/">Website</a> &bull;
+  <a href="https://divyviradiya2.github.io/ethertransfer/docs.html">Documentation</a> &bull;
+  <a href="https://divyviradiya2.github.io/ethertransfer/#roadmap">Roadmap</a> &bull;
+  <a href="#downloads">Downloads</a>
+</p>
 
 <br>
 
-<img src="docs/network_diagram.jpg" alt="EtherTransfer Direct Point-to-Point Topology" width="800" style="border-radius: 8px; border: 1px solid #334155;" />
+<img src="docs/network_diagram.svg" alt="EtherTransfer Direct Point-to-Point Architecture Diagram" width="860" />
 
 </div>
 
