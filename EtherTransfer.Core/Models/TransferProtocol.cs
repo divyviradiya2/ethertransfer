@@ -1,9 +1,13 @@
-namespace EtherTransfer.Core.Models;
+﻿namespace EtherTransfer.Core.Models;
 
 public static class ProtocolMessageTypes
 {
     public const string TransferRequest = "TRANSFER_REQUEST";
     public const string TransferResponse = "TRANSFER_RESPONSE";
+    public const string FileBegin = "FILE_BEGIN";
+    public const string FolderBegin = "FOLDER_BEGIN";
+    public const string TransferEnd = "TRANSFER_END";
+    public const string FileSkip = "FILE_SKIP";
 }
 
 public class BaseProtocolMessage
@@ -45,6 +49,13 @@ public class FileItemMetadata
     public long Size { get; set; }
 }
 
+public class FolderTarMetadata
+{
+    public string RootName { get; set; } = string.Empty;
+    public int TotalFiles { get; set; }
+    public long TotalSize { get; set; }
+}
+
 public class FileChecksumMessage : BaseProtocolMessage
 {
     public FileChecksumMessage() { Type = "FILE_CHECKSUM"; }
@@ -53,7 +64,8 @@ public class FileChecksumMessage : BaseProtocolMessage
 
 public class FileSkipMessage : BaseProtocolMessage
 {
-    public FileSkipMessage() { Type = "FILE_SKIP"; }
+    public FileSkipMessage() { Type = ProtocolMessageTypes.FileSkip; }
     public string RelativePath { get; set; } = string.Empty;
     public string Reason { get; set; } = string.Empty;
 }
+

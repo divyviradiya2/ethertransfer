@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace EtherTransfer.Core.Models;
 
@@ -11,3 +11,4 @@ public class DiscoveredDevice
     public string OS { get; set; } = string.Empty;
     public DateTime LastSeen { get; set; }
 }
+

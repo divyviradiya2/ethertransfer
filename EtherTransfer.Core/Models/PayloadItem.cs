@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,3 +27,4 @@ public class PayloadItem
     public string DisplaySize => FormatHelper.FormatSize(TotalSize);
     public string DisplayCount => Type == PayloadItemType.Folder ? $"({FileCount} files)" : "";
 }
+

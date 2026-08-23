@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -43,3 +43,4 @@ public class DefaultPlatformEnvironment : IPlatformEnvironment
 #endif
     }
 }
+

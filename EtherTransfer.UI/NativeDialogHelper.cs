@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -93,3 +93,4 @@ public static class NativeDialogHelper
         return true;
     }
 }
+

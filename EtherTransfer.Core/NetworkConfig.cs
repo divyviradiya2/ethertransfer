@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace EtherTransfer.Core;
 
@@ -18,3 +18,4 @@ public class NetworkConfig
 
     public static NetworkConfig Default { get; } = new NetworkConfig();
 }
+

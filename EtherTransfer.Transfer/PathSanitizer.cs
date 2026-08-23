@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -107,3 +107,4 @@ public static class PathSanitizer
         return StringComparison.OrdinalIgnoreCase;
     }
 }
+

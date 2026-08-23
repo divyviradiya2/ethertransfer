@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 
@@ -96,3 +96,4 @@ public static class SettingsManager
         }
     }
 }
+

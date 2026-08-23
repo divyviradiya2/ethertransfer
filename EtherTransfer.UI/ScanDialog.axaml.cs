@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using System.Collections.ObjectModel;
 
 namespace EtherTransfer.UI;
@@ -39,3 +39,4 @@ public partial class ScanDialog : Window
         base.OnClosing(e);
     }
 }
+

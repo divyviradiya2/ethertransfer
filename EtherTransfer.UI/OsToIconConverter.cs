@@ -1,4 +1,4 @@
-using Avalonia.Data.Converters;
+﻿using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using System;
@@ -43,3 +43,4 @@ public class OsToIconConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+

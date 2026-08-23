@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using EtherTransfer.Core;
 using NUnit.Framework;
@@ -83,3 +83,4 @@ public class SettingsManagerTests
         Assert.That(SettingsManager.SettingsFile, Is.EqualTo(Path.Combine(_tempTestDir, "settings.json")));
     }
 }
+

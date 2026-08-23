@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.NetworkInformation;
 
 namespace EtherTransfer.Network.NetworkInterfaces;
@@ -95,3 +95,4 @@ public static class WindowsNetworkInterfaceDetector
         return (isPhysical, isVirtual, isWifi);
     }
 }
+

@@ -19,3 +19,4 @@ class Program
             .WithInterFont()
             .LogToTrace();
 }
+

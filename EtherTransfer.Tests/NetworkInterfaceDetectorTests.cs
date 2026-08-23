@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using EtherTransfer.Network.NetworkInterfaces;
 using Moq;
@@ -156,3 +156,4 @@ public class NetworkInterfaceDetectorTests
         Assert.That(isVirtual, Is.True);
     }
 }
+

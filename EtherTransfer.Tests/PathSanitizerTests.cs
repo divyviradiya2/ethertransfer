@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using EtherTransfer.Transfer;
 using NUnit.Framework;
@@ -169,3 +169,4 @@ public class PathSanitizerTests
         Assert.That(resolved2, Is.EqualTo(Path.Combine(_sandboxDir, "photo (2).jpg")));
     }
 }
+

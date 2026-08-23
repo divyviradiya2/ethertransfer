@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace EtherTransfer.Core.Models;
 
@@ -10,3 +10,4 @@ public record StructuredLogMessage(
     LogLevel Level = LogLevel.Info,
     Dictionary<string, object>? Properties = null
 );
+

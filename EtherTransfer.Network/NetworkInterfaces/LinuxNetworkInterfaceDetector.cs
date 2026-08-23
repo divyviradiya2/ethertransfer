@@ -1,4 +1,4 @@
-using System.Net.NetworkInformation;
+﻿using System.Net.NetworkInformation;
 
 namespace EtherTransfer.Network.NetworkInterfaces;
 
@@ -81,3 +81,4 @@ public static class LinuxNetworkInterfaceDetector
         return (isPhysical, isVirtual, isWifi);
     }
 }
+

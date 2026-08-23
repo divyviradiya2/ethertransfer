@@ -1,5 +1,8 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Formats.Tar;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
@@ -15,7 +18,8 @@ public class TransferReceiver
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<StructuredLogMessage>? DebugLog;
 
-    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "receiver.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "receiver.log") =>
+        DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
     public async Task<TransferResult> HandleClientAsync(TcpClient client, CancellationToken appCt)
     {
@@ -27,22 +31,20 @@ public class TransferReceiver
         {
             using (client)
             {
-                var stream = client.GetStream();
+                var networkStream = client.GetStream();
                 client.NoDelay = true;
-                client.SendBufferSize = 1024 * 1024;
-                client.ReceiveBufferSize = 1024 * 1024;
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
-                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(stream, appCt, 2000);
+                var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(networkStream, appCt, 3000).ConfigureAwait(false);
                 if (request == null)
                     throw new Exception("Did not receive TransferRequest.");
 
-                Log($"Incoming: {request.SenderName} — {request.TotalFiles} files, {request.TotalSize / 1024 / 1024} MB");
+                Log($"Incoming: {request.SenderName} - {request.TotalFiles} files, {request.TotalSize / 1024 / 1024} MB");
 
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
-                var (accepted, savePath, cancelToken) = await OnIncomingTransfer(request, appCt);
+                var (accepted, savePath, cancelToken) = await OnIncomingTransfer(request, appCt).ConfigureAwait(false);
 
                 using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(appCt, cancelToken);
                 var transferCt = linkedCt.Token;
@@ -52,7 +54,7 @@ public class TransferReceiver
                     Accepted = accepted,
                     Reason = accepted ? "" : "User declined."
                 };
-                await ProtocolHelper.SendMessageAsync(stream, response, transferCt, 2000);
+                await ProtocolHelper.SendMessageAsync(networkStream, response, transferCt, 3000).ConfigureAwait(false);
 
                 if (!accepted)
                 {
@@ -64,13 +66,11 @@ public class TransferReceiver
                 Directory.CreateDirectory(savePath);
                 Log($"Transfer accepted. Saving to: {savePath}");
 
-                long totalReceived = 0;
+                long totalBytesReceived = 0;
                 int filesReceived = 0;
                 int filesSkipped = 0;
-                var watch = System.Diagnostics.Stopwatch.StartNew();
-                var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024);
                 var filesByRootElement = new Dictionary<string, List<string>>();
-                var createdDirectoriesThisSession = new HashSet<string>();
+                var createdDirectoriesThisSession = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 int totalElements = request.PayloadFolderCount + request.PayloadFileCount;
                 result.TotalElements = totalElements;
@@ -79,6 +79,37 @@ public class TransferReceiver
                 string? currentRootName = null;
 
                 bool receivedTransferEnd = false;
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var speedTracker = new SpeedTracker();
+                speedTracker.Start();
+
+                var lastProgressReport = watch.ElapsedMilliseconds;
+
+                void ReportProgress(bool force = false)
+                {
+                    var now = watch.ElapsedMilliseconds;
+                    if (force || now - lastProgressReport >= 50 || totalBytesReceived >= request.TotalSize)
+                    {
+                        lastProgressReport = now;
+                        var currentSpeed = speedTracker.CalculateSpeed(totalBytesReceived);
+
+                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                        {
+                            CurrentFile = currentRootName ?? string.Empty,
+                            BytesSent = totalBytesReceived,
+                            TotalBytes = request.TotalSize,
+                            SpeedMbPerSec = currentSpeed,
+                            CurrentElementIndex = currentElementIndex,
+                            TotalElements = totalElements
+                        });
+                    }
+                }
+
+                using var countingStream = new CountingStream(networkStream, onBytesRead: read =>
+                {
+                    totalBytesReceived = read;
+                    ReportProgress(force: false);
+                });
 
                 try
                 {
@@ -86,7 +117,7 @@ public class TransferReceiver
                     {
                         transferCt.ThrowIfCancellationRequested();
 
-                        var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(stream, transferCt, 5000);
+                        var markerJson = await ProtocolHelper.ReceiveRawJsonAsync(countingStream, transferCt, 5000).ConfigureAwait(false);
                         if (markerJson == null)
                         {
                             throw new IOException("Connection closed by sender unexpectedly before transfer completed.");
@@ -98,166 +129,269 @@ public class TransferReceiver
                             throw new IOException("Received invalid protocol message header.");
                         }
 
-                        if (baseMsg.Type == "TRANSFER_END")
+                        if (baseMsg.Type == ProtocolMessageTypes.TransferEnd)
                         {
                             receivedTransferEnd = true;
                             break;
                         }
 
-                        if (baseMsg.Type == "FILE_SKIP")
+                        if (baseMsg.Type == ProtocolMessageTypes.FileSkip)
                         {
                             var skipMsg = JsonSerializer.Deserialize<FileSkipMessage>(markerJson);
                             if (skipMsg != null)
-                                Log($"Sender skipped: {skipMsg.RelativePath} — {skipMsg.Reason}");
+                                Log($"Sender skipped: {skipMsg.RelativePath} - {skipMsg.Reason}");
                             filesSkipped++;
                             continue;
                         }
 
-                        if (baseMsg.Type != "FILE_BEGIN")
-                            continue;
-
-                        var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(stream, transferCt, 2000);
-                        if (fileMeta == null)
+                        if (baseMsg.Type == ProtocolMessageTypes.FolderBegin)
                         {
-                            throw new IOException("Connection lost while reading file metadata.");
-                        }
+                            var folderMeta = await ProtocolHelper.ReceiveMessageAsync<FolderTarMetadata>(countingStream, transferCt, 3000).ConfigureAwait(false);
+                            if (folderMeta == null)
+                                throw new IOException("Connection lost while reading folder metadata.");
 
-                        if (fileMeta.RootName != currentRootName)
-                        {
-                            if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+                            if (folderMeta.RootName != currentRootName)
                             {
-                                result.CompletedElementNames.Add(currentRootName);
-                            }
-                            currentRootName = fileMeta.RootName;
-                            currentElementIndex++;
-                        }
-
-                        var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
-                        if (safePath == null)
-                        {
-                            Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
-                            await DrainBytesAsync(stream, fileMeta.Size, buffer, transferCt);
-                            filesSkipped++;
-                            continue;
-                        }
-
-                        safePath = PathSanitizer.ResolveCollision(safePath);
-
-                        var dirPath = Path.GetDirectoryName(safePath);
-                        if (dirPath != null)
-                        {
-                            if (!Directory.Exists(dirPath))
-                            {
-                                Directory.CreateDirectory(dirPath);
-                                createdDirectoriesThisSession.Add(dirPath);
-                            }
-                        }
-
-                        FileStream? fs = null;
-                        try
-                        {
-                            fs = new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true);
-
-                            long fileReceived = 0;
-
-                            var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-                            var initialSpeed = elapsedSecInitial > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSecInitial : 0;
-
-                            ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
-                            {
-                                CurrentFile = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName,
-                                BytesSent = totalReceived,
-                                TotalBytes = request.TotalSize,
-                                SpeedMbPerSec = initialSpeed,
-                                CurrentElementIndex = currentElementIndex,
-                                TotalElements = totalElements
-                            });
-
-                            var lastUpdate = watch.ElapsedMilliseconds;
-
-                            while (fileReceived < fileMeta.Size)
-                            {
-                                int toRead = (int)Math.Min(buffer.Length, fileMeta.Size - fileReceived);
-
-                                if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, transferCt, 5000))
-                                    throw new IOException("Connection lost while reading file data.");
-
-                                await fs.WriteAsync(buffer, 0, toRead, transferCt);
-
-                                fileReceived += toRead;
-                                totalReceived += toRead;
-
-                                var currentElapsed = watch.ElapsedMilliseconds;
-                                if (currentElapsed - lastUpdate >= 50 || totalReceived == request.TotalSize)
+                                if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
                                 {
-                                    lastUpdate = currentElapsed;
-                                    var elapsedSec = watch.Elapsed.TotalSeconds;
-                                    var speed = elapsedSec > 0 ? (totalReceived / 1024.0 / 1024.0) / elapsedSec : 0;
+                                    result.CompletedElementNames.Add(currentRootName);
+                                }
+                                currentRootName = folderMeta.RootName;
+                                currentElementIndex++;
+                            }
 
-                                    ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
+                            if (!filesByRootElement.ContainsKey(folderMeta.RootName))
+                            {
+                                filesByRootElement[folderMeta.RootName] = new List<string>();
+                            }
+
+                            ReportProgress(force: true);
+
+                            string? inFlightTarFile = null;
+                            try
+                            {
+                                var tarReader = new TarReader(countingStream, leaveOpen: true);
+                                await using (tarReader.ConfigureAwait(false))
+                                {
+                                    while (await tarReader.GetNextEntryAsync(cancellationToken: transferCt).ConfigureAwait(false) is { } entry)
                                     {
-                                        CurrentFile = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName,
-                                        BytesSent = totalReceived,
-                                        TotalBytes = request.TotalSize,
-                                        SpeedMbPerSec = speed,
-                                        CurrentElementIndex = currentElementIndex,
-                                        TotalElements = totalElements
-                                    });
+                                        transferCt.ThrowIfCancellationRequested();
+
+                                        if (entry.EntryType == TarEntryType.RegularFile || entry.EntryType == TarEntryType.V7RegularFile)
+                                        {
+                                            var safePath = PathSanitizer.SanitizeRelativePath(savePath, entry.Name);
+                                            if (safePath == null)
+                                            {
+                                                Log($"SECURITY: Blocked malicious path in TAR: {entry.Name}");
+                                                filesSkipped++;
+                                                continue;
+                                            }
+
+                                            safePath = PathSanitizer.ResolveCollision(safePath);
+
+                                            var dirPath = Path.GetDirectoryName(safePath);
+                                            if (dirPath != null && !createdDirectoriesThisSession.Contains(dirPath))
+                                            {
+                                                Directory.CreateDirectory(dirPath);
+                                                createdDirectoriesThisSession.Add(dirPath);
+                                            }
+
+                                            if (entry.DataStream != null)
+                                            {
+                                                inFlightTarFile = safePath;
+                                                filesByRootElement[folderMeta.RootName].Add(safePath);
+
+                                                FileStream? fs = new FileStream(
+                                                    safePath,
+                                                    FileMode.Create,
+                                                    FileAccess.Write,
+                                                    FileShare.None,
+                                                    128 * 1024,
+                                                    FileOptions.Asynchronous);
+
+                                                try
+                                                {
+                                                    if (entry.Length > 0)
+                                                    {
+                                                        try { fs.SetLength(entry.Length); } catch { }
+                                                    }
+                                                    await entry.DataStream.CopyToAsync(fs, transferCt).ConfigureAwait(false);
+                                                    await fs.DisposeAsync().ConfigureAwait(false);
+                                                    fs = null;
+                                                }
+                                                finally
+                                                {
+                                                    if (fs != null)
+                                                    {
+                                                        try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
+                                                    }
+                                                }
+
+                                                inFlightTarFile = null;
+                                            }
+                                            else
+                                            {
+
+                                                filesByRootElement[folderMeta.RootName].Add(safePath);
+                                                using (new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
+                                            }
+
+                                            filesReceived++;
+                                            ReportProgress(force: false);
+                                        }
+                                        else if (entry.EntryType == TarEntryType.Directory)
+                                        {
+                                            var safeDir = PathSanitizer.SanitizeRelativePath(savePath, entry.Name);
+                                            if (safeDir != null && !createdDirectoriesThisSession.Contains(safeDir))
+                                            {
+                                                Directory.CreateDirectory(safeDir);
+                                                createdDirectoriesThisSession.Add(safeDir);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                var trailingTarEofBlock = System.Buffers.ArrayPool<byte>.Shared.Rent(512);
+                                try
+                                {
+                                    await ProtocolHelper.ReadExactAsync(countingStream, trailingTarEofBlock, 512, transferCt, 3000).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    System.Buffers.ArrayPool<byte>.Shared.Return(trailingTarEofBlock);
                                 }
                             }
+                            catch
+                            {
+                                if (inFlightTarFile != null)
+                                {
+                                    try
+                                    {
+                                        if (File.Exists(inFlightTarFile))
+                                        {
+                                            File.Delete(inFlightTarFile);
+                                        }
+                                    }
+                                    catch { }
+                                }
+                                throw;
+                            }
 
-                            await fs.FlushAsync(transferCt);
-                            await fs.DisposeAsync();
-                            fs = null;
+                            if (!result.CompletedElementNames.Contains(folderMeta.RootName))
+                            {
+                                result.CompletedElementNames.Add(folderMeta.RootName);
+                            }
+                            continue;
+                        }
 
-                            filesReceived++;
+                        if (baseMsg.Type == ProtocolMessageTypes.FileBegin)
+                        {
+                            var fileMeta = await ProtocolHelper.ReceiveMessageAsync<FileItemMetadata>(countingStream, transferCt, 3000).ConfigureAwait(false);
+                            if (fileMeta == null)
+                            {
+                                throw new IOException("Connection lost while reading file metadata.");
+                            }
+
+                            if (fileMeta.RootName != currentRootName)
+                            {
+                                if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
+                                {
+                                    result.CompletedElementNames.Add(currentRootName);
+                                }
+                                currentRootName = fileMeta.RootName;
+                                currentElementIndex++;
+                            }
 
                             var rootKey = string.IsNullOrEmpty(fileMeta.RootName) ? fileMeta.RelativePath : fileMeta.RootName;
                             if (!filesByRootElement.ContainsKey(rootKey))
                             {
                                 filesByRootElement[rootKey] = new List<string>();
                             }
-                            filesByRootElement[rootKey].Add(safePath);
 
-                            if (totalElements > 1 && (fileMeta.RelativePath == fileMeta.RootName || string.IsNullOrEmpty(fileMeta.RootName)))
+                            var safePath = PathSanitizer.SanitizeRelativePath(savePath, fileMeta.RelativePath);
+                            if (safePath == null)
                             {
-                                if (!result.CompletedElementNames.Contains(rootKey))
-                                {
-                                    result.CompletedElementNames.Add(rootKey);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
-
-                            if (fs != null)
-                            {
-                                try { await fs.DisposeAsync(); } catch { }
-                                fs = null;
+                                Log($"SECURITY: Blocked malicious path: {fileMeta.RelativePath}");
+                                await DrainBytesAsync(countingStream, fileMeta.Size, transferCt).ConfigureAwait(false);
+                                filesSkipped++;
+                                continue;
                             }
 
+                            safePath = PathSanitizer.ResolveCollision(safePath);
+
+                            var dirPath = Path.GetDirectoryName(safePath);
+                            if (dirPath != null && !createdDirectoriesThisSession.Contains(dirPath))
+                            {
+                                Directory.CreateDirectory(dirPath);
+                                createdDirectoriesThisSession.Add(dirPath);
+                            }
+
+                            ReportProgress(force: true);
+
+                            FileStream? fs = null;
                             try
                             {
-                                if (File.Exists(safePath))
+                                filesByRootElement[rootKey].Add(safePath);
+
+                                fs = new FileStream(
+                                    safePath,
+                                    FileMode.Create,
+                                    FileAccess.Write,
+                                    FileShare.None,
+                                    128 * 1024,
+                                    FileOptions.Asynchronous);
+
+                                await PipelinedTransferEngine.StreamNetworkToFileAsync(
+                                    countingStream,
+                                    fs,
+                                    fileMeta.Size,
+                                    onBytesReceived: _ => ReportProgress(force: false),
+                                    transferCt).ConfigureAwait(false);
+
+                                await fs.DisposeAsync().ConfigureAwait(false);
+                                fs = null;
+
+                                filesReceived++;
+
+                                if (totalElements > 1 && (fileMeta.RelativePath == fileMeta.RootName || string.IsNullOrEmpty(fileMeta.RootName)))
                                 {
-                                    File.Delete(safePath);
-                                    Log($"Cleaned up partial file: {fileMeta.RelativePath}");
+                                    if (!result.CompletedElementNames.Contains(rootKey))
+                                    {
+                                        result.CompletedElementNames.Add(rootKey);
+                                    }
                                 }
                             }
-                            catch (Exception delEx)
+                            catch (Exception ex)
                             {
-                                Log($"Failed to delete partial file: {delEx.Message}", LogLevel.Warning);
-                            }
+                                Log($"Error receiving {fileMeta.RelativePath}: {ex.Message}");
 
-                            throw;
-                        }
-                        finally
-                        {
-                            if (fs != null)
+                                if (fs != null)
+                                {
+                                    try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
+                                    fs = null;
+                                }
+
+                                try
+                                {
+                                    if (File.Exists(safePath))
+                                    {
+                                        File.Delete(safePath);
+                                        Log($"Cleaned up partial file: {fileMeta.RelativePath}");
+                                    }
+                                }
+                                catch (Exception delEx)
+                                {
+                                    Log($"Failed to delete partial file: {delEx.Message}", LogLevel.Warning);
+                                }
+
+                                throw;
+                            }
+                            finally
                             {
-                                try { await fs.DisposeAsync(); } catch { }
-                                fs = null;
+                                if (fs != null)
+                                {
+                                    try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
+                                }
                             }
                         }
                     }
@@ -274,7 +408,9 @@ public class TransferReceiver
 
                     result.Success = true;
                     watch.Stop();
-                    var summary = $"Transfer complete! Received {totalReceived / 1024 / 1024} MB ({filesReceived} files) in {watch.Elapsed.TotalSeconds:F1}s.";
+                    ReportProgress(force: true);
+
+                    var summary = $"Transfer complete! Received {totalBytesReceived / 1024 / 1024} MB ({filesReceived} files) in {watch.Elapsed.TotalSeconds:F1}s.";
                     Log(summary);
                 }
                 catch (Exception ex)
@@ -282,7 +418,9 @@ public class TransferReceiver
                     result.Success = false;
                     result.ErrorMessage = ex is OperationCanceledException
                         ? "Transfer cancelled."
-                        : (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException ? "Connection lost (sender aborted or network disconnected)." : ex.Message);
+                        : (ex is System.IO.IOException || ex is System.Net.Sockets.SocketException
+                            ? "Connection lost (sender aborted or network disconnected)."
+                            : ex.Message);
 
                     if (totalElements <= 1)
                     {
@@ -341,10 +479,6 @@ public class TransferReceiver
 
                     try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
                 }
-                finally
-                {
-                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                }
             }
         }
         catch (Exception ex)
@@ -355,22 +489,34 @@ public class TransferReceiver
                 : ex.Message;
             try { client.LingerState = new LingerOption(true, 0); client.Close(); } catch { }
         }
-        result.FailedElementNames = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(result.AllElementNames, name => !result.CompletedElementNames.Contains(name)));
+
+        result.FailedElementNames = result.AllElementNames
+            .Where(name => !result.CompletedElementNames.Contains(name))
+            .ToList();
+
         return result;
     }
 
-    private static async Task DrainBytesAsync(NetworkStream stream, long count, byte[] buffer, CancellationToken ct)
+    private static async Task DrainBytesAsync(Stream stream, long count, CancellationToken ct)
     {
-        long drained = 0;
-
-        while (drained < count)
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(65536);
+        try
         {
-            int toRead = (int)Math.Min(buffer.Length, count - drained);
+            long drained = 0;
+            while (drained < count)
+            {
+                int toRead = (int)Math.Min(buffer.Length, count - drained);
+                int read = await stream.ReadAsync(buffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                if (read == 0)
+                    throw new IOException("Connection lost while draining skipped file data.");
 
-            if (!await ProtocolHelper.ReadExactAsync(stream, buffer, toRead, ct, 5000))
-                throw new IOException("Connection lost while draining skipped file data.");
-
-            drained += toRead;
+                drained += read;
+            }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }
+

@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
 
 namespace EtherTransfer.UI;
@@ -22,3 +22,4 @@ public partial class ErrorDialog : Window
         Close();
     }
 }
+
