@@ -9,16 +9,13 @@
 Fast, zero-configuration local data movement without routers, cloud servers, or setup.
 
 [![Version](https://img.shields.io/badge/version-0.1.1-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey?style=flat-square)](#downloads)
 
-<p align="center">
-  <a href="https://divyviradiya2.github.io/ethertransfer/">Website</a> &bull;
-  <a href="https://divyviradiya2.github.io/ethertransfer/docs.html">Documentation</a> &bull;
-  <a href="https://divyviradiya2.github.io/ethertransfer/#roadmap">Roadmap</a> &bull;
-  <a href="#downloads">Downloads</a>
-</p>
+[![Website](https://img.shields.io/badge/website-visit-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/)
+[![Documentation](https://img.shields.io/badge/docs-guide-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/docs.html)
+[![Roadmap](https://img.shields.io/badge/roadmap-milestones-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/#roadmap)
+[![Downloads](https://img.shields.io/badge/downloads-releases-blue?style=flat-square)](#downloads)
 
 <br>
 
