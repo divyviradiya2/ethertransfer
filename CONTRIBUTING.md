@@ -1,5 +1,7 @@
 # Contributing to EtherTransfer
 
+> **Interactive Documentation**: For the interactive web version with searchable architecture references and diagrams, visit the **[Developer Guide on the Docs Portal](https://divyviradiya2.github.io/ethertransfer/docs.html#developer-guide)**.
+
 Thank you for your interest in contributing to EtherTransfer! We build EtherTransfer with a strong focus on **reliability, memory efficiency, and rock-solid cross-platform networking**.
 
 This guide covers everything you need to know to set up your environment, understand the codebase architecture, run tests, and submit changes.
@@ -80,12 +82,12 @@ EtherTransfer is structured into 6 focused projects:
 
 ```text
 EtherTransfer/
-├── EtherTransfer.Core/        # Shared models, DTOs, network constants & settings manager
-├── EtherTransfer.Network/     # UDP discovery, TCP listener, interface detection & link state monitor
-├── EtherTransfer.Transfer/    # Streaming engine, framing serializer, ArrayPool buffers & PathSanitizer
-├── EtherTransfer.Services/    # High-level orchestration (DeviceService, TransferService, FirewallHelper)
-├── EtherTransfer.UI/          # Avalonia UI (MVVM) desktop client, views, viewmodels, and assets
-└── EtherTransfer.Tests/       # NUnit unit & integration test suites
+ EtherTransfer.Core/        # Shared models, DTOs, network constants & settings manager
+ EtherTransfer.Network/     # UDP discovery, TCP listener, interface detection & link state monitor
+ EtherTransfer.Transfer/    # Streaming engine, framing serializer, ArrayPool buffers & PathSanitizer
+ EtherTransfer.Services/    # High-level orchestration (DeviceService, TransferService, FirewallHelper)
+ EtherTransfer.UI/          # Avalonia UI (MVVM) desktop client, views, viewmodels, and assets
+ EtherTransfer.Tests/       # NUnit unit & integration test suites
 ```
 
 ### Project Responsibilities

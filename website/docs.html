@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherTransfer Documentation | Direct Ethernet File Transfer Architecture & Guides</title>
+    <meta name="description" content="Technical documentation for EtherTransfer: RFC 3927 link-local networking, UDP discovery protocol, TCP framing engine, performance benchmarks, and developer guides.">
+    <meta name="keywords" content="EtherTransfer docs, ethernet transfer protocol, RFC 3927 link-local, udp discovery port 50000, tcp streaming port 55000, 10GbE transfer benchmarks, C# network programming">
+    <meta name="author" content="Divy Viradiya (DS Labs)">
+    <link rel="canonical" href="https://divyviradiya2.github.io/ethertransfer/docs.html">
+
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://divyviradiya2.github.io/ethertransfer/docs.html">
+    <meta property="og:title" content="EtherTransfer Technical Documentation">
+    <meta property="og:description" content="In-depth technical architecture, protocol framing, hardware requirements, and developer specifications for direct peer-to-peer Ethernet file transfer.">
+    <meta property="og:image" content="https://divyviradiya2.github.io/ethertransfer/assets/logo.png">
+
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+
+    <!-- Main Navigation Bar (Identical to Website) -->
+    <header class="top-nav">
+        <div class="nav-container">
+            <div class="brand">
+                <a href="index.html" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: var(--text-main);">
+                    <img src="assets/logo.png" alt="Logo" class="logo">
+                    <span class="brand-name">EtherTransfer</span>
+                </a>
+            </div>
+            <div class="nav-controls">
+                <div class="nav-links">
+                    <a href="index.html#features" class="nav-link">Features</a>
+                    <a href="index.html#guide" class="nav-link">Guide</a>
+                    <a href="docs.html" class="nav-link" style="color: var(--accent); font-weight: 600;">Docs</a>
+                    <a href="index.html#comparison" class="nav-link">Comparison</a>
+                    <a href="index.html#faq" class="nav-link">FAQ</a>
+                    <a href="index.html#downloads" class="nav-link">All Downloads</a>
+                    <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
+                </div>
+                <div class="nav-actions">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Theme">
+                        <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </button>
+                    <a href="index.html#downloads" class="btn-primary small-btn">Download</a>
+                    <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                        <span class="hamburger-bar"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-nav-drawer" class="mobile-nav-drawer" aria-hidden="true">
+        <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
+        <div class="mobile-nav-panel">
+            <nav class="mobile-nav-links">
+                <a href="index.html#features" class="mobile-nav-link">
+                    <span>Features</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="index.html#guide" class="mobile-nav-link">
+                    <span>Guide</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="docs.html" class="mobile-nav-link" style="color: var(--accent); font-weight: 600;">
+                    <span>Documentation</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="index.html#comparison" class="mobile-nav-link">
+                    <span>Speed Comparison</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="index.html#faq" class="mobile-nav-link">
+                    <span>FAQ</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="index.html#downloads" class="mobile-nav-link">
+                    <span>All Downloads</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+                <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="mobile-nav-link external">
+                    <span>GitHub Repository</span>
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+            </nav>
+            <div class="mobile-nav-actions">
+                <a href="index.html#downloads" class="btn-primary mobile-cta-btn">Get EtherTransfer</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Sub-Navigation / Category Tabs -->
+    <nav class="docs-subnav" aria-label="Documentation Categories">
+        <div class="docs-subnav-container">
+            <div class="docs-category-tabs-wrapper">
+                <div class="docs-category-tabs">
+                    <button class="docs-cat-tab active" data-category="getting-started">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        <span>Getting Started</span>
+                    </button>
+                    <button class="docs-cat-tab" data-category="architecture-networking">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        <span>Architecture</span>
+                    </button>
+                    <button class="docs-cat-tab" data-category="transfer-engine">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        <span>Transfer Engine</span>
+                    </button>
+                    <button class="docs-cat-tab" data-category="performance-benchmarks">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                        <span>Benchmarks</span>
+                    </button>
+                    <button class="docs-cat-tab" data-category="security-sandboxing">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span>Security</span>
+                    </button>
+                    <button class="docs-cat-tab" data-category="developer-guide">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        <span>Developer</span>
+                    </button>
+                </div>
+            </div>
+            <button class="docs-subnav-search-btn" id="subnavSearchBtn" aria-label="Search documentation">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span class="search-btn-label">Search</span>
+                <kbd class="search-btn-kbd">Ctrl K</kbd>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Documentation Main Layout -->
+    <div class="docs-layout-wrapper">
+
+        <!-- Left Sticky Sidebar Navigation -->
+        <aside class="docs-sidebar-nav" id="docsSidebarNav" aria-label="Table of Contents">
+            
+            <div class="sidebar-category-block" data-category="getting-started">
+                <div class="sidebar-category-title">Getting Started</div>
+                <a href="#overview" class="sidebar-doc-link">Overview & Vision</a>
+                <a href="#why-ethertransfer" class="sidebar-doc-link">Why EtherTransfer Exists</a>
+                <a href="#quickstart" class="sidebar-doc-link">Quick Start Guide</a>
+                <a href="#hardware-requirements" class="sidebar-doc-link">Hardware & Cabling</a>
+                <a href="#supported-topologies" class="sidebar-doc-link">Supported Topologies</a>
+            </div>
+
+            <div class="sidebar-category-block" data-category="architecture-networking">
+                <div class="sidebar-category-title">Architecture & Networking</div>
+                <a href="#link-local-negotiation" class="sidebar-doc-link">RFC 3927 Link-Local Addressing</a>
+                <a href="#udp-discovery" class="sidebar-doc-link">UDP Peer Discovery (Port 50000)</a>
+                <a href="#session-identity" class="sidebar-doc-link">UUID Session Identity Model</a>
+                <a href="#link-monitor" class="sidebar-doc-link">Link Monitor State Machine</a>
+                <a href="#interface-isolation" class="sidebar-doc-link">Subnet Interface Isolation</a>
+            </div>
+
+            <div class="sidebar-category-block" data-category="transfer-engine">
+                <div class="sidebar-category-title">Transfer Engine</div>
+                <a href="#tcp-streaming-protocol" class="sidebar-doc-link">TCP Streaming Architecture</a>
+                <a href="#framing-serialization" class="sidebar-doc-link">Length-Prefixed Framing</a>
+                <a href="#memory-pipeline" class="sidebar-doc-link">Zero-Allocation Pipeline</a>
+                <a href="#directory-serialization" class="sidebar-doc-link">Directory Tree Reconstruction</a>
+                <a href="#reliability-watchdogs" class="sidebar-doc-link">Reliability & Watchdogs</a>
+            </div>
+
+            <div class="sidebar-category-block" data-category="performance-benchmarks">
+                <div class="sidebar-category-title">Performance & Hardware</div>
+                <a href="#speed-matrix" class="sidebar-doc-link">Ethernet Throughput Matrix</a>
+                <a href="#bottlenecks-analysis" class="sidebar-doc-link">Bottleneck Deep-Dive</a>
+                <a href="#multi-stream-pipelining" class="sidebar-doc-link">Multi-Stream Pipelining</a>
+                <a href="#storage-prerequisites" class="sidebar-doc-link">Storage Requirements</a>
+            </div>
+
+            <div class="sidebar-category-block" data-category="security-sandboxing">
+                <div class="sidebar-category-title">Security & System</div>
+                <a href="#security-model" class="sidebar-doc-link">Security Model & Consent Gate</a>
+                <a href="#path-sanitizer" class="sidebar-doc-link">Sandboxing & Path Sanitization</a>
+                <a href="#firewall-configuration" class="sidebar-doc-link">Firewall Rules & Sockets</a>
+                <a href="#system-modifications-transparency" class="sidebar-doc-link">OS Modifications Audit</a>
+                <a href="#portable-mode" class="sidebar-doc-link">Portable Mode & Settings</a>
+            </div>
+
+            <div class="sidebar-category-block" data-category="developer-guide">
+                <div class="sidebar-category-title">Developer Guide</div>
+                <a href="#solution-architecture" class="sidebar-doc-link">Solution Architecture (6 Projects)</a>
+                <a href="#building-running" class="sidebar-doc-link">Building from Source</a>
+                <a href="#running-tests" class="sidebar-doc-link">Running Test Suites</a>
+                <a href="#packaging-publishing" class="sidebar-doc-link">Publishing Single-File Builds</a>
+                <a href="#code-standards" class="sidebar-doc-link">Code Guidelines & Standards</a>
+                <a href="#troubleshooting-matrix" class="sidebar-doc-link">Troubleshooting Matrix</a>
+            </div>
+
+        </aside>
+
+        <!-- Main Article Content Area -->
+        <main class="docs-article">
+
+            <!-- ================= PANE 1: GETTING STARTED ================= -->
+            <div class="docs-category-pane active" id="pane-getting-started" data-category-title="Getting Started">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Getting Started</span>
+                </div>
+
+                <h1>Getting Started with EtherTransfer</h1>
+                <p class="docs-article-lead">
+                    EtherTransfer is an open-source, peer-to-peer desktop file transfer application engineered with <strong>.NET 10</strong> and <strong>Avalonia UI</strong>. It provides direct computer-to-computer data movement across physical Ethernet cables without intermediate cloud servers, routers, DHCP configurations, or third-party relays.
+                </p>
+
+                <!-- 1.1 Overview & Vision -->
+                <section class="docs-chapter-section">
+                    <h2 id="overview">Overview & Core Architecture</h2>
+                    <p>
+                        Traditional local network sharing protocols were engineered for client-server office LANs. When you want to link two laptops together with a physical cable and move a 100 GB folder, standard operating system tools present massive obstacles: credential dialogues, permission mismatches, firewalls, and manual IP subnet calculations.
+                    </p>
+                    <p>
+                        EtherTransfer operates as a dedicated, self-contained transport system. It uses decentralized <a href="#udp-discovery" class="source-route-link">UDP Port 50000 Broadcast</a> for peer detection and a hardened <a href="#tcp-streaming-protocol" class="source-route-link">TCP Port 55000 Streaming Engine</a> for raw binary payloads.
+                    </p>
+
+                    <div class="docs-diagram-box">
+                        <img src="assets/network_diagram.jpg" alt="EtherTransfer Direct Point-to-Point Topology">
+                        <p class="docs-diagram-caption">Point-to-Point physical topology operating over RFC 3927 Link-Local Addressing without external infrastructure.</p>
+                    </div>
+                </section>
+
+                <!-- 1.2 Why EtherTransfer Exists -->
+                <section class="docs-chapter-section">
+                    <h2 id="why-ethertransfer">Why EtherTransfer Exists & What It Solves</h2>
+                    <p>
+                        Moving large datasets between computers sitting adjacent to each other should take seconds of human effort: plug a cable, select your files, and hit transfer. Traditional mechanisms fail this basic use case:
+                    </p>
+
+                    <ul>
+                        <li><strong>Windows File Sharing / SMB</strong>: Beset by credential prompts, cross-platform Windows-to-Linux permission headaches, NetBIOS discovery failures, and public/private profile firewall blocks.</li>
+                        <li><strong>Manual Static IP & Netcat</strong>: Requires opening terminal consoles, calculating non-conflicting IP subnets on both machines, creating tarballs manually, and piping raw sockets with zero progress feedback.</li>
+                        <li><strong>External USB Drives</strong>: Requires a two-phase transfer (copying 100 GB onto the drive, waiting, unplugging, copying off the drive, waiting again) and fails if the file exceeds the drive's free capacity.</li>
+                        <li><strong>Cloud & Relay Solutions</strong>: Route local data across external internet connections, capped by ISP upload limits and third-party servers.</li>
+                    </ul>
+
+                    <div class="docs-callout">
+                        <div class="docs-callout-icon">
+                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        </div>
+                        <div class="docs-callout-content">
+                            <div class="docs-callout-title">Interface Pinning Guarantee</div>
+                            <p>EtherTransfer isolates physical Ethernet adapters from active Wi-Fi connections. You can continue browsing the web on Wi-Fi while massive gigabyte transfers saturate the physical cable at wire speeds.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 1.3 Quick Start Guide -->
+                <section class="docs-chapter-section">
+                    <h2 id="quickstart">Quick Start Guide</h2>
+                    <p>
+                        To perform a direct transfer between two computers:
+                    </p>
+
+                    <div class="code-box">
+                        <pre><code>         Ethernet Cable (Cat 5e/6/6a/7/8)        
+     Sender Computer         Receiver Computer    
+  (EtherTransfer open)     UDP Discovery (Port 50000 Broadcast)     (EtherTransfer open)   
+   IP: 169.254.x.x         Framed TCP Stream (Port 55000)      IP: 169.254.x.x       
+                                                 </code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+
+                    <ol>
+                        <li><strong>Launch</strong>: Open EtherTransfer on both computers.</li>
+                        <li><strong>Connect</strong>: Connect both machines using a standard Ethernet cable (or connect both to the same switch/LAN).</li>
+                        <li><strong>Discover</strong>: Within 1–5 seconds, each machine detects the other via UDP broadcast and displays the peer in the device list.</li>
+                        <li><strong>Select & Send</strong>: Drag and drop files or folders onto the target peer, or select them via the file picker and click <strong>Send</strong>.</li>
+                        <li><strong>Accept</strong>: The receiving machine prompts with the sender name, file count, and total payload size. Choose a destination folder and click <strong>Accept</strong>.</li>
+                    </ol>
+                </section>
+
+                <!-- 1.4 Hardware & Cabling -->
+                <section class="docs-chapter-section">
+                    <h2 id="hardware-requirements">Hardware Requirements & Cabling Standards</h2>
+                    <p>
+                        EtherTransfer works with all standard Ethernet hardware without proprietary dongles or drivers:
+                    </p>
+
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Specification</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Network Interface</strong></td>
+                                    <td>10/100/1000 Mbps, 2.5 GbE, 5 GbE, or 10 GbE NIC</td>
+                                    <td>Integrated motherboard NIC or USB 3.0 / USB-C / Thunderbolt dongles.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Auto-MDIX</strong></td>
+                                    <td><a href="https://standards.ieee.org/" target="_blank" class="text-link">IEEE 802.3ab Standard</a></td>
+                                    <td>Standard on all Gigabit+ NICs since 2000. Eliminates the need for crossover cables.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cables</strong></td>
+                                    <td>RJ-45 Category 5e, 6, 6a, 7, or 8 patch cables</td>
+                                    <td>Standard straight-through cables work directly point-to-point.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Storage Throughput</strong></td>
+                                    <td>SATA SSD (500 MB/s) or NVMe SSD (1500–7000 MB/s)</td>
+                                    <td>Disk write speeds determine throughput on links &ge; 2.5 Gbps.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 1.5 Supported Topologies -->
+                <section class="docs-chapter-section">
+                    <h2 id="supported-topologies">Supported Network Topologies</h2>
+                    
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Topology</th>
+                                    <th>Configuration Required</th>
+                                    <th>Behavior</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Direct Cable (1-to-1)</strong></td>
+                                    <td>Zero (Automatic)</td>
+                                    <td>Direct cable linking two PCs. OS assigns IPv4 Link-Local (<code>169.254.0.0/16</code>) automatically.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Unmanaged Switch (1-to-Many)</strong></td>
+                                    <td>Zero (Automatic)</td>
+                                    <td>Multiple PCs connected to an unmanaged switch without a router. All peers auto-discover.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Existing LAN / Router</strong></td>
+                                    <td>Zero</td>
+                                    <td>EtherTransfer uses standard DHCP addresses (<code>192.168.x.x</code>, <code>10.x.x.x</code>) across the subnet.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mixed Wi-Fi + Cable</strong></td>
+                                    <td>Zero</td>
+                                    <td>Wi-Fi handles internet access while EtherTransfer pins file streaming exclusively to the cable.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <div></div>
+                    <button class="docs-stepper-btn next" data-target-category="architecture-networking">
+                        <span class="stepper-label">Next Chapter &rarr;</span>
+                        <span class="stepper-title">Architecture & Networking</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= PANE 2: ARCHITECTURE & NETWORKING ================= -->
+            <div class="docs-category-pane" id="pane-architecture-networking" data-category-title="Architecture & Networking">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Architecture & Networking</span>
+                </div>
+
+                <h1>Architecture & Networking</h1>
+                <p class="docs-article-lead">
+                    EtherTransfer combines zero-configuration link-local addressing, subnet-isolated UDP broadcast discovery, and an active physical link state machine to deliver seamless connectivity.
+                </p>
+
+                <!-- 2.1 RFC 3927 Link-Local Addressing -->
+                <section class="docs-chapter-section">
+                    <h2 id="link-local-negotiation">RFC 3927 Link-Local IPv4 Negotiation</h2>
+                    <p>
+                        When two computers connect directly with an Ethernet cable without a DHCP server, they negotiate addresses in the IPv4 Link-Local range <code>169.254.1.0</code> through <code>169.254.254.255</code> with subnet mask <code>255.255.0.0</code> as defined in <a href="https://datatracker.ietf.org/doc/html/rfc3927" target="_blank" class="text-link">RFC 3927</a>.
+                    </p>
+                    <ul>
+                        <li><strong>Windows</strong>: Native Automatic Private IP Addressing (APIPA) assigns an IP address within 2–6 seconds.</li>
+                        <li><strong>Linux</strong>: NetworkManager historically does not enable link-local negotiation automatically on unmanaged ports. EtherTransfer includes an active state machine in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a> that automatically executes <code>nmcli device modify &lt;iface&gt; ipv4.method link-local</code> when a physical carrier is detected, and restores prior settings on exit.</li>
+                    </ul>
+                </section>
+
+                <!-- 2.2 UDP Discovery Protocol -->
+                <section class="docs-chapter-section">
+                    <h2 id="udp-discovery">UDP Peer Discovery Protocol (Port 50000)</h2>
+                    <p>
+                        Decentralized peer discovery is managed by <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="source-route-link">DiscoveryService.cs</a> using UDP broadcasts on port <strong>50000</strong>:
+                    </p>
+
+                    <div class="code-box">
+                        <pre><code>{
+  "Type": "HELLO",
+  "Id": "EtherTransferApp-V1",
+  "SessionId": "c4b8e21a-7b3f-4e89-9a12-8f6a91d2345e",
+  "ComputerName": "Workstation-Desktop",
+  "TcpPort": 55000,
+  "OS": "Windows",
+  "SequenceNumber": 42
+}</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+
+                    <h3>Discovery Dynamics & Lifecycle</h3>
+                    <ul>
+                        <li><strong>Startup Burst</strong>: On launch, the client transmits discovery packets at staggered intervals: 250ms, 500ms, and 1000ms.</li>
+                        <li><strong>Steady-State Heartbeat</strong>: Transmits a <code>HELLO</code> packet every <strong>2000ms</strong>.</li>
+                        <li><strong>Stale Peer Eviction</strong>: Peers silent for <strong>45 seconds</strong> or whose IP address disappears from active Ethernet subnets are purged from memory.</li>
+                        <li><strong>Graceful Teardown</strong>: Upon application closure, a burst of 3 <code>BYE</code> packets is broadcast to immediately unregister from peer lists.</li>
+                    </ul>
+                </section>
+
+                <!-- 2.3 UUID Session Identity Model -->
+                <section class="docs-chapter-section">
+                    <h2 id="session-identity">UUID Session Identity Model</h2>
+                    <p>
+                        Devices are tracked by a dynamic UUID <code>SessionId</code> generated at startup, rather than a physical IP address.
+                    </p>
+                    <p>
+                        <strong>Rationale:</strong> During link-local negotiation, an operating system may assign a temporary IP and renegotiate seconds later. By indexing peers by <code>SessionId</code>, IP shifts update the existing peer record in-place without generating duplicate "ghost devices" in the user interface.
+                    </p>
+                </section>
+
+                <!-- 2.4 Link Monitor State Machine -->
+                <section class="docs-chapter-section">
+                    <h2 id="link-monitor">Physical Link Monitor State Machine</h2>
+                    <p>
+                        The network layer runs a deterministic state machine defined in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="source-route-link">EthernetLinkMonitor.cs</a>:
+                    </p>
+
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>State</th>
+                                    <th>Condition</th>
+                                    <th>System Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>NoCable</code></td>
+                                    <td>No physical Ethernet carrier detected.</td>
+                                    <td>Discovery paused; status bar displays disconnected state.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>Configuring</code></td>
+                                    <td>Carrier UP, but no IPv4 address assigned yet.</td>
+                                    <td>On Linux, triggers <code>nmcli device modify</code> to invoke link-local mode.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>Ready</code></td>
+                                    <td>Carrier UP and valid IPv4 address assigned.</td>
+                                    <td>Spawns UDP broadcast loops and starts TCP listeners.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>ConfigError</code></td>
+                                    <td>IPv4 assignment timed out or failed.</td>
+                                    <td>Prompts user to verify interface state or click Retry.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 2.5 Subnet Interface Isolation -->
+                <section class="docs-chapter-section">
+                    <h2 id="interface-isolation">Subnet Interface Isolation</h2>
+                    <p>
+                        To prevent file transfer traffic from accidentally routing across slower Wi-Fi networks, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/NetworkHelper.cs" target="_blank" class="source-route-link">NetworkHelper.cs</a> inspects network interfaces and enforces active subnet matching:
+                    </p>
+                    <div class="code-box">
+                        <pre><code>public static bool IsIpInActiveSubnets(string ipAddress)
+{
+    var activeSubnets = GetActiveEthernetSubnets();
+    return activeSubnets.Any(subnet => subnet.Contains(IPAddress.Parse(ipAddress)));
+}</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <button class="docs-stepper-btn" data-target-category="getting-started">
+                        <span class="stepper-label">&larr; Previous</span>
+                        <span class="stepper-title">Getting Started</span>
+                    </button>
+                    <button class="docs-stepper-btn next" data-target-category="transfer-engine">
+                        <span class="stepper-label">Next Chapter &rarr;</span>
+                        <span class="stepper-title">Transfer Engine</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= PANE 3: TRANSFER ENGINE & PROTOCOLS ================= -->
+            <div class="docs-category-pane" id="pane-transfer-engine" data-category-title="Transfer Engine & Protocols">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Transfer Engine & Protocols</span>
+                </div>
+
+                <h1>Transfer Engine & Streaming Architecture</h1>
+                <p class="docs-article-lead">
+                    EtherTransfer implements a high-throughput length-prefixed TCP streaming protocol on port 55000 utilizing zero-allocation buffer pooling and deterministic watchdog timeouts.
+                </p>
+
+                <!-- 3.1 TCP Streaming Protocol -->
+                <section class="docs-chapter-section">
+                    <h2 id="tcp-streaming-protocol">TCP Streaming Architecture (Port 55000)</h2>
+                    <p>
+                        Transfer sessions operate over a dedicated TCP stream with socket keep-alives enabled. The transfer handshake and execution sequence:
+                    </p>
+
+                    <div class="code-box">
+                        <pre><code>Sender                                                                Receiver
+                                                                        
+   1. TCP Handshake (Port 55000) 
+   2. TRANSFER_REQUEST [TotalFiles, TotalSize, RootElements] 
+                                                                         [Prompt User]
+   3. TRANSFER_RESPONSE [Accepted: true/false, Reason] 
+                                                                        
+      === For each file in payload ===                                  
+   4. FILE_BEGIN 
+   5. FileItemMetadata [RelativePath, RootName, Size] 
+   6. Binary Payload Stream (1 MB sequential chunks)  [Write to Disk]
+                                                                        
+      === End of transmission ===                                       
+   7. TRANSFER_END  [Finalize Result]
+                                                                        </code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                </section>
+
+                <!-- 3.2 Framing & Serialization -->
+                <section class="docs-chapter-section">
+                    <h2 id="framing-serialization">Length-Prefixed Framing & DoS Protection</h2>
+                    <p>
+                        All metadata messages in <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/ProtocolHelper.cs" target="_blank" class="source-route-link">ProtocolHelper.cs</a> are serialized with a <strong>4-byte little-endian length prefix</strong> (Int32) followed by UTF-8 encoded JSON:
+                    </p>
+                    <div class="code-box">
+                        <pre><code>[ 4-Byte Payload Length (LE Int32) ] [ UTF-8 JSON Metadata Body ] [ Binary File Data Chunks... ]</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                    <div class="docs-callout security">
+                        <div class="docs-callout-icon">
+                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </div>
+                        <div class="docs-callout-content">
+                            <div class="docs-callout-title">10 MB Sanity Allocation Guard</div>
+                            <p>To prevent memory exhaustion denial-of-service attacks, the receiver strictly enforces a 10 MB maximum header size. Any length prefix exceeding 10 MB causes immediate socket termination.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3.3 Zero-Allocation Pipeline -->
+                <section class="docs-chapter-section">
+                    <h2 id="memory-pipeline">Zero-Allocation Memory Pipeline (ArrayPool)</h2>
+                    <p>
+                        Instead of allocating new <code>byte[]</code> arrays per chunk, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="source-route-link">TransferSender.cs</a> and <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferReceiver.cs" target="_blank" class="source-route-link">TransferReceiver.cs</a> rent <strong>1 MB buffers</strong> from <code>System.Buffers.ArrayPool&lt;byte&gt;.Shared</code>:
+                    </p>
+                    <div class="code-box">
+                        <pre><code>byte[] buffer = ArrayPool&lt;byte&gt;.Shared.Rent(1024 * 1024); // 1 MB buffer
+try
+{
+    while (remainingBytes > 0)
+    {
+        int bytesToRead = (int)Math.Min(buffer.Length, remainingBytes);
+        int bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, bytesToRead), cancellationToken);
+        await networkStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+        remainingBytes -= bytesRead;
+    }
+}
+finally
+{
+    ArrayPool&lt;byte&gt;.Shared.Return(buffer);
+}</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                    <p>
+                        This ensures process working set memory remains under <strong>100 MB</strong> even when streaming 500 GB+ datasets.
+                    </p>
+                </section>
+
+                <!-- 3.4 Directory Serialization -->
+                <section class="docs-chapter-section">
+                    <h2 id="directory-serialization">Deep Directory Hierarchy Reconstruction</h2>
+                    <p>
+                        EtherTransfer recursively traverses folders using <code>Directory.EnumerateFiles</code> with <code>IgnoreInaccessible = true</code>.
+                    </p>
+                    <ul>
+                        <li><strong>No Archive Overhead</strong>: Folders are streamed natively on-the-fly without requiring intermediate <code>.zip</code> or <code>.tar</code> creation.</li>
+                        <li><strong>Path Normalization</strong>: Relative directory paths are transmitted with forward-slash delimiters and sanitized on the receiving platform to maintain cross-platform structure integrity.</li>
+                    </ul>
+                </section>
+
+                <!-- 3.5 Reliability & Watchdogs -->
+                <section class="docs-chapter-section">
+                    <h2 id="reliability-watchdogs">Reliability & Watchdog Timeouts</h2>
+                    <p>
+                        Direct point-to-point links do not always trigger an OS socket abort when a cable is severed. EtherTransfer protects against hangs using active timeouts:
+                    </p>
+                    <ul>
+                        <li><strong>Metadata Operations</strong>: Strict 2-second timeout watchdog.</li>
+                        <li><strong>Payload Chunks</strong>: 5-second watchdog per 1 MB chunk. If a chunk fails to transfer within 5 seconds over a physical cable, the connection is aborted cleanly.</li>
+                        <li><strong>Atomic Rollback</strong>: Incomplete files are deleted upon transfer cancellation or network disconnect. Completely transferred items in multi-file sessions are preserved.</li>
+                    </ul>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <button class="docs-stepper-btn" data-target-category="architecture-networking">
+                        <span class="stepper-label">&larr; Previous</span>
+                        <span class="stepper-title">Architecture & Networking</span>
+                    </button>
+                    <button class="docs-stepper-btn next" data-target-category="performance-benchmarks">
+                        <span class="stepper-label">Next Chapter &rarr;</span>
+                        <span class="stepper-title">Performance & Hardware</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= PANE 4: PERFORMANCE & HARDWARE ================= -->
+            <div class="docs-category-pane" id="pane-performance-benchmarks" data-category-title="Performance & Hardware">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Performance & Hardware</span>
+                </div>
+
+                <h1>Performance & Link Speed Benchmarks</h1>
+                <p class="docs-article-lead">
+                    Detailed technical throughput matrices, multi-gigabit bottleneck analysis, and storage hardware prerequisites across all Ethernet tiers.
+                </p>
+
+                <!-- 4.1 Speed Matrix -->
+                <section class="docs-chapter-section">
+                    <h2 id="speed-matrix">Comprehensive Ethernet Throughput Matrix</h2>
+                    
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Ethernet Tier</th>
+                                    <th>Line Rate</th>
+                                    <th>TCP Theoretical Max</th>
+                                    <th>Single-Stream Speed</th>
+                                    <th>Multi-Stream / Pipeline</th>
+                                    <th>Storage Requirement</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>1 GbE (Gigabit)</strong></td>
+                                    <td>125.0 MB/s</td>
+                                    <td>~118.5 MB/s</td>
+                                    <td><strong>110 – 115 MB/s</strong></td>
+                                    <td><strong>115 MB/s</strong> (Line Saturated)</td>
+                                    <td>Fast HDD / SATA SSD</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>2.5 GbE</strong></td>
+                                    <td>312.5 MB/s</td>
+                                    <td>~296.0 MB/s</td>
+                                    <td><strong>270 – 285 MB/s</strong></td>
+                                    <td><strong>285 – 295 MB/s</strong></td>
+                                    <td>SATA III SSD (&ge;500 MB/s)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>5 GbE</strong></td>
+                                    <td>625.0 MB/s</td>
+                                    <td>~592.0 MB/s</td>
+                                    <td><strong>450 – 540 MB/s</strong></td>
+                                    <td><strong>560 – 590 MB/s</strong></td>
+                                    <td>PCIe Gen 3 NVMe SSD</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>10 GbE (MTU 1500)</strong></td>
+                                    <td>1250.0 MB/s</td>
+                                    <td>~1184.0 MB/s</td>
+                                    <td><strong>450 – 850 MB/s</strong></td>
+                                    <td><strong>1,100 – 1,150 MB/s</strong></td>
+                                    <td>PCIe Gen 3/4 NVMe SSD</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>10 GbE (Jumbo 9000)</strong></td>
+                                    <td>1250.0 MB/s</td>
+                                    <td>~1235.0 MB/s</td>
+                                    <td><strong>850 – 1,100 MB/s</strong></td>
+                                    <td><strong>1,180 – 1,220 MB/s</strong></td>
+                                    <td>PCIe Gen 4 NVMe SSD</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4.2 Bottlenecks Analysis -->
+                <section class="docs-chapter-section">
+                    <h2 id="bottlenecks-analysis">Technical Bottlenecks Analysis</h2>
+                    
+                    <h3>1. Why Single-Stream Plain TCP Caps at ~850 MB/s on 10 GbE</h3>
+                    <p>
+                        On standard 1500-byte MTU, transferring at 10 Gbps generates approximately <strong>800,000 packets per second</strong>. A single TCP connection processes socket interrupts and ACKs on a single CPU core, creating an interrupt handling bottleneck before the network hardware is saturated.
+                    </p>
+                    <p>
+                        Additionally, synchronous I/O loops (read disk &rarr; write socket) introduce alternating idle states where the network waits on storage and storage waits on socket buffer flushes.
+                    </p>
+                </section>
+
+                <!-- 4.3 Multi-Stream Pipelining -->
+                <section class="docs-chapter-section">
+                    <h2 id="multi-stream-pipelining">Multi-Stream Pipelining & Optimization</h2>
+                    <p>
+                        To reach maximum throughput (1,150+ MB/s) on 10 GbE links:
+                    </p>
+                    <ul>
+                        <li><strong>Multi-Stream TCP (4–8 Sockets)</strong>: Distributes packet processing across multiple CPU cores.</li>
+                        <li><strong>Asynchronous Channels (<code>System.Threading.Channels</code>)</strong>: Decouples disk reading from network transmission, allowing simultaneous 100% duty cycles on both NVMe storage and network PHY.</li>
+                        <li><strong>Socket Tuning</strong>: Disabling Nagle's algorithm (<code>NoDelay = true</code>) and configuring 4 MB socket buffer windows prevents window stalls across high bandwidth-delay product links.</li>
+                    </ul>
+                </section>
+
+                <!-- 4.4 Storage Prerequisites -->
+                <section class="docs-chapter-section">
+                    <h2 id="storage-prerequisites">Storage Hardware Prerequisites</h2>
+                    <ul>
+                        <li><strong>1 GbE (115 MB/s)</strong>: Standard SATA SSD or 7200 RPM mechanical HDD.</li>
+                        <li><strong>2.5 GbE (285 MB/s)</strong>: Quality SATA III SSD (Samsung 870 EVO, Crucial MX500) or NVMe SSD.</li>
+                        <li><strong>5 GbE (570 MB/s)</strong>: PCIe Gen 3 NVMe SSD (SATA SSDs cap at ~550 MB/s).</li>
+                        <li><strong>10 GbE (1,150 MB/s)</strong>: PCIe Gen 3 &times;4 or Gen 4 NVMe SSD with sustained sequential write performance outside of SLC write cache.</li>
+                    </ul>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <button class="docs-stepper-btn" data-target-category="transfer-engine">
+                        <span class="stepper-label">&larr; Previous</span>
+                        <span class="stepper-title">Transfer Engine</span>
+                    </button>
+                    <button class="docs-stepper-btn next" data-target-category="security-sandboxing">
+                        <span class="stepper-label">Next Chapter &rarr;</span>
+                        <span class="stepper-title">Security & System</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= PANE 5: SECURITY & SYSTEM ================= -->
+            <div class="docs-category-pane" id="pane-security-sandboxing" data-category-title="Security & System">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Security & System Modifications</span>
+                </div>
+
+                <h1>Security Model & System Modifications</h1>
+                <p class="docs-article-lead">
+                    Complete transparency into EtherTransfer's security boundaries, path sanitization algorithms, firewall rules, and operating system modifications.
+                </p>
+
+                <!-- 5.1 Security Model -->
+                <section class="docs-chapter-section">
+                    <h2 id="security-model">Security Model & Consent Gate</h2>
+                    
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Security Property</th>
+                                    <th>State</th>
+                                    <th>Technical Implementation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Transport Encryption</strong></td>
+                                    <td>Plaintext Binary</td>
+                                    <td>Designed for direct cables or private unmanaged switches. No TLS overhead.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Authentication</strong></td>
+                                    <td>Broadcast Discovery</td>
+                                    <td>Any instance on the Layer 2 domain appears in peer list.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Authorization Gate</strong></td>
+                                    <td>Manual UI Consent</td>
+                                    <td>Receivers must explicitly click <strong>Accept</strong> to allow incoming files.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Path Sandboxing</strong></td>
+                                    <td>Strictly Enforced</td>
+                                    <td>Path traversal (<code>../</code>) and absolute root paths are blocked.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Collision Safety</strong></td>
+                                    <td>Auto-Renaming</td>
+                                    <td>Appends incrementing counters (e.g. <code>data (1).bin</code>) to prevent overwrites.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 5.2 Sandboxing & Path Sanitization -->
+                <section class="docs-chapter-section">
+                    <h2 id="path-sanitizer">Sandboxing & Path Sanitization (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a>)</h2>
+                    <p>
+                        Untrusted path strings from the network are strictly sanitized before any file handles are created:
+                    </p>
+                    <ul>
+                        <li><strong>Directory Traversal</strong>: Strips <code>../</code> and <code>..\</code> sequences to keep files contained in the selected destination folder.</li>
+                        <li><strong>Windows Reserved Names</strong>: Reserved device identifiers (<code>CON</code>, <code>PRN</code>, <code>AUX</code>, <code>NUL</code>, <code>COM1-9</code>, <code>LPT1-9</code>) are automatically prefixed with an underscore (e.g., <code>_CON.txt</code>).</li>
+                        <li><strong>Control Characters</strong>: Null bytes (<code> </code>) and illegal filesystem characters are stripped.</li>
+                    </ul>
+                </section>
+
+                <!-- 5.3 Firewall Configuration -->
+                <section class="docs-chapter-section">
+                    <h2 id="firewall-configuration">Firewall Configuration & Sockets</h2>
+                    <p>
+                        EtherTransfer requires access to two specific local network ports:
+                    </p>
+                    <ul>
+                        <li><strong>UDP Port 50000</strong>: Inbound & Outbound discovery broadcasts.</li>
+                        <li><strong>TCP Port 55000</strong>: Inbound streaming file transfer listener.</li>
+                    </ul>
+
+                    <div class="docs-os-switcher">
+                        <div class="docs-os-tabs">
+                            <button class="docs-os-tab-btn active" data-os="windows">Windows</button>
+                            <button class="docs-os-tab-btn" data-os="linux">Linux</button>
+                        </div>
+                        <div class="docs-os-pane active" data-os="windows">
+                            <p style="margin-bottom: 0.75rem;">The Windows installer registers an inbound rule via <code>netsh</code> automatically:</p>
+                            <div class="code-box">
+                                <pre><code>netsh advfirewall firewall add rule name="EtherTransfer" dir=in action=allow program="%ProgramFiles%\EtherTransfer\EtherTransfer.exe" enable=yes profile=private,public</code></pre>
+                                <button class="copy-btn" type="button">Copy</button>
+                            </div>
+                        </div>
+                        <div class="docs-os-pane" data-os="linux">
+                            <p style="margin-bottom: 0.75rem;">The Linux installer detects the active firewall manager and adds port rules:</p>
+                            <div class="code-box">
+                                <pre><code># For UFW (Ubuntu / Debian)
+sudo ufw allow 50000/udp && sudo ufw allow 55000/tcp
+
+# For Firewalld (Fedora / RHEL / CentOS)
+sudo firewall-cmd --permanent --add-port=50000/udp --add-port=55000/tcp
+sudo firewall-cmd --reload</code></pre>
+                                <button class="copy-btn" type="button">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5.4 System Modifications Audit -->
+                <section class="docs-chapter-section">
+                    <h2 id="system-modifications-transparency">OS Modifications Audit & Transparency</h2>
+                    <p>
+                        We maintain complete transparency regarding changes made by installers:
+                    </p>
+                    <ul>
+                        <li><strong>Windows Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.iss" target="_blank" class="source-route-link">EtherTransfer.iss</a>)</strong>: Installs binaries to <code>C:\Program Files\EtherTransfer</code>, adds start menu shortcuts, and registers the firewall whitelist rule. Uninstallation cleanly removes all binaries and deletes the firewall rule.</li>
+                        <li><strong>Linux Installer (<a href="https://github.com/divyviradiya2/ethertransfer/blob/main/install_linux.sh" target="_blank" class="source-route-link">install_linux.sh</a>)</strong>: Installs to <code>/opt/ethertransfer</code>, registers <code>/usr/share/applications/ethertransfer.desktop</code>, symlinks to <code>/usr/local/bin/ethertransfer</code>, opens firewall ports, and installs <code>network-manager</code> if missing.</li>
+                        <li><strong>Zero Telemetry Guarantee</strong>: EtherTransfer contains zero tracking services, telemetry agents, or background analytics hooks. Absolutely no data leaves your local machine.</li>
+                    </ul>
+                </section>
+
+                <!-- 5.5 Portable Mode -->
+                <section class="docs-chapter-section">
+                    <h2 id="portable-mode">Portable Mode & Settings Storage</h2>
+                    <p>
+                        Portable releases are self-contained single-file executables with the .NET runtime bundled directly inside.
+                    </p>
+                    <ul>
+                        <li><strong>Settings Storage (Windows)</strong>: <code>%AppData%\EtherTransfer\settings.json</code></li>
+                        <li><strong>Settings Storage (Linux)</strong>: <code>~/.config/EtherTransfer/settings.json</code></li>
+                    </ul>
+                    <p>
+                        Custom device identities persist across sessions even if the portable executable is moved between directories or launched from a USB drive.
+                    </p>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <button class="docs-stepper-btn" data-target-category="performance-benchmarks">
+                        <span class="stepper-label">&larr; Previous</span>
+                        <span class="stepper-title">Performance & Hardware</span>
+                    </button>
+                    <button class="docs-stepper-btn next" data-target-category="developer-guide">
+                        <span class="stepper-label">Next Chapter &rarr;</span>
+                        <span class="stepper-title">Developer Guide</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- ================= PANE 6: DEVELOPER GUIDE ================= -->
+            <div class="docs-category-pane" id="pane-developer-guide" data-category-title="Developer Guide">
+                
+                <div class="docs-breadcrumb-trail">
+                    <a href="index.html">Docs</a>
+                    <span>/</span>
+                    <span>Developer Guide</span>
+                </div>
+
+                <h1>Developer & Contributing Guide</h1>
+                <p class="docs-article-lead">
+                    Complete solution architecture breakdown, build instructions, test suites, and publishing workflows for contributors.
+                </p>
+
+                <!-- 6.1 Solution Architecture -->
+                <section class="docs-chapter-section">
+                    <h2 id="solution-architecture">Solution Architecture (6 Projects)</h2>
+                    <p>
+                        The EtherTransfer solution is organized into 6 focused projects:
+                    </p>
+
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Responsibility</th>
+                                    <th>Key Classes & Links</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Core" target="_blank" class="source-route-link">EtherTransfer.Core</a></strong></td>
+                                    <td>Data contracts, protocol schemas, network constants, and settings manager.</td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Core/Models/TransferProtocol.cs" target="_blank" class="text-link">TransferProtocol.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Core/SettingsManager.cs" target="_blank" class="text-link">SettingsManager.cs</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Network" target="_blank" class="source-route-link">EtherTransfer.Network</a></strong></td>
+                                    <td>UDP discovery, TCP server hosting, adapter classification, and link state detector.</td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/UdpDiscovery/DiscoveryService.cs" target="_blank" class="text-link">DiscoveryService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Network/NetworkInterfaces/EthernetLinkMonitor.cs" target="_blank" class="text-link">EthernetLinkMonitor.cs</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Transfer" target="_blank" class="source-route-link">EtherTransfer.Transfer</a></strong></td>
+                                    <td>File scanning, binary stream transmission, 4-byte LE framing, and path sanitization.</td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="text-link">TransferSender.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Transfer/PathSanitizer.cs" target="_blank" class="text-link">PathSanitizer.cs</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Services" target="_blank" class="source-route-link">EtherTransfer.Services</a></strong></td>
+                                    <td>Application orchestration layer tying network discovery and transfer state to UI.</td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Services/DeviceManager/DeviceService.cs" target="_blank" class="text-link">DeviceService.cs</a>, <a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Services/FirewallHelper.cs" target="_blank" class="text-link">FirewallHelper.cs</a></td>
+                                </tr>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.UI" target="_blank" class="source-route-link">EtherTransfer.UI</a></strong></td>
+                                    <td>Cross-platform Avalonia UI (MVVM) desktop client and viewmodels.</td>
+                                    <td><code>MainWindow.axaml</code>, <code>MainViewModel.cs</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong><a href="https://github.com/divyviradiya2/ethertransfer/tree/main/EtherTransfer.Tests" target="_blank" class="source-route-link">EtherTransfer.Tests</a></strong></td>
+                                    <td>Automated test suites for protocol framing, path traversal security, and cancellations.</td>
+                                    <td><a href="https://github.com/divyviradiya2/ethertransfer/blob/main/EtherTransfer.Tests/PathSanitizerTests.cs" target="_blank" class="text-link">PathSanitizerTests.cs</a>, <code>ProtocolFramingTests.cs</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 6.2 Building from Source -->
+                <section class="docs-chapter-section">
+                    <h2 id="building-running">Building from Source</h2>
+                    <p>
+                        Prerequisites: <a href="https://dotnet.microsoft.com/download/dotnet/10.0" target="_blank" class="text-link">.NET 10 SDK</a> (version 10.0 or later) and Git.
+                    </p>
+
+                    <div class="code-box">
+                        <pre><code># 1. Clone the repository
+git clone https://github.com/divyviradiya2/ethertransfer.git
+cd ethertransfer
+
+# 2. Build the solution
+dotnet build
+
+# 3. Launch the desktop application
+dotnet run --project EtherTransfer.UI</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                </section>
+
+                <!-- 6.3 Running Tests -->
+                <section class="docs-chapter-section">
+                    <h2 id="running-tests">Running Automated Test Suites</h2>
+                    <p>
+                        EtherTransfer includes comprehensive unit and integration tests covering path sanitization, protocol framing, device discovery, and cancellation tokens:
+                    </p>
+
+                    <div class="code-box">
+                        <pre><code># Run all test fixtures
+dotnet test
+
+# Run specific path sanitization security tests
+dotnet test --filter "FullyQualifiedName~PathSanitizerTests"</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                </section>
+
+                <!-- 6.4 Publishing Releases -->
+                <section class="docs-chapter-section">
+                    <h2 id="packaging-publishing">Publishing Single-File Executables & Installers</h2>
+
+                    <div class="code-box">
+                        <pre><code># Windows x64 (Self-contained, Single-File)
+dotnet publish EtherTransfer.UI -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/win-x64
+
+# Windows x86 (32-bit Compatibility)
+dotnet publish EtherTransfer.UI -c Release -r win-x86 --self-contained true -p:PublishSingleFile=true -o publish/win-x86
+
+# Linux x64 (Self-contained, Single-File)
+dotnet publish EtherTransfer.UI -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o publish/linux-x64</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+
+                    <p>
+                        To compile the Windows installer with Inno Setup:
+                    </p>
+                    <div class="code-box">
+                        <pre><code># Compile 64-bit installer
+iscc EtherTransfer.iss
+
+# Compile 32-bit installer
+iscc EtherTransfer_x86.iss</code></pre>
+                        <button class="copy-btn" type="button">Copy</button>
+                    </div>
+                </section>
+
+                <!-- 6.5 Code Standards -->
+                <section class="docs-chapter-section">
+                    <h2 id="code-standards">Code Guidelines & Standards</h2>
+                    <ul>
+                        <li><strong>Asynchronous Discipline</strong>: Always propagate <code>CancellationToken</code>s through all network and file I/O operations.</li>
+                        <li><strong>No Swallowed Exceptions</strong>: Do not use empty <code>catch</code> blocks; log or bubble errors with structured context.</li>
+                        <li><strong>Memory Efficiency</strong>: Rent buffers from <code>ArrayPool&lt;byte&gt;.Shared</code> rather than repeatedly allocating byte arrays in loops.</li>
+                        <li><strong>UI Responsiveness</strong>: Never block the UI thread with synchronous disk or socket calls; dispatch updates via <code>Dispatcher.UIThread.Post()</code>.</li>
+                    </ul>
+                </section>
+
+                <!-- 6.6 Troubleshooting & Comparison -->
+                <section class="docs-chapter-section">
+                    <h2 id="troubleshooting-matrix">Troubleshooting Matrix</h2>
+                    
+                    <div class="docs-table-container">
+                        <table class="docs-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Symptom</th>
+                                    <th>Root Cause</th>
+                                    <th>Resolution</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Peer not detected in list</td>
+                                    <td>Firewall blocking Port 50000 (UDP) or 55000 (TCP)</td>
+                                    <td>Verify firewall rules in Windows Defender / UFW / Firewalld. Disconnect corporate VPNs.</td>
+                                </tr>
+                                <tr>
+                                    <td>Linux link stuck in <code>Configuring</code></td>
+                                    <td>NetworkManager not handling link-local assignment</td>
+                                    <td>Ensure NetworkManager is active (<code>systemctl status NetworkManager</code>) and click Retry.</td>
+                                </tr>
+                                <tr>
+                                    <td>Transfer rate caps at ~35 MB/s</td>
+                                    <td>USB-to-Ethernet adapter connected to USB 2.0 port</td>
+                                    <td>Plug adapter into a USB 3.0 (SuperSpeed blue/type-c) port.</td>
+                                </tr>
+                                <tr>
+                                    <td>Speed drops after 10–20 GB</td>
+                                    <td>SSD SLC write cache exhaustion</td>
+                                    <td>Normal behavior for DRAM-less TLC/QLC SSDs once write cache fills.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="docs-page-stepper">
+                    <button class="docs-stepper-btn" data-target-category="security-sandboxing">
+                        <span class="stepper-label">&larr; Previous</span>
+                        <span class="stepper-title">Security & System</span>
+                    </button>
+                    <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="docs-stepper-btn next">
+                        <span class="stepper-label">Open Source &rarr;</span>
+                        <span class="stepper-title">GitHub Repository</span>
+                    </a>
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- Right Sticky Table of Contents -->
+        <aside class="docs-toc-sidebar" aria-label="Page Table of Contents">
+            <div class="toc-heading">On This Page</div>
+            <ul class="toc-nav-list" id="tocNavList">
+                <!-- Dynamically populated by docs.js -->
+            </ul>
+        </aside>
+
+    </div>
+
+    <!-- Mobile Chapter Sidebar Toggle Floating Button -->
+    <button class="mobile-docs-sidebar-toggle" id="mobileDocsSidebarToggle" aria-label="Open Chapter Sidebar">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+
+    <!-- Search Overlay Dialog -->
+    <div class="docs-search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-label="Search Documentation">
+        <div class="docs-search-dialog">
+            <div class="search-dialog-header">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="searchInputField" placeholder="Search documentation chapters..." autocomplete="off">
+                <button id="searchCloseBtn" aria-label="Close search dialog">&times;</button>
+            </div>
+            <div class="search-dialog-results" id="searchResultsContainer">
+                <div class="search-no-results">
+                    <p>Type keywords to search across all documentation chapters...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="docs.js"></script>
+</body>
+</html>

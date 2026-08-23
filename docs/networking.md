@@ -1,5 +1,7 @@
 # EtherTransfer Networking Architecture
 
+> **Interactive Documentation**: For interactive schemas, benchmarks, and deep links to source files, see **[Architecture & Networking Docs](https://divyviradiya2.github.io/ethertransfer/docs.html#architecture-networking)**.
+
 ## Overview
 EtherTransfer relies on UDP broadcasts for peer discovery and high-performance TCP streaming for file transfers. The network layer has been heavily hardened and re-architected to guarantee absolute reliability over direct, unmanaged physical Ethernet links.
 

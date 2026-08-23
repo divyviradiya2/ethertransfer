@@ -1,5 +1,7 @@
 # System Modifications & Behind the Scenes
 
+> **Interactive Documentation**: For the interactive web version with firewall command switchers and security breakdowns, see **[Security & System Modifications Docs](https://divyviradiya2.github.io/ethertransfer/docs.html#security-sandboxing)**.
+
 This document outlines everything EtherTransfer does to a user's operating system during installation and execution. We believe in complete transparency so administrators and developers know exactly what network bindings, firewall rules, and system services are modified.
 
 ---
