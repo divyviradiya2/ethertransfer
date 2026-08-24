@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -400,15 +400,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
         _activeDialog = dialog;
 
+        this.Hide();
+
         dialog.Closed += (_, _) =>
         {
-            if (_activeDialog == dialog)
+            _ = Dispatcher.UIThread.InvokeAsync(() =>
             {
-                _activeDialog = null;
-            }
+                if (_activeDialog == dialog)
+                {
+                    _activeDialog = null;
+                }
+                this.Show();
+                this.WindowState = WindowState.Normal;
+                this.Activate();
+                this.Focus();
+            });
         };
 
-        _ = dialog.ShowDialog(this);
+        dialog.Show();
 
         try
         {
@@ -618,7 +627,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             });
         });
 
-        _ = Dispatcher.UIThread.InvokeAsync(async () =>
+        _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             string sizeStr = EtherTransfer.Core.FormatHelper.FormatSize(request.TotalSize);
             string text;
@@ -639,8 +648,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var cancelCts = new CancellationTokenSource();
             var dialog = TransferDialog.CreateReceiver(text, request.TotalSize, tcs, cancelCts);
             _activeDialog = dialog;
-            await dialog.ShowDialog(this);
-            _activeDialog = null;
+
+            dialog.Closed += (_, _) =>
+            {
+                _ = Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (_activeDialog == dialog)
+                    {
+                        _activeDialog = null;
+                    }
+                    this.Show();
+                    this.WindowState = WindowState.Normal;
+                    this.Activate();
+                    this.Focus();
+                });
+            };
+
+            var originalTask = tcs.Task;
+            _ = originalTask.ContinueWith(t =>
+            {
+                if (t.IsCompletedSuccessfully && t.Result.Item1)
+                {
+                    _ = Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        this.Hide();
+                    });
+                }
+            });
+
+            dialog.Show();
         });
 
         return tcs.Task;

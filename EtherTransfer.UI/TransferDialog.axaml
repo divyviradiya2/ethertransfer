@@ -3,10 +3,11 @@
         xmlns:ui="clr-namespace:EtherTransfer.UI"
         x:Class="EtherTransfer.UI.TransferDialog"
         x:DataType="ui:TransferDialog"
-        Title="Transfer Window"
+        Title="{Binding WindowTitle}"
+        Icon="avares://EtherTransfer/Assets/logo.png"
         Width="480" SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
-        ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
         Foreground="{DynamicResource AppForeground}"
         CanResize="False">
 

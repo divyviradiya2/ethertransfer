@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -21,11 +21,46 @@ public class CompletedItemViewModel
 
 public partial class TransferDialog : Window, INotifyPropertyChanged
 {
+    public string WindowTitle
+    {
+        get
+        {
+            if (IsProgressMode)
+            {
+                return string.IsNullOrEmpty(TransferPercentageText)
+                    ? "EtherTransfer - Transferring..."
+                    : $"EtherTransfer - Transferring ({TransferPercentageText})";
+            }
+            if (IsSuccessMode) return "EtherTransfer - Transfer Complete";
+            if (IsFailureMode) return $"EtherTransfer - {FailureTitle}";
+            if (IsSenderMode) return "EtherTransfer - Waiting for Peer";
+            return "EtherTransfer - Incoming Transfer Request";
+        }
+    }
+
+    private IntPtr GetWindowHandle()
+    {
+        try
+        {
+            return this.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        }
+        catch
+        {
+            return IntPtr.Zero;
+        }
+    }
+
     private bool _isSenderMode;
     public bool IsSenderMode
     {
         get => _isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
-        set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); }
+        set 
+        { 
+            _isSenderMode = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(IsReceiverMode)); 
+            OnPropertyChanged(nameof(WindowTitle));
+        }
     }
 
     public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
@@ -40,6 +75,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsSenderMode));
             OnPropertyChanged(nameof(IsReceiverMode));
+            OnPropertyChanged(nameof(WindowTitle));
         }
     }
 
@@ -56,6 +92,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsProgressMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
             OnPropertyChanged(nameof(IsFailureMode));
+            OnPropertyChanged(nameof(WindowTitle));
         }
     }
 
@@ -63,7 +100,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public bool IsPartialSuccessMode
     {
         get => _isPartialSuccessMode;
-        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); }
+        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); OnPropertyChanged(nameof(WindowTitle)); }
     }
 
     public bool IsFullSuccessMode => IsSuccessMode && !IsPartialSuccessMode;
@@ -81,11 +118,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsProgressMode));
             OnPropertyChanged(nameof(IsSuccessMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
+            OnPropertyChanged(nameof(WindowTitle));
         }
     }
 
     private string _failureTitle = "Transfer Cancelled";
-    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); } }
+    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); } }
 
     private string _failureMessage = "The transfer was cancelled.";
     public string FailureMessage { get => _failureMessage; set { _failureMessage = value; OnPropertyChanged(); } }
@@ -294,6 +332,20 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         Close();
     }
 
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        IntPtr hwnd = GetWindowHandle();
+        if (IsSenderMode)
+        {
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Indeterminate);
+        }
+        else if (IsProgressMode)
+        {
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Normal);
+        }
+    }
+
     private async void Accept_Click(object? sender, RoutedEventArgs e)
     {
         try
@@ -320,6 +372,10 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             System.Diagnostics.Debug.WriteLine($"Drive check failed: {ex.Message}");
         }
+
+        IsProgressMode = true;
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Indeterminate);
 
         _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
     }
@@ -350,6 +406,13 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             TransferProgressText = $"{EtherTransfer.Core.FormatHelper.FormatSize(e.BytesSent)} / {EtherTransfer.Core.FormatHelper.FormatSize(e.TotalBytes)}";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
+
+            IntPtr hwnd = GetWindowHandle();
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Normal);
+            if (e.TotalBytes > 0)
+            {
+                WindowsTaskbarProgress.SetProgressValue(hwnd, (ulong)Math.Min(e.BytesSent, e.TotalBytes), (ulong)e.TotalBytes);
+            }
         });
     }
 
@@ -392,6 +455,9 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _isCancelled = true;
         _senderCts?.Cancel();
         _receiverCancelCts?.Cancel();
+
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.NoProgress);
     }
 
     private bool _isForceClosing = false;
@@ -432,6 +498,9 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     {
         _isCancelled = true;
         _receiverCancelCts?.Cancel();
+
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.NoProgress);
 
         _receiverTcs?.TrySetResult((false, "", default));
         base.OnClosed(e);
