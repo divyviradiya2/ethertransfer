@@ -21,15 +21,21 @@ public class CompletedItemViewModel
 
 public partial class TransferDialog : Window, INotifyPropertyChanged
 {
+    public event Action? TransferStarted;
+    private bool _hasTriggeredTransferStarted = false;
+
     public string WindowTitle
     {
         get
         {
             if (IsProgressMode)
             {
-                return string.IsNullOrEmpty(TransferPercentageText)
-                    ? "EtherTransfer - Transferring..."
-                    : $"EtherTransfer - Transferring ({TransferPercentageText})";
+                if (_transferTotalBytes > 0)
+                {
+                    double percent = Math.Clamp((double)_transferSentBytes / _transferTotalBytes * 100, 0, 100);
+                    return $"EtherTransfer - Transferring ({percent:F0}%)";
+                }
+                return "EtherTransfer - Transferring...";
             }
             if (IsSuccessMode) return "EtherTransfer - Transfer Complete";
             if (IsFailureMode) return $"EtherTransfer - {FailureTitle}";
@@ -60,6 +66,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(); 
             OnPropertyChanged(nameof(IsReceiverMode)); 
             OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -76,6 +83,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsSenderMode));
             OnPropertyChanged(nameof(IsReceiverMode));
             OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -93,6 +101,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsFullSuccessMode));
             OnPropertyChanged(nameof(IsFailureMode));
             OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -100,7 +109,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public bool IsPartialSuccessMode
     {
         get => _isPartialSuccessMode;
-        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); OnPropertyChanged(nameof(WindowTitle)); }
+        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; }
     }
 
     public bool IsFullSuccessMode => IsSuccessMode && !IsPartialSuccessMode;
@@ -119,11 +128,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsSuccessMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
             OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
     private string _failureTitle = "Transfer Cancelled";
-    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); } }
+    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; } }
 
     private string _failureMessage = "The transfer was cancelled.";
     public string FailureMessage { get => _failureMessage; set { _failureMessage = value; OnPropertyChanged(); } }
@@ -148,6 +158,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(TransferProgressText));
             OnPropertyChanged(nameof(TransferPercentageText));
             OnPropertyChanged(nameof(TransferFinalSizeText));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -213,6 +225,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(TransferProgressText));
             OnPropertyChanged(nameof(TransferPercentageText));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -374,6 +388,14 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
 
         IsProgressMode = true;
+        this.Title = WindowTitle;
+
+        if (!_hasTriggeredTransferStarted)
+        {
+            _hasTriggeredTransferStarted = true;
+            TransferStarted?.Invoke();
+        }
+
         IntPtr hwnd = GetWindowHandle();
         WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Indeterminate);
 
@@ -399,6 +421,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             if (!IsProgressMode) IsProgressMode = true;
 
+            if (!_hasTriggeredTransferStarted)
+            {
+                _hasTriggeredTransferStarted = true;
+                TransferStarted?.Invoke();
+            }
+
             TransferFileName = e.CurrentFile;
             TransferItemCountText = $"({e.CurrentElementIndex}/{e.TotalElements})";
             TransferTotalBytes = e.TotalBytes;
@@ -406,6 +434,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             TransferProgressText = $"{EtherTransfer.Core.FormatHelper.FormatSize(e.BytesSent)} / {EtherTransfer.Core.FormatHelper.FormatSize(e.TotalBytes)}";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
+
+            this.Title = WindowTitle;
 
             IntPtr hwnd = GetWindowHandle();
             WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Normal);

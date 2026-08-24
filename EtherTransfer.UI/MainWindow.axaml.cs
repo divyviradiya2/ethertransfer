@@ -400,7 +400,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dialog = TransferDialog.CreateSender(SelectedDevice.Name, cts);
         _activeDialog = dialog;
 
-        this.Hide();
+        dialog.TransferStarted += () =>
+        {
+            _ = Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                this.Hide();
+            });
+        };
 
         dialog.Closed += (_, _) =>
         {
@@ -417,7 +423,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             });
         };
 
-        dialog.Show();
+        dialog.Show(this);
 
         try
         {
@@ -649,6 +655,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var dialog = TransferDialog.CreateReceiver(text, request.TotalSize, tcs, cancelCts);
             _activeDialog = dialog;
 
+            dialog.TransferStarted += () =>
+            {
+                _ = Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    this.Hide();
+                });
+            };
+
             dialog.Closed += (_, _) =>
             {
                 _ = Dispatcher.UIThread.InvokeAsync(() =>
@@ -664,19 +678,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 });
             };
 
-            var originalTask = tcs.Task;
-            _ = originalTask.ContinueWith(t =>
-            {
-                if (t.IsCompletedSuccessfully && t.Result.Item1)
-                {
-                    _ = Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        this.Hide();
-                    });
-                }
-            });
-
-            dialog.Show();
+            dialog.Show(this);
         });
 
         return tcs.Task;
