@@ -24,22 +24,54 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public event Action? TransferStarted;
     private bool _hasTriggeredTransferStarted = false;
 
+    private string _peerDeviceName = "";
+    public string PeerDeviceName
+    {
+        get => _peerDeviceName;
+        set
+        {
+            _peerDeviceName = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ProgressTitle));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
+        }
+    }
+
+    public string ProgressTitle
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_peerDeviceName))
+            {
+                return _isSenderMode 
+                    ? $"Sending to {_peerDeviceName}" 
+                    : $"Receiving from {_peerDeviceName}";
+            }
+            return "Transferring";
+        }
+    }
+
     public string WindowTitle
     {
         get
         {
             if (IsProgressMode)
             {
+                string actionPrefix = !string.IsNullOrWhiteSpace(_peerDeviceName)
+                    ? (_isSenderMode ? $"Sending to {_peerDeviceName}" : $"Receiving from {_peerDeviceName}")
+                    : "Transferring";
+
                 if (_transferTotalBytes > 0)
                 {
                     double percent = Math.Clamp((double)_transferSentBytes / _transferTotalBytes * 100, 0, 100);
-                    return $"EtherTransfer - Transferring ({percent:F0}%)";
+                    return $"EtherTransfer - {actionPrefix} ({percent:F0}%)";
                 }
-                return "EtherTransfer - Transferring...";
+                return $"EtherTransfer - {actionPrefix}...";
             }
             if (IsSuccessMode) return "EtherTransfer - Transfer Complete";
             if (IsFailureMode) return $"EtherTransfer - {FailureTitle}";
-            if (IsSenderMode) return "EtherTransfer - Waiting for Peer";
+            if (IsSenderMode) return !string.IsNullOrWhiteSpace(_peerDeviceName) ? $"EtherTransfer - Waiting for {_peerDeviceName}" : "EtherTransfer - Waiting for Peer";
             return "EtherTransfer - Incoming Transfer Request";
         }
     }
@@ -271,17 +303,19 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         var dialog = new TransferDialog
         {
             IsSenderMode = true,
+            PeerDeviceName = targetName,
             WaitingText = $"Waiting for {targetName} to accept...",
             _senderCts = cts
         };
         return dialog;
     }
 
-    public static TransferDialog CreateReceiver(string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
+    public static TransferDialog CreateReceiver(string senderName, string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
     {
         var dialog = new TransferDialog
         {
             IsSenderMode = false,
+            PeerDeviceName = senderName,
             IncomingRequestText = requestText,
             TransferTotalBytes = totalBytes,
             _receiverTcs = tcs,

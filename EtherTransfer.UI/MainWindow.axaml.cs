@@ -652,7 +652,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             var cancelCts = new CancellationTokenSource();
-            var dialog = TransferDialog.CreateReceiver(text, request.TotalSize, tcs, cancelCts);
+            var dialog = TransferDialog.CreateReceiver(request.SenderName, text, request.TotalSize, tcs, cancelCts);
             _activeDialog = dialog;
 
             dialog.TransferStarted += () =>

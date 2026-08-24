@@ -49,7 +49,7 @@
             </StackPanel>
 
             <StackPanel IsVisible="{Binding IsProgressMode}" VerticalAlignment="Center" Spacing="12">
-                <TextBlock Text="Transferring" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                <TextBlock Text="{Binding ProgressTitle}" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
 
                 <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10">
                     <Grid ColumnDefinitions="*,Auto">
