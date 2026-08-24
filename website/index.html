@@ -333,10 +333,10 @@
                             <div class="f-icon">
                                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                             </div>
-                            <h3>Native Directory Tree Recursion</h3>
+                            <h3>High-Speed Folder Streaming</h3>
                         </div>
                         <div class="feature-desc">
-                            <p>Drag and drop deep folder structures, game installs, or video assets. The streaming engine recursively scans and recreates exact directory hierarchies with strict path traversal sandboxing and hidden dotfile preservation.</p>
+                            <p>Drag and drop deep folder hierarchies, repositories with thousands of files, or game installs. Powered by zero-allocation binary framing and parallel disk worker pools (4–16 threads) that overcome Windows NTFS small-file latency for wire-speed folder streaming.</p>
                         </div>
                     </div>
 
@@ -476,7 +476,7 @@
                         <div class="step-text">
                             <div class="step-badge">Step 4</div>
                             <h3>Full-Speed Streaming</h3>
-                            <p>Once accepted, files stream using framed TCP with 1 MB pooled buffers. Real-time transfer speed, progress percentage, and elapsed metrics display continuously.</p>
+                            <p>Once accepted, files stream using a 32 MB double-buffered pipelined channel engine with unbuffered direct kernel I/O. Real-time transfer speed, progress percentage, and elapsed metrics display continuously.</p>
                         </div>
                         <div class="step-visual">
                             <div class="visual-box">
@@ -592,7 +592,7 @@
                 </div>
 
                 <div class="roadmap-journey">
-                    <!-- Stage 1: v0.1.0 Initial Release -->
+                    <!-- Stage 1: v0.1.0 Released -->
                     <div class="journey-step step-completed">
                         <div class="journey-node">
                             <div class="node-dot">
@@ -612,17 +612,19 @@
                             <ul class="journey-list">
                                 <li>Automatic RFC 3927 IPv4 Link-Local (APIPA) negotiation on Windows &amp; automated <code>nmcli</code> fallback on Linux</li>
                                 <li>Port 50000 UDP peer discovery with dynamic UUID session indexing</li>
-                                <li>Framed TCP streaming (Port 55000) using reusable 1 MB <code>ArrayPool&lt;byte&gt;</code> memory buffers</li>
+                                <li>Framed TCP streaming (Port 55000) using reusable <code>ArrayPool&lt;byte&gt;</code> memory buffers</li>
                                 <li>Hardware adapter pinning to keep active Wi-Fi internet uninhibited</li>
                                 <li>Avalonia UI desktop client for Windows 10/11 (x64/x86) and Linux x64</li>
                             </ul>
                         </div>
                     </div>
 
-                    <!-- Stage 2: v0.2.0 Current Release -->
+                    <!-- Stage 2: v0.2.0 Released (Current Tag) -->
                     <div class="journey-step step-completed">
                         <div class="journey-node">
-                            <div class="node-dot active-dot"></div>
+                            <div class="node-dot">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="3" fill="none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
                         </div>
                         <div class="journey-content">
                             <div class="journey-header">
@@ -632,18 +634,19 @@
                                 </div>
                                 <span class="journey-quarter">Released</span>
                             </div>
-                            <h3 class="journey-heading">Resumable Transfers &amp; Integrity Verification</h3>
-                            <p class="journey-desc">Recovery mechanisms for severed physical links and streaming cryptographic validation.</p>
+                            <h3 class="journey-heading">Hardware Adapter Filtering &amp; Portable Builds</h3>
+                            <p class="journey-desc">Network isolation hardening, real-time adapter hot-swapping, and zero-install portable deployment.</p>
                             <ul class="journey-list">
-                                <li>Byte-offset checkpoint journal allowing interrupted transfers to resume without re-transmitting completed files</li>
-                                <li>Streaming SIMD-accelerated SHA-256 data integrity checksum calculation</li>
-                                <li>Multi-folder batch transfer queue with pause/resume controls</li>
-                                <li>Native OS desktop completion alerts and notification integration</li>
+                                <li>Strict Ethernet adapter isolation filtering out Bluetooth PAN, virtual NICs, and VPN tunnel interfaces</li>
+                                <li>Real-time Ethernet adapter hot-swap detection when cables are plugged or unplugged while the app is running</li>
+                                <li>Zero-install standalone single-file portable builds for Windows (x64/x86) and Linux x64</li>
+                                <li>Hardened transfer acceptance handshake and responsive cancellation UX dialogs</li>
+                                <li>Enhanced dynamic UI metrics with automatic human-readable size scaling (GB/MB)</li>
                             </ul>
                         </div>
                     </div>
 
-                    <!-- Stage 3: v0.3.0 In Progress -->
+                    <!-- Stage 3: v0.3.0 In Progress (Active Development) -->
                     <div class="journey-step step-active">
                         <div class="journey-node">
                             <div class="node-dot active-dot"></div>
@@ -656,18 +659,43 @@
                                 </div>
                                 <span class="journey-quarter">Next Release</span>
                             </div>
-                            <h3 class="journey-heading">Multi-Stream 10 GbE Saturation</h3>
-                            <p class="journey-desc">Parallel socket architecture engineered to fully saturate 5 GbE and 10 GbE wire speeds.</p>
+                            <h3 class="journey-heading">Pipelined Transfer Engine &amp; High-Speed Folder Streaming</h3>
+                            <p class="journey-desc">High-throughput double-buffered streaming architecture with zero-allocation binary folder framing and multi-worker disk ingestion.</p>
                             <ul class="journey-list">
-                                <li>Multi-socket connection pooling (4–8 parallel sockets) to bypass single-core interrupt limits on 1500 MTU</li>
-                                <li><code>System.Threading.Channels</code> pipelining to decouple NVMe disk reads from socket writes</li>
-                                <li>Line-rate throughput up to 1,150+ MB/s on 10 GbE networks</li>
-                                <li>Dynamic TCP window buffer auto-tuning</li>
+                                <li><code>System.Threading.Channels</code> double-buffered producer-consumer channel pipeline (32 MB cushion) decoupling disk seeks from network streaming</li>
+                                <li>Ultra-fast Raw Binary Framed Stream for folder streaming with zero TAR/ZIP archive overhead and 0-byte padding waste</li>
+                                <li>Receiver-side parallel disk ingestion worker pool (4–16 concurrent threads) solving the "Million Small Files Problem" on Windows NTFS</li>
+                                <li>Unbuffered direct kernel I/O (<code>SequentialScan</code> + pre-allocated NTFS extents) for sustained 115 MB/s Gigabit wire saturation</li>
+                                <li>Stabilized Exponential Moving Average (EMA) speed tracking and element-level atomic cancellation rollback</li>
                             </ul>
                         </div>
                     </div>
 
-                    <!-- Stage 4: v1.0.0 Planned -->
+                    <!-- Stage 4: v0.4.0 Planned -->
+                    <div class="journey-step step-planned">
+                        <div class="journey-node">
+                            <div class="node-dot"></div>
+                        </div>
+                        <div class="journey-content">
+                            <div class="journey-header">
+                                <div class="journey-title-wrap">
+                                    <span class="journey-ver">v0.4.0</span>
+                                    <span class="journey-badge">Planned</span>
+                                </div>
+                                <span class="journey-quarter">Future Milestone</span>
+                            </div>
+                            <h3 class="journey-heading">Multi-Stream 10 GbE Saturation &amp; Resumption</h3>
+                            <p class="journey-desc">Parallel socket architecture engineered to fully saturate 5 GbE and 10 GbE wire speeds with transfer resumption.</p>
+                            <ul class="journey-list">
+                                <li>Multi-socket connection pooling (4–8 parallel sockets) to bypass single-core interrupt limits on 1500 MTU</li>
+                                <li>Byte-offset checkpoint journal allowing interrupted transfers to resume without re-transmitting completed files</li>
+                                <li>Streaming SIMD-accelerated cryptographic SHA-256 data integrity checksum calculation</li>
+                                <li>Native OS desktop completion alerts and notification integration</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Stage 5: v1.0.0 Planned -->
                     <div class="journey-step step-planned">
                         <div class="journey-node">
                             <div class="node-dot"></div>

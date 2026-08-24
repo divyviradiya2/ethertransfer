@@ -29,9 +29,9 @@ Fast, zero-configuration local data movement without routers, cloud servers, or 
 
 - **Zero Configuration**: Connect two PCs directly with an Ethernet cable. IPv4 Link-Local addresses negotiate automatically ([RFC 3927](https://datatracker.ietf.org/doc/html/rfc3927)).
 - **Instant Discovery**: Automatic peer detection across local links via UDP broadcast on Port `50000`.
-- **Wire-Speed Streaming**: Framed TCP binary streaming on Port `55000` with 1 MB reusable buffer pools ([`ArrayPool<byte>`](https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1)).
+- **Pipelined Transfer Engine**: 32 MB double-buffered channel pipeline (`System.Threading.Channels`) with unbuffered direct kernel I/O for sustained 115 MB/s Gigabit wire saturation.
+- **Ultra-Fast Folder Streaming**: Zero-allocation binary framing with receiver-side multi-worker disk ingestion (4–16 threads) to overcome NTFS small-file latency.
 - **Interface Isolation**: Saturates the physical Ethernet cable while your active Wi-Fi remains free for uninterrupted internet browsing.
-- **Deep Folder Streaming**: Transmits nested directory trees on-the-fly without intermediate zip compression.
 - **Cross-Platform**: Windows 10/11 & Linux supported.
 
 ---

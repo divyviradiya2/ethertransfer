@@ -111,14 +111,15 @@ EtherTransfer/
 - When shutting down cleanly, `DiscoveryService` sends a burst of `BYE` messages so peers immediately drop the instance from their active list.
 
 ### 2. File Transfer Protocol (TCP Port 55000)
-- All metadata messages are serialized as UTF-8 JSON preceded by a **4-byte little-endian length prefix**.
+- All control messages are serialized as UTF-8 JSON preceded by a **4-byte little-endian length prefix**.
 - Transfer sequence:
-  1. Sender connects via TCP to receiver's port `55000`.
+  1. Sender connects via TCP to receiver's port `55000` with 2 MB socket buffers configured.
   2. Sender transmits `TRANSFER_REQUEST` (containing item count, total bytes, and root folder list).
   3. Receiver prompts the user. If accepted, receiver sends `TRANSFER_RESPONSE` with `Accepted: true`.
-  4. For each file, sender emits `FILE_BEGIN` + `FileItemMetadata`, followed by raw binary chunks.
-  5. Senders and receivers stream payloads in **1 MB chunks** using `ArrayPool<byte>.Shared` to avoid garbage collector pressure and maintain low RAM consumption (< 100 MB).
-  6. Transmission finishes with `TRANSFER_END`.
+  4. Single files stream through the **Pipelined Transfer Engine** (`System.Threading.Channels` 32 MB cushion) with unbuffered direct kernel I/O and pre-allocated extents.
+  5. Folders stream via the **Raw Binary Framed Stream** (`[4B PathLen][UTF-8 Path][8B FileSize][Payload]...[4B 0 EOF]`) with receiver-side parallel disk ingestion (4–16 concurrent threads).
+  6. Senders and receivers rent memory buffers from `ArrayPool<byte>.Shared` to avoid garbage collector pressure and maintain low RAM consumption (< 100 MB).
+  7. Transmission finishes with `TRANSFER_END`.
 
 ### 3. Path Security & Sanitization
 - Never write untrusted file paths directly to disk.

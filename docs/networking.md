@@ -44,14 +44,15 @@ On Windows and macOS, link-local (169.254.x.x) fallback is native and reliable. 
 
 ---
 
-## 3. TCP Transfer Protocol Hardening
+## 3. TCP Transfer Protocol & Pipelined Engine Hardening
 
-Because EtherTransfer operates directly on physical wire without a switch, the OS TCP stack doesn't always cleanly abort a connection immediately when a cable is pulled. To prevent application hangs, the TCP streaming protocol employs aggressive failure detection:
+Because EtherTransfer operates directly on physical wire without a switch, the OS TCP stack doesn't always cleanly abort a connection immediately when a cable is pulled. To guarantee sustained line-rate throughput and prevent hangs:
 
-- **Watchdog Timeouts**: Every network `ReadAsync` and `WriteAsync` call is wrapped in a `CancellationTokenSource.CancelAfter(timeoutMs)` watchdog. 
-  - Metadata reads/writes (e.g., file headers, skip markers) are given a strict **2-second timeout**.
-  - File chunk payload reads/writes (1MB chunks) are given a **5-second timeout**. If a 1MB chunk cannot traverse a direct Ethernet link in 5 seconds, the connection is considered physically severed.
-- **TCP Keep-Alives**: Since watchdogs only run during active data transmission, the system explicitly enables native OS TCP Keep-Alives (`SocketOptionName.KeepAlive`). This provides a seamless safety net for idle states (such as when waiting for a user UI prompt), ensuring physical link drops are caught even when no data is actively flowing.
+- **32 MB Pipelined Channel Cushion**: Uses `System.Threading.Channels` double-buffering (16 &times; 2 MB chunks) to decouple NVMe/SATA disk reads from socket transmission, completely absorbing NTFS write flushes and real-time antivirus scan pauses.
+- **Tuned Socket Buffers**: Configures 2 MB `SendBufferSize` and `ReceiveBufferSize` with `NoDelay = true` to prevent TCP Zero-Window stalls and sliding window collapses.
+- **Raw Binary Folder Streaming**: Uses a zero-allocation length-prefixed binary stream `[4B PathLen][UTF-8 Path][8B FileSize][Payload]...[4B 0 EOF]` with receiver-side parallel disk ingestion (4–16 concurrent workers) to overcome Windows NTFS small-file latency.
+- **Watchdog Timeouts**: Every network `ReadAsync` and `WriteAsync` call is protected with deterministic watchdogs (2s for metadata, 5s for payload chunks).
+- **TCP Keep-Alives**: Explicitly enables native OS TCP Keep-Alives (`SocketOptionName.KeepAlive`) for idle prompt states.
 
 ---
 
