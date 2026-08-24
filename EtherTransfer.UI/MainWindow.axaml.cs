@@ -79,6 +79,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         InitializeComponent();
         DataContext = this;
+        WindowsTitleBarTheme.EnableDarkMode(this);
 
         var settings = EtherTransfer.Core.SettingsManager.Load();
         if (string.IsNullOrWhiteSpace(settings.CustomDeviceName))

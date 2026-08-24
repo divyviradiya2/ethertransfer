@@ -34,28 +34,28 @@
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="AppBackground" Color="#18181B"/>
-                    <SolidColorBrush x:Key="SurfaceBackground" Color="#27272A"/>
-                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#3F3F46"/>
-                    <SolidColorBrush x:Key="CardBackground" Color="#202023"/>
-                    <SolidColorBrush x:Key="CardBorder" Color="#3F3F46"/>
-                    <SolidColorBrush x:Key="AppSurface" Color="#202023"/>
+                    <SolidColorBrush x:Key="AppBackground" Color="#000000"/>
+                    <SolidColorBrush x:Key="SurfaceBackground" Color="#000000"/>
+                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#16161A"/>
+                    <SolidColorBrush x:Key="CardBackground" Color="#0C0C0E"/>
+                    <SolidColorBrush x:Key="CardBorder" Color="#222228"/>
+                    <SolidColorBrush x:Key="AppSurface" Color="#0C0C0E"/>
                     <SolidColorBrush x:Key="AppForeground" Color="#F4F4F5"/>
-                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#A1A1AA"/>
-                    <SolidColorBrush x:Key="AppBorder" Color="#3F3F46"/>
-                    <SolidColorBrush x:Key="AccentColor" Color="#38BDF8"/>
-                    <SolidColorBrush x:Key="AccentColorHover" Color="#7DD3FC"/>
-                    <SolidColorBrush x:Key="AccentForeground" Color="#0F172A"/>
-                    <SolidColorBrush x:Key="DangerColor" Color="#F87171"/>
-                    <SolidColorBrush x:Key="DangerBackground" Color="#2C1618"/>
-                    <SolidColorBrush x:Key="SuccessColor" Color="#34D399"/>
-                    <SolidColorBrush x:Key="SuccessBackground" Color="#132D22"/>
-                    <SolidColorBrush x:Key="WarningColor" Color="#FBBF24"/>
-                    <SolidColorBrush x:Key="WarningBackground" Color="#2E2413"/>
+                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#8E8E98"/>
+                    <SolidColorBrush x:Key="AppBorder" Color="#1E1E24"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#0284C7"/>
+                    <SolidColorBrush x:Key="AccentColorHover" Color="#0369A1"/>
+                    <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
+                    <SolidColorBrush x:Key="DangerBackground" Color="#241215"/>
+                    <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
+                    <SolidColorBrush x:Key="SuccessBackground" Color="#0D221A"/>
+                    <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
+                    <SolidColorBrush x:Key="WarningBackground" Color="#261E10"/>
 
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#3F3F46"/>
-                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#52525B"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#16161A"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#222228"/>
                     <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>

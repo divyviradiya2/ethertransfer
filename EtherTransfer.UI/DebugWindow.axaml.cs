@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -11,6 +11,7 @@ public partial class DebugWindow : Window
     public DebugWindow()
     {
         InitializeComponent();
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     private async void CopyLog_Click(object? sender, RoutedEventArgs e)

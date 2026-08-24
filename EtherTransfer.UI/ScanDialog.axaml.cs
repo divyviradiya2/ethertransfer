@@ -1,4 +1,4 @@
-﻿using Avalonia.Controls;
+using Avalonia.Controls;
 using System.Collections.ObjectModel;
 
 namespace EtherTransfer.UI;
@@ -15,6 +15,7 @@ public partial class ScanDialog : Window
         ScanTasks = new ObservableCollection<ScanProgressViewModel>();
         ScanCts = new System.Threading.CancellationTokenSource();
         DataContext = this;
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     public ScanDialog(ObservableCollection<ScanProgressViewModel> tasks, System.Threading.CancellationTokenSource cts) : this()

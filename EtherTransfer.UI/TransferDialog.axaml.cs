@@ -296,6 +296,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     {
         InitializeComponent();
         DataContext = this;
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     public static TransferDialog CreateSender(string targetName, CancellationTokenSource cts)
