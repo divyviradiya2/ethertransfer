@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -33,6 +33,8 @@ public class TransferReceiver
             {
                 var networkStream = client.GetStream();
                 client.NoDelay = true;
+                client.SendBufferSize = 2 * 1024 * 1024;
+                client.ReceiveBufferSize = 2 * 1024 * 1024;
                 client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
                 var request = await ProtocolHelper.ReceiveMessageAsync<TransferRequestMessage>(networkStream, appCt, 3000).ConfigureAwait(false);
@@ -334,12 +336,12 @@ public class TransferReceiver
                                 filesByRootElement[rootKey].Add(safePath);
 
                                 fs = new FileStream(
-                                    safePath,
-                                    FileMode.Create,
-                                    FileAccess.Write,
-                                    FileShare.None,
-                                    128 * 1024,
-                                    FileOptions.Asynchronous);
+                                    safePath, 
+                                    FileMode.Create, 
+                                    FileAccess.Write, 
+                                    FileShare.None, 
+                                    1, 
+                                    FileOptions.Asynchronous | FileOptions.SequentialScan);
 
                                 await PipelinedTransferEngine.StreamNetworkToFileAsync(
                                     countingStream,

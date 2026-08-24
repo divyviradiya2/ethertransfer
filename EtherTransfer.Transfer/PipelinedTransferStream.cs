@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.IO;
 using System.Threading;
@@ -13,7 +13,7 @@ public class SpeedTracker
     private long _lastBytes = 0;
     private double _lastTimestamp = 0;
     private double _smoothedSpeedMbPerSec = 0;
-    private const double Alpha = 0.35;
+    private const double Alpha = 0.20;
 
     public void Start()
     {
@@ -33,7 +33,7 @@ public class SpeedTracker
         var currentSeconds = _stopwatch.Elapsed.TotalSeconds;
         var deltaSeconds = currentSeconds - _lastTimestamp;
 
-        if (deltaSeconds >= 0.2)
+        if (deltaSeconds >= 0.5)
         {
             var deltaBytes = currentTotalBytes - _lastBytes;
             if (deltaBytes < 0) deltaBytes = 0;
@@ -161,8 +161,8 @@ internal sealed class BufferChunk : IDisposable
 
 public static class PipelinedTransferEngine
 {
-    private const int ChunkSize = 1024 * 1024;
-    private const int ChannelCapacity = 4;
+    private const int ChunkSize = 2 * 1024 * 1024;
+    private const int ChannelCapacity = 16;
 
     public static async Task StreamFileToNetworkAsync(
         FileStream fs,

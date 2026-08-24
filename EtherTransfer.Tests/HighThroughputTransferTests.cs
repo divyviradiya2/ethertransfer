@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -281,9 +281,9 @@ public class HighThroughputTransferTests
         var initialSpeed = tracker.CalculateSpeed(0);
         Assert.That(initialSpeed, Is.EqualTo(0));
 
-        Thread.Sleep(250);
+        Thread.Sleep(550);
 
-        var speed1 = tracker.CalculateSpeed(25 * 1024 * 1024);
+        var speed1 = tracker.CalculateSpeed(50 * 1024 * 1024);
         Assert.That(speed1, Is.GreaterThan(50.0), "Speed should reflect ~100 MB/s instantaneous rate");
     }
 

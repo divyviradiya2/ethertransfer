@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -172,6 +172,8 @@ public class TransferSender
 
         var networkStream = client.GetStream();
         client.NoDelay = true;
+        client.SendBufferSize = 2 * 1024 * 1024;
+        client.ReceiveBufferSize = 2 * 1024 * 1024;
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
         var request = new TransferRequestMessage
@@ -335,7 +337,7 @@ public class TransferSender
                             FileMode.Open,
                             FileAccess.Read,
                             FileShare.ReadWrite,
-                            128 * 1024,
+                            1,
                             FileOptions.Asynchronous | FileOptions.SequentialScan);
                     }
                     catch (FileNotFoundException)
