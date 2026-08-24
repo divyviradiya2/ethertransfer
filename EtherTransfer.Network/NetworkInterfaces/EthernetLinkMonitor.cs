@@ -51,7 +51,7 @@ public class EthernetLinkMonitor : IDisposable
         TimeSpan? configTimeout = null)
     {
         _networkProvider = networkProvider;
-        _pollInterval = pollInterval ?? TimeSpan.FromMilliseconds(1000);
+        _pollInterval = pollInterval ?? TimeSpan.FromMilliseconds(300);
         _configTimeout = configTimeout ?? TimeSpan.FromSeconds(12);
     }
 
