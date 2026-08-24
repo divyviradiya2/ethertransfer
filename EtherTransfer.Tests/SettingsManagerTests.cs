@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using EtherTransfer.Core;
 using NUnit.Framework;
@@ -81,6 +81,16 @@ public class SettingsManagerTests
 
         Assert.That(SettingsManager.SettingsFolder, Is.EqualTo(_tempTestDir));
         Assert.That(SettingsManager.SettingsFile, Is.EqualTo(Path.Combine(_tempTestDir, "settings.json")));
+    }
+
+    [Test]
+    public void SettingsFolder_WhenNoCustomDirectory_ReturnsValidDirectory()
+    {
+        SettingsManager.SetCustomSettingsDirectory(null);
+
+        var folder = SettingsManager.SettingsFolder;
+        Assert.That(string.IsNullOrWhiteSpace(folder), Is.False);
+        Assert.That(Path.IsPathRooted(folder), Is.True);
     }
 }
 

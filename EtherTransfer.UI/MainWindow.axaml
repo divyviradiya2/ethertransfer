@@ -8,7 +8,7 @@
         x:Class="EtherTransfer.UI.MainWindow"
         x:DataType="ui:MainWindow"
         Title="EtherTransfer"
-        Icon="avares://EtherTransfer/Assets/logo.png"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
         Background="{DynamicResource AppBackground}"
         Foreground="{DynamicResource AppForeground}"
         WindowStartupLocation="CenterScreen">

@@ -4,7 +4,7 @@
         x:Class="EtherTransfer.UI.TransferDialog"
         x:DataType="ui:TransferDialog"
         Title="{Binding WindowTitle}"
-        Icon="avares://EtherTransfer/Assets/logo.png"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
         Width="480" SizeToContent="Height"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"

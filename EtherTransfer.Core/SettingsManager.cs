@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json;
 
@@ -21,6 +21,25 @@ public static class SettingsManager
         {
             if (_customSettingsDirectory != null)
                 return _customSettingsDirectory;
+
+            try
+            {
+                var appDir = AppDomain.CurrentDomain.BaseDirectory;
+                if (!string.IsNullOrEmpty(appDir))
+                {
+                    var localSettingsFile = Path.Combine(appDir, "settings.json");
+                    var localPortableMarker = Path.Combine(appDir, ".portable");
+
+                    if (File.Exists(localSettingsFile) || File.Exists(localPortableMarker))
+                    {
+                        return appDir;
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback to ApplicationData on permission or path error
+            }
 
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EtherTransfer");
         }

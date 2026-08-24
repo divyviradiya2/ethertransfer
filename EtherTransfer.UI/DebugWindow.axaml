@@ -4,6 +4,7 @@
         x:Class="EtherTransfer.UI.DebugWindow"
         x:DataType="ui:MainWindow"
         Title="Developer Logs"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
         Width="680" Height="440"
         Background="{DynamicResource SurfaceBackground}"
         Foreground="{DynamicResource AppForeground}"

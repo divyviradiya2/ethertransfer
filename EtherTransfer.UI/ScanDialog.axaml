@@ -4,6 +4,7 @@
         x:Class="EtherTransfer.UI.ScanDialog"
         x:DataType="ui:ScanDialog"
         Title="Preparing Files"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
         Width="440" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
