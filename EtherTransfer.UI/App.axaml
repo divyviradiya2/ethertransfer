@@ -1,4 +1,4 @@
-﻿<Application xmlns="https://github.com/avaloniaui"
+<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="EtherTransfer.UI.App"
              RequestedThemeVariant="Default">
@@ -139,6 +139,18 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceBackgroundHover}"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="TextBlock.Foreground" Value="{DynamicResource DangerColor}"/>
+        </Style>
+
+        <Style Selector="Button.DangerSolid">
+            <Setter Property="Background" Value="{DynamicResource DangerColor}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerColor}"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.DangerSolid:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#DC2626"/>
+            <Setter Property="BorderBrush" Value="#DC2626"/>
+            <Setter Property="TextBlock.Foreground" Value="#FFFFFF"/>
         </Style>
 
         <Style Selector="Button.Secondary">

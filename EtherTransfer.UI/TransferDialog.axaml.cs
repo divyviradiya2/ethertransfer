@@ -344,7 +344,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             return;
         }
 
-        bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync("Are you sure you want to cancel the transfer?", "Cancel Transfer");
+        bool confirm = await ConfirmDialog.ShowAsync(this, "Are you sure you want to cancel the transfer?", "Cancel Transfer");
         if (confirm)
         {
             _isCancelled = true;
@@ -545,7 +545,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         {
             e.Cancel = true;
 
-            bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync(
+            bool confirm = await ConfirmDialog.ShowAsync(
+                this,
                 "Are you sure you want to cancel the transfer?",
                 "Cancel Transfer");
 

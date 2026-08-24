@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="EtherTransfer.UI.ConfirmDialog"
+        Title="Confirmation"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
+        Width="380" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Foreground="{DynamicResource AppForeground}"
+        CanResize="False">
+
+    <Border Background="{DynamicResource SurfaceBackground}"
+            BorderBrush="{DynamicResource CardBorder}"
+            BorderThickness="1"
+            CornerRadius="12"
+            BoxShadow="0 8 28 0 #50000000"
+            Padding="24">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+
+            <PathIcon Grid.Row="0"
+                      Data="{StaticResource WarningIcon}"
+                      Width="38" Height="38"
+                      Foreground="{DynamicResource WarningColor}"
+                      HorizontalAlignment="Center"
+                      Margin="0,0,0,12"/>
+
+            <TextBlock Grid.Row="1"
+                       Name="TitleText"
+                       Text="Cancel Transfer?"
+                       FontWeight="SemiBold"
+                       FontSize="17"
+                       Foreground="{DynamicResource AppForeground}"
+                       TextAlignment="Center"
+                       Margin="0,0,0,8"/>
+
+            <TextBlock Grid.Row="2"
+                       Name="MessageText"
+                       Text="Are you sure you want to cancel the transfer?"
+                       FontSize="13"
+                       Foreground="{DynamicResource AppForegroundSecondary}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       LineHeight="19"
+                       Margin="0,0,0,20"/>
+
+            <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,4,0,0">
+                <Button Grid.Column="0"
+                        Name="NoButton"
+                        Content="No, Keep"
+                        Classes="Secondary"
+                        Click="No_Click"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="0,9"
+                        Margin="0,0,6,0"/>
+
+                <Button Grid.Column="1"
+                        Name="YesButton"
+                        Content="Yes, Cancel"
+                        Classes="DangerSolid"
+                        Click="Yes_Click"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="0,9"
+                        Margin="6,0,0,0"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
