@@ -262,10 +262,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     }
                     else if (_activeDialog.IsSender)
                     {
-                        _activeDialog.FailureTitle = isConnectionLoss ? "Transfer Failed" : "Transfer Cancelled";
-                        _activeDialog.FailureMessage = isConnectionLoss
-                            ? (!string.IsNullOrWhiteSpace(peerName) ? $"Connection lost with {peerName}." : "Connection lost.")
-                            : (!string.IsNullOrWhiteSpace(peerName) ? $"{peerName} cancelled the transfer." : "Receiver cancelled the transfer.");
+                        _activeDialog.FailureTitle = "Transfer Cancelled";
+                        _activeDialog.FailureMessage = !string.IsNullOrWhiteSpace(peerName)
+                            ? $"Receiver '{peerName}' cancelled the transfer."
+                            : "Receiver cancelled the transfer.";
                         _activeDialog.FailureSubDetail = !string.IsNullOrWhiteSpace(peerName)
                             ? $"No files were sent to {peerName}."
                             : "No files were sent. Your original files were not modified.";
@@ -507,12 +507,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 else if (_activeDialog.IsProgressMode)
                 {
-                    OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled active transfer.", LogLevel.Info));
-                    _activeDialog.IsFailureMode = true;
-                    _activeDialog.FailureTitle = "Transfer Cancelled";
-                    _activeDialog.FailureMessage = $"Sender '{e.Message.ComputerName}' cancelled the transfer.";
-                    _activeDialog.FailureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
-                    _activeDialog.CancelTransfer();
+                    if (_activeDialog.IsSender)
+                    {
+                        OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_receiver", $"Receiver '{e.Message.ComputerName}' cancelled active transfer.", LogLevel.Info));
+                        _activeDialog.IsFailureMode = true;
+                        _activeDialog.FailureTitle = "Transfer Cancelled";
+                        _activeDialog.FailureMessage = $"Receiver '{e.Message.ComputerName}' cancelled the transfer.";
+                        _activeDialog.FailureSubDetail = $"No files were sent to {e.Message.ComputerName}.";
+                        _activeDialog.CancelTransfer();
+                    }
+                    else
+                    {
+                        OnDebugLog(this, new StructuredLogMessage("transfer.cancelled_by_sender", $"Sender '{e.Message.ComputerName}' cancelled active transfer.", LogLevel.Info));
+                        _activeDialog.IsFailureMode = true;
+                        _activeDialog.FailureTitle = "Transfer Cancelled";
+                        _activeDialog.FailureMessage = $"Sender '{e.Message.ComputerName}' cancelled the transfer.";
+                        _activeDialog.FailureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
+                        _activeDialog.CancelTransfer();
+                    }
                 }
             }
         });
@@ -713,6 +725,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
 
             var cancelCts = new CancellationTokenSource();
+            cancelCts.Token.Register(() =>
+            {
+                _ = _deviceService.SendTransferCancelAsync(System.Net.IPAddress.Broadcast);
+            });
             var dialog = TransferDialog.CreateReceiver(request.SenderName, text, request.TotalSize, tcs, cancelCts);
             _activeDialog = dialog;
 
