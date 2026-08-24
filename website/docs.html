@@ -786,7 +786,7 @@
                                 <tr>
                                     <td><strong>Collision Safety</strong></td>
                                     <td>Auto-Renaming</td>
-                                    <td>Appends incrementing counters (e.g. <code>data (1).bin</code>) to prevent overwrites.</td>
+                                    <td>Appends incrementing counters (e.g. <code>data (1).bin</code>, <code>Folder (1)</code>) to prevent file or directory overwrites.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -802,7 +802,8 @@
                     <ul>
                         <li><strong>Directory Traversal</strong>: Strips <code>../</code> and <code>..\</code> sequences to keep files contained in the selected destination folder.</li>
                         <li><strong>Windows Reserved Names</strong>: Reserved device identifiers (<code>CON</code>, <code>PRN</code>, <code>AUX</code>, <code>NUL</code>, <code>COM1-9</code>, <code>LPT1-9</code>) are automatically prefixed with an underscore (e.g., <code>_CON.txt</code>).</li>
-                        <li><strong>Control Characters</strong>: Null bytes (<code> </code>) and illegal filesystem characters are stripped.</li>
+                        <li><strong>Control Characters</strong>: Null bytes (<code>\0</code>) and illegal filesystem characters are stripped.</li>
+                        <li><strong>Collision Auto-Renaming</strong>: If a file or folder already exists at the destination, EtherTransfer automatically appends an incrementing counter (e.g., <code>document (1).pdf</code>, <code>Photos (1)</code>), guaranteeing that pre-existing user data is never overwritten or merged.</li>
                     </ul>
                 </section>
 

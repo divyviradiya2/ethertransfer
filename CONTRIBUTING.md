@@ -125,7 +125,7 @@ EtherTransfer/
 - Never write untrusted file paths directly to disk.
 - All paths received over the network must pass through `PathSanitizer.SanitizeRelativePath()` to prevent directory traversal (`../`, absolute paths, root-relative paths).
 - Windows reserved file names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) are automatically prefixed (e.g. `_CON.txt`).
-- `PathSanitizer.ResolveCollision()` safely renames files (`file (1).ext`) if a file already exists at the destination.
+- `PathSanitizer.ResolveCollision()` and `PathSanitizer.ResolveDirectoryCollision()` safely rename files (`file (1).ext`) and folders (`Folder (1)`) if an item with the same name already exists at the destination.
 
 ### 4. Link Monitoring & Auto-Configuration
 - On Windows, APIPA assigns a link-local address (`169.254.x.x`) automatically.
