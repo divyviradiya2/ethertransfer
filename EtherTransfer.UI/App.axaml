@@ -8,28 +8,36 @@
             <ResourceDictionary.ThemeDictionaries>
 
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="AppBackground" Color="#F4F4F5"/>
+                    <SolidColorBrush x:Key="AppBackground" Color="#F3F4F6"/>
                     <SolidColorBrush x:Key="SurfaceBackground" Color="#FFFFFF"/>
-                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#F0F0F2"/>
-                    <SolidColorBrush x:Key="CardBackground" Color="#FAFAFA"/>
-                    <SolidColorBrush x:Key="CardBorder" Color="#E4E4E7"/>
-                    <SolidColorBrush x:Key="AppSurface" Color="#FAFAFA"/>
-                    <SolidColorBrush x:Key="AppForeground" Color="#18181B"/>
-                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#71717A"/>
-                    <SolidColorBrush x:Key="AppBorder" Color="#E4E4E7"/>
+                    <SolidColorBrush x:Key="SurfaceBackgroundHover" Color="#E5E7EB"/>
+                    <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="CardBorder" Color="#D1D5DB"/>
+                    <SolidColorBrush x:Key="AppSurface" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppForeground" Color="#09090B"/>
+                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#374151"/>
+                    <SolidColorBrush x:Key="AppBorder" Color="#D1D5DB"/>
                     <SolidColorBrush x:Key="AccentColor" Color="#0284C7"/>
                     <SolidColorBrush x:Key="AccentColorHover" Color="#0369A1"/>
                     <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF"/>
-                    <SolidColorBrush x:Key="DangerColor" Color="#EF4444"/>
-                    <SolidColorBrush x:Key="DangerBackground" Color="#FEF2F2"/>
-                    <SolidColorBrush x:Key="SuccessColor" Color="#10B981"/>
-                    <SolidColorBrush x:Key="SuccessBackground" Color="#ECFDF5"/>
-                    <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
-                    <SolidColorBrush x:Key="WarningBackground" Color="#FFFBEB"/>
+                    <SolidColorBrush x:Key="DangerColor" Color="#DC2626"/>
+                    <SolidColorBrush x:Key="DangerBackground" Color="#FEE2E2"/>
+                    <SolidColorBrush x:Key="SuccessColor" Color="#059669"/>
+                    <SolidColorBrush x:Key="SuccessBackground" Color="#D1FAE5"/>
+                    <SolidColorBrush x:Key="WarningColor" Color="#B45309"/>
+                    <SolidColorBrush x:Key="WarningBackground" Color="#FEF3C7"/>
+
+                    <!-- High-contrast dynamic log brushes for Light Mode -->
+                    <SolidColorBrush x:Key="LogDefaultColor" Color="#1F2937"/>
+                    <SolidColorBrush x:Key="LogErrorColor" Color="#DC2626"/>
+                    <SolidColorBrush x:Key="LogWarningColor" Color="#B45309"/>
+                    <SolidColorBrush x:Key="LogSuccessColor" Color="#059669"/>
+                    <SolidColorBrush x:Key="LogInfoColor" Color="#1D4ED8"/>
+                    <SolidColorBrush x:Key="LogSpecialColor" Color="#6D28D9"/>
 
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
-                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#F0F0F2"/>
-                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#E4E4E7"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#E5E7EB"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#D1D5DB"/>
                     <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
                 </ResourceDictionary>
 
@@ -41,7 +49,7 @@
                     <SolidColorBrush x:Key="CardBorder" Color="#222228"/>
                     <SolidColorBrush x:Key="AppSurface" Color="#0C0C0E"/>
                     <SolidColorBrush x:Key="AppForeground" Color="#F4F4F5"/>
-                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#8E8E98"/>
+                    <SolidColorBrush x:Key="AppForegroundSecondary" Color="#A1A1AA"/>
                     <SolidColorBrush x:Key="AppBorder" Color="#1E1E24"/>
                     <SolidColorBrush x:Key="AccentColor" Color="#0284C7"/>
                     <SolidColorBrush x:Key="AccentColorHover" Color="#0369A1"/>
@@ -52,6 +60,14 @@
                     <SolidColorBrush x:Key="SuccessBackground" Color="#0D221A"/>
                     <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
                     <SolidColorBrush x:Key="WarningBackground" Color="#261E10"/>
+
+                    <!-- Vibrant high-contrast dynamic log brushes for Dark Mode -->
+                    <SolidColorBrush x:Key="LogDefaultColor" Color="#E4E4E7"/>
+                    <SolidColorBrush x:Key="LogErrorColor" Color="#F87171"/>
+                    <SolidColorBrush x:Key="LogWarningColor" Color="#FBBF24"/>
+                    <SolidColorBrush x:Key="LogSuccessColor" Color="#34D399"/>
+                    <SolidColorBrush x:Key="LogInfoColor" Color="#38BDF8"/>
+                    <SolidColorBrush x:Key="LogSpecialColor" Color="#C084FC"/>
 
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#16161A"/>

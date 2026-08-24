@@ -18,9 +18,37 @@
 
         <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="10">
             <ListBox x:Name="DebugLogList" Background="Transparent" ItemsSource="{Binding DebugMessages}" FontSize="12" FontFamily="Consolas, monospace">
+                <ListBox.Styles>
+                    <Style Selector="TextBlock.LogDefault">
+                        <Setter Property="Foreground" Value="{DynamicResource LogDefaultColor}"/>
+                    </Style>
+                    <Style Selector="TextBlock.LogError">
+                        <Setter Property="Foreground" Value="{DynamicResource LogErrorColor}"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                    </Style>
+                    <Style Selector="TextBlock.LogWarning">
+                        <Setter Property="Foreground" Value="{DynamicResource LogWarningColor}"/>
+                    </Style>
+                    <Style Selector="TextBlock.LogSuccess">
+                        <Setter Property="Foreground" Value="{DynamicResource LogSuccessColor}"/>
+                    </Style>
+                    <Style Selector="TextBlock.LogInfo">
+                        <Setter Property="Foreground" Value="{DynamicResource LogInfoColor}"/>
+                    </Style>
+                    <Style Selector="TextBlock.LogSpecial">
+                        <Setter Property="Foreground" Value="{DynamicResource LogSpecialColor}"/>
+                    </Style>
+                </ListBox.Styles>
                 <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="{Binding Color}" Margin="0,0,0,2"/>
+                    <DataTemplate x:DataType="ui:LogMessage">
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
+                                   Classes.LogError="{Binding IsError}"
+                                   Classes.LogWarning="{Binding IsWarning}"
+                                   Classes.LogSuccess="{Binding IsSuccess}"
+                                   Classes.LogInfo="{Binding IsInfo}"
+                                   Classes.LogSpecial="{Binding IsSpecial}"
+                                   Classes.LogDefault="{Binding IsDefault}"
+                                   Margin="0,0,0,2"/>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

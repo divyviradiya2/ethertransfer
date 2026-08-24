@@ -19,10 +19,27 @@ using EtherTransfer.Network.UdpDiscovery;
 
 namespace EtherTransfer.UI;
 
+public enum LogCategory
+{
+    Default,
+    Info,
+    Success,
+    Warning,
+    Error,
+    Special
+}
+
 public class LogMessage
 {
     public string Text { get; set; } = string.Empty;
-    public string Color { get; set; } = "#A6ADC8";
+    public LogCategory Category { get; set; } = LogCategory.Default;
+
+    public bool IsError => Category == LogCategory.Error;
+    public bool IsWarning => Category == LogCategory.Warning;
+    public bool IsSuccess => Category == LogCategory.Success;
+    public bool IsInfo => Category == LogCategory.Info;
+    public bool IsSpecial => Category == LogCategory.Special;
+    public bool IsDefault => Category == LogCategory.Default;
 }
 
 public partial class MainWindow : Window, INotifyPropertyChanged
@@ -260,20 +277,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _ = Dispatcher.UIThread.InvokeAsync(() =>
         {
             var cleanedMessage = logMsg.Message.Trim();
-
-            string color = "#A6ADC8";
+            var category = LogCategory.Default;
 
             if (logMsg.Level == LogLevel.Error)
             {
-                color = "#F38BA8";
+                category = LogCategory.Error;
             }
             else if (logMsg.Level == LogLevel.Warning)
             {
-                color = "#F9E2AF";
+                category = LogCategory.Warning;
             }
             else if (logMsg.EventId.StartsWith("device.new") || logMsg.EventId.StartsWith("ethernet.ready"))
             {
-                color = "#A6E3A1";
+                category = LogCategory.Success;
             }
             else if (logMsg.Level == LogLevel.Info)
             {
@@ -282,15 +298,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     cleanedMessage.Contains("listening", StringComparison.OrdinalIgnoreCase) ||
                     cleanedMessage.Contains("offline", StringComparison.OrdinalIgnoreCase))
                 {
-                    color = "#89B4FA";
+                    category = LogCategory.Info;
                 }
                 else if (cleanedMessage.Contains("network interface", StringComparison.OrdinalIgnoreCase))
                 {
-                    color = "#CBA6F7";
+                    category = LogCategory.Special;
                 }
             }
 
-            DebugMessages.Add(new LogMessage { Text = cleanedMessage, Color = color });
+            DebugMessages.Add(new LogMessage { Text = cleanedMessage, Category = category });
 
             if (DebugMessages.Count > 100)
             {

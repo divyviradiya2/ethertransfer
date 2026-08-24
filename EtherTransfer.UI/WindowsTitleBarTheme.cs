@@ -135,6 +135,9 @@ public static class WindowsTitleBarTheme
 
     private static void SubclassWindow(Window window)
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
         try
         {
             var hwnd = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -173,6 +176,9 @@ public static class WindowsTitleBarTheme
 
     private static void UnhookWindow(Window window)
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
         try
         {
             var hwnd = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
