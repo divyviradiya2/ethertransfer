@@ -38,6 +38,9 @@
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#E5E7EB"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#D1D5DB"/>
                     <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
+
+                    <SolidColorBrush x:Key="OsIconBadgeBackground" Color="#F3F4F6"/>
+                    <SolidColorBrush x:Key="OsIconBadgeBorder" Color="#E5E7EB"/>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
@@ -69,8 +72,11 @@
 
                     <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/>
                     <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#16161A"/>
-                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#222228"/>
+                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#1E1E24"/>
                     <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/>
+
+                    <SolidColorBrush x:Key="OsIconBadgeBackground" Color="#18181B"/>
+                    <SolidColorBrush x:Key="OsIconBadgeBorder" Color="#2E2E36"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 

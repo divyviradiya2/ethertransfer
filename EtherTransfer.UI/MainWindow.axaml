@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -65,7 +65,9 @@
                                 <DataTemplate>
                                     <Border Background="Transparent" CornerRadius="4" Padding="10">
                                         <Grid ColumnDefinitions="Auto,*">
-                                            <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
+                                            <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource OsIconBadgeBackground}" BorderBrush="{DynamicResource OsIconBadgeBorder}" BorderThickness="1" CornerRadius="8" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                <Image Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
                                                 <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
@@ -87,7 +89,7 @@
                             <StackPanel IsVisible="{Binding !HasActiveVpn}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
                                 <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
+                                        <Border Grid.Column="0" Width="36" Height="36" Margin="0,0,14,0" CornerRadius="8" Background="{DynamicResource AppBorder}" />
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
                                             <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
                                             <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
