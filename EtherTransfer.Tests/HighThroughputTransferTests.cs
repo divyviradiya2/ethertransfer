@@ -393,5 +393,67 @@ public class HighThroughputTransferTests
         Assert.That(File.Exists(destNormal), Is.True);
         Assert.That(new FileInfo(destNormal).Length, Is.EqualTo(4));
     }
+
+    [Test]
+    public async Task ThousandsOfSmallFiles_TransfersAtHighSpeedAndPreservesIntegrity()
+    {
+        var rootDir = Path.Combine(_tempSourceDir, "ManyFilesRepo");
+        Directory.CreateDirectory(rootDir);
+
+        var items = new List<FileSelectionItem>();
+        int totalFiles = 500;
+        for (int i = 0; i < totalFiles; i++)
+        {
+            var subDir = Path.Combine(rootDir, $"module_{i % 20}", $"sub_{i % 5}");
+            Directory.CreateDirectory(subDir);
+            var filePath = Path.Combine(subDir, $"file_{i}.txt");
+            var content = System.Text.Encoding.UTF8.GetBytes($"Payload content for file {i} - {new string('X', i % 200)}");
+            await File.WriteAllBytesAsync(filePath, content);
+
+            var relativePath = Path.GetRelativePath(_tempSourceDir, filePath).Replace('\\', '/');
+            items.Add(new FileSelectionItem
+            {
+                AbsolutePath = filePath,
+                RelativePath = relativePath,
+                RootName = "ManyFilesRepo",
+                Size = content.Length
+            });
+        }
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) => Task.FromResult((true, _tempDestDir, CancellationToken.None));
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        var session = new TransferSession
+        {
+            ContainsFolders = true,
+            PayloadFolderCount = 1,
+            PayloadFileCount = totalFiles
+        };
+        session.AddFiles(items);
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "Sender", session, CancellationToken.None);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        Assert.That(senderResult.Success, Is.True, $"Sender failed: {senderResult.ErrorMessage}");
+        Assert.That(receiverResult.Success, Is.True, $"Receiver failed: {receiverResult.ErrorMessage}");
+
+        for (int i = 0; i < totalFiles; i++)
+        {
+            var item = items[i];
+            var destPath = Path.Combine(_tempDestDir, item.RelativePath);
+            Assert.That(File.Exists(destPath), Is.True, $"File missing: {item.RelativePath}");
+            Assert.That(new FileInfo(destPath).Length, Is.EqualTo(item.Size));
+        }
+    }
 }
 

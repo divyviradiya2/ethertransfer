@@ -169,7 +169,63 @@ public class TransferReceiver
 
                             ReportProgress(force: true);
 
-                            string? inFlightFolderFile = null;
+                            int workerCount = Math.Clamp(Environment.ProcessorCount, 4, 16);
+                            var fileChannel = System.Threading.Channels.Channel.CreateBounded<FolderFileTask>(
+                                new System.Threading.Channels.BoundedChannelOptions(256)
+                                {
+                                    SingleWriter = true,
+                                    SingleReader = false,
+                                    FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait
+                                });
+
+                            using var workerCts = CancellationTokenSource.CreateLinkedTokenSource(transferCt);
+                            var workerTasks = new Task[workerCount];
+                            for (int i = 0; i < workerCount; i++)
+                            {
+                                workerTasks[i] = Task.Run(async () =>
+                                {
+                                    var reader = fileChannel.Reader;
+                                    while (await reader.WaitToReadAsync(workerCts.Token).ConfigureAwait(false))
+                                    {
+                                        while (reader.TryRead(out var task))
+                                        {
+                                            try
+                                            {
+                                                if (task.Buffer != null && task.Length > 0)
+                                                {
+                                                    await using var fs = new FileStream(
+                                                        task.SafePath,
+                                                        FileMode.Create,
+                                                        FileAccess.Write,
+                                                        FileShare.None,
+                                                        1,
+                                                        FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+                                                    await fs.WriteAsync(task.Buffer.AsMemory(0, task.Length), workerCts.Token).ConfigureAwait(false);
+                                                }
+                                                else
+                                                {
+                                                    using (new FileStream(task.SafePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
+                                                }
+                                            }
+                                            catch (OperationCanceledException) { }
+                                            catch (Exception ex)
+                                            {
+                                                Log($"Worker write error: {task.SafePath} - {ex.Message}");
+                                            }
+                                            finally
+                                            {
+                                                if (task.Buffer != null)
+                                                {
+                                                    System.Buffers.ArrayPool<byte>.Shared.Return(task.Buffer);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }, workerCts.Token);
+                            }
+
+                            var inFlightFiles = new List<string>();
                             try
                             {
                                 var lenBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
@@ -239,10 +295,27 @@ public class TransferReceiver
                                             createdDirectoriesThisSession.Add(dirPath);
                                         }
 
-                                        inFlightFolderFile = safePath;
+                                        inFlightFiles.Add(safePath);
                                         filesByRootElement[folderMeta.RootName].Add(safePath);
 
-                                        if (fileSize > 0)
+                                        if (fileSize <= 64 * 1024)
+                                        {
+                                            if (fileSize > 0)
+                                            {
+                                                var fileBuf = System.Buffers.ArrayPool<byte>.Shared.Rent((int)fileSize);
+                                                if (!await ProtocolHelper.ReadExactAsync(countingStream, fileBuf, (int)fileSize, transferCt, 5000).ConfigureAwait(false))
+                                                {
+                                                    System.Buffers.ArrayPool<byte>.Shared.Return(fileBuf);
+                                                    throw new IOException("Connection lost while reading folder file payload.");
+                                                }
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, fileBuf, (int)fileSize, folderMeta.RootName), transferCt).ConfigureAwait(false);
+                                            }
+                                            else
+                                            {
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, null, 0, folderMeta.RootName), transferCt).ConfigureAwait(false);
+                                            }
+                                        }
+                                        else
                                         {
                                             FileStream? fs = new FileStream(
                                                 safePath, 
@@ -284,12 +357,7 @@ public class TransferReceiver
                                                 }
                                             }
                                         }
-                                        else
-                                        {
-                                            using (new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
-                                        }
 
-                                        inFlightFolderFile = null;
                                         filesReceived++;
                                     }
                                 }
@@ -299,17 +367,25 @@ public class TransferReceiver
                                     System.Buffers.ArrayPool<byte>.Shared.Return(sizeBuffer);
                                     System.Buffers.ArrayPool<byte>.Shared.Return(copyBuffer);
                                 }
+
+                                fileChannel.Writer.Complete();
+                                await Task.WhenAll(workerTasks).ConfigureAwait(false);
                             }
                             catch
                             {
-                                if (inFlightFolderFile != null)
+                                workerCts.Cancel();
+                                while (fileChannel.Reader.TryRead(out var task))
+                                {
+                                    if (task.Buffer != null)
+                                    {
+                                        System.Buffers.ArrayPool<byte>.Shared.Return(task.Buffer);
+                                    }
+                                }
+                                foreach (var path in inFlightFiles)
                                 {
                                     try
                                     {
-                                        if (File.Exists(inFlightFolderFile))
-                                        {
-                                            File.Delete(inFlightFolderFile);
-                                        }
+                                        if (File.Exists(path)) File.Delete(path);
                                     }
                                     catch { }
                                 }
@@ -556,6 +632,22 @@ public class TransferReceiver
         {
             System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
         }
+    }
+}
+
+internal readonly struct FolderFileTask
+{
+    public readonly string SafePath;
+    public readonly byte[]? Buffer;
+    public readonly int Length;
+    public readonly string RootName;
+
+    public FolderFileTask(string safePath, byte[]? buffer, int length, string rootName)
+    {
+        SafePath = safePath;
+        Buffer = buffer;
+        Length = length;
+        RootName = rootName;
     }
 }
 

@@ -314,20 +314,45 @@ public class TransferSender
                             {
                                 var actualSize = fs.Length;
                                 var pathBytes = System.Text.Encoding.UTF8.GetBytes(item.RelativePath);
+                                int headerLen = 4 + pathBytes.Length + 8;
 
-                                await countingStream.WriteAsync(BitConverter.GetBytes(pathBytes.Length), ct).ConfigureAwait(false);
-                                await countingStream.WriteAsync(pathBytes, ct).ConfigureAwait(false);
-                                await countingStream.WriteAsync(BitConverter.GetBytes(actualSize), ct).ConfigureAwait(false);
-
-                                long remaining = actualSize;
-                                while (remaining > 0)
+                                if (headerLen + actualSize <= copyBuffer.Length)
                                 {
-                                    ct.ThrowIfCancellationRequested();
-                                    int toRead = (int)Math.Min(copyBuffer.Length, remaining);
-                                    int read = await fs.ReadAsync(copyBuffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
-                                    if (read == 0) break;
-                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, read), ct).ConfigureAwait(false);
-                                    remaining -= read;
+                                    BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
+                                    pathBytes.CopyTo(copyBuffer, 4);
+                                    BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+
+                                    if (actualSize > 0)
+                                    {
+                                        int totalRead = 0;
+                                        while (totalRead < actualSize)
+                                        {
+                                            int read = await fs.ReadAsync(copyBuffer.AsMemory(headerLen + totalRead, (int)actualSize - totalRead), ct).ConfigureAwait(false);
+                                            if (read == 0) break;
+                                            totalRead += read;
+                                        }
+                                    }
+
+                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, headerLen + (int)actualSize), ct).ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
+                                    pathBytes.CopyTo(copyBuffer, 4);
+                                    BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+
+                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+
+                                    long remaining = actualSize;
+                                    while (remaining > 0)
+                                    {
+                                        ct.ThrowIfCancellationRequested();
+                                        int toRead = (int)Math.Min(copyBuffer.Length, remaining);
+                                        int read = await fs.ReadAsync(copyBuffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                                        if (read == 0) break;
+                                        await countingStream.WriteAsync(copyBuffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                                        remaining -= read;
+                                    }
                                 }
 
                                 filesSent++;
