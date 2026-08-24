@@ -287,27 +287,25 @@ public class TransferSender
                         {
                             ct.ThrowIfCancellationRequested();
 
-                            if (!File.Exists(item.AbsolutePath))
-                            {
-                                Log($"SKIP (missing): {item.RelativePath}");
-                                filesSkipped++;
-                                continue;
-                            }
-
                             try
                             {
                                 var entry = new PaxTarEntry(TarEntryType.RegularFile, item.RelativePath);
                                 using var fs = new FileStream(
-                                    item.AbsolutePath,
-                                    FileMode.Open,
-                                    FileAccess.Read,
-                                    FileShare.ReadWrite,
-                                    128 * 1024,
+                                    item.AbsolutePath, 
+                                    FileMode.Open, 
+                                    FileAccess.Read, 
+                                    FileShare.ReadWrite, 
+                                    128 * 1024, 
                                     FileOptions.Asynchronous | FileOptions.SequentialScan);
 
                                 entry.DataStream = fs;
                                 await tarWriter.WriteEntryAsync(entry, ct).ConfigureAwait(false);
                                 filesSent++;
+                            }
+                            catch (FileNotFoundException)
+                            {
+                                Log($"SKIP (missing): {item.RelativePath}");
+                                filesSkipped++;
                             }
                             catch (Exception ex)
                             {

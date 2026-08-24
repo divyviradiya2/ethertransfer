@@ -189,8 +189,6 @@ public class TransferReceiver
                                                 continue;
                                             }
 
-                                            safePath = PathSanitizer.ResolveCollision(safePath);
-
                                             var dirPath = Path.GetDirectoryName(safePath);
                                             if (dirPath != null && !createdDirectoriesThisSession.Contains(dirPath))
                                             {
@@ -204,20 +202,20 @@ public class TransferReceiver
                                                 filesByRootElement[folderMeta.RootName].Add(safePath);
 
                                                 FileStream? fs = new FileStream(
-                                                    safePath,
-                                                    FileMode.Create,
-                                                    FileAccess.Write,
-                                                    FileShare.None,
-                                                    128 * 1024,
-                                                    FileOptions.Asynchronous);
+                                                    safePath, 
+                                                    FileMode.Create, 
+                                                    FileAccess.Write, 
+                                                    FileShare.None, 
+                                                    128 * 1024, 
+                                                    FileOptions.Asynchronous | FileOptions.SequentialScan);
 
                                                 try
                                                 {
-                                                    if (entry.Length > 0)
+                                                    if (entry.Length >= 1024 * 1024)
                                                     {
                                                         try { fs.SetLength(entry.Length); } catch { }
                                                     }
-                                                    await entry.DataStream.CopyToAsync(fs, transferCt).ConfigureAwait(false);
+                                                    await entry.DataStream.CopyToAsync(fs, 128 * 1024, transferCt).ConfigureAwait(false);
                                                     await fs.DisposeAsync().ConfigureAwait(false);
                                                     fs = null;
                                                 }
@@ -233,7 +231,6 @@ public class TransferReceiver
                                             }
                                             else
                                             {
-
                                                 filesByRootElement[folderMeta.RootName].Add(safePath);
                                                 using (new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
                                             }
