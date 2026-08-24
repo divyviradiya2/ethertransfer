@@ -190,9 +190,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 OnDebugLog(this, new StructuredLogMessage("network.lost", $"Link state changed to {newState}. Aborting active transfer.", LogLevel.Error));
                 _activeDialog.CancelTransfer();
-
-                var errorDialog = new ErrorDialog($"Connection lost ({newState}).");
-                _ = errorDialog.ShowDialog(this);
             }
         });
     }
@@ -225,7 +222,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 else
                 {
-
                     OnDebugLog(this, new StructuredLogMessage("transfer.cancelled", $"Transfer cancelled/failed: {result.ErrorMessage}", LogLevel.Info));
 
                     bool isConnectionLoss = !string.IsNullOrEmpty(result.ErrorMessage) &&
@@ -259,6 +255,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         _activeDialog.FailureSubDetail = _activeDialog.IsSender
                             ? (!string.IsNullOrWhiteSpace(peerName) ? $"No files were sent to {peerName}." : "No files were sent from your device.")
                             : "No files were saved to your device.";
+                    }
+                    else if (LinkState == EthernetLinkState.NoCable)
+                    {
+                        _activeDialog.FailureTitle = "Transfer Failed";
+                        _activeDialog.FailureMessage = "Connection lost (Ethernet cable disconnected).";
+                        _activeDialog.FailureSubDetail = _activeDialog.IsSender
+                            ? (!string.IsNullOrWhiteSpace(peerName) ? $"No files were sent to {peerName}." : "No files were sent. Your original files were not modified.")
+                            : "No files were saved to your device. Any temporary data was safely cleaned up.";
                     }
                     else if (_activeDialog.IsSender)
                     {
