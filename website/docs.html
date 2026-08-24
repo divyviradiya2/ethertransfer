@@ -39,7 +39,6 @@
                     <a href="index.html#guide" class="nav-link">Guide</a>
                     <a href="docs.html" class="nav-link" style="color: var(--accent); font-weight: 600;">Docs</a>
                     <a href="index.html#comparison" class="nav-link">Comparison</a>
-                    <a href="index.html#roadmap" class="nav-link">Roadmap</a>
                     <a href="index.html#downloads" class="nav-link">Downloads</a>
                     <a href="index.html#faq" class="nav-link">FAQ</a>
                     <a href="https://github.com/divyviradiya2/ethertransfer" target="_blank" rel="noopener noreferrer" class="nav-link">GitHub</a>
@@ -79,10 +78,6 @@
                 </a>
                 <a href="index.html#comparison" class="mobile-nav-link">
                     <span>Speed Comparison</span>
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </a>
-                <a href="index.html#roadmap" class="mobile-nav-link">
-                    <span>Roadmap</span>
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </a>
                 <a href="index.html#downloads" class="mobile-nav-link">
@@ -180,7 +175,7 @@
                 <div class="sidebar-category-title">Performance & Hardware</div>
                 <a href="#speed-matrix" class="sidebar-doc-link">Ethernet Throughput Matrix</a>
                 <a href="#bottlenecks-analysis" class="sidebar-doc-link">Bottleneck Deep-Dive</a>
-                <a href="#multi-stream-pipelining" class="sidebar-doc-link">Multi-Stream Roadmap</a>
+                <a href="#multi-stream-pipelining" class="sidebar-doc-link">Multi-Stream Architecture</a>
                 <a href="#storage-prerequisites" class="sidebar-doc-link">Storage Requirements</a>
             </div>
 
@@ -640,7 +635,7 @@
                                     <th>Line Rate</th>
                                     <th>TCP Theoretical Max</th>
                                     <th>Single-Stream Speed (Current)</th>
-                                    <th>Multi-Stream (Planned Roadmap)</th>
+                                    <th>Multi-Stream (10 GbE Parallel)</th>
                                     <th>Storage Requirement</th>
                                 </tr>
                             </thead>
@@ -674,7 +669,7 @@
                                     <td>1250.0 MB/s</td>
                                     <td>~1184.0 MB/s</td>
                                     <td><strong>450 – 850 MB/s</strong></td>
-                                    <td><strong>1,100 – 1,150 MB/s</strong> (Roadmap)</td>
+                                    <td><strong>1,100 – 1,150 MB/s</strong></td>
                                     <td>PCIe Gen 3/4 NVMe SSD</td>
                                 </tr>
                                 <tr>
@@ -682,7 +677,7 @@
                                     <td>1250.0 MB/s</td>
                                     <td>~1235.0 MB/s</td>
                                     <td><strong>850 – 1,050 MB/s</strong></td>
-                                    <td><strong>1,180 – 1,220 MB/s</strong> (Roadmap)</td>
+                                    <td><strong>1,180 – 1,220 MB/s</strong></td>
                                     <td>PCIe Gen 4 NVMe SSD</td>
                                 </tr>
                             </tbody>
@@ -703,11 +698,11 @@
                     </p>
                 </section>
 
-                <!-- 4.3 Multi-Stream Pipelining Roadmap -->
+                <!-- 4.3 Multi-Stream Pipelining Architecture -->
                 <section class="docs-chapter-section">
-                    <h2 id="multi-stream-pipelining">Architecture Roadmap: Multi-Stream Saturation &amp; Resumption (10 GbE)</h2>
+                    <h2 id="multi-stream-pipelining">Multi-Stream Saturation &amp; Session Resumption (10 GbE)</h2>
                     <p>
-                        EtherTransfer's upcoming <strong>v0.3.0</strong> release delivers sustained wire-speed transfers (<strong>110–115 MB/s on 1 GbE</strong>, <strong>270–285 MB/s on 2.5 GbE</strong>, and <strong>450–850 MB/s on 10 GbE</strong>) powered by its 32 MB <code>System.Threading.Channels</code> pipeline and parallel disk ingestion. To achieve full 10 GbE line-rate saturation (1,150+ MB/s) and session recovery, the following features are scheduled for milestone <strong>v0.4.0</strong> (see our interactive <a href="index.html#roadmap" class="text-link">Engineering Roadmap</a>):
+                        EtherTransfer's high-speed engine delivers sustained wire-speed transfers (<strong>110–115 MB/s on 1 GbE</strong>, <strong>270–285 MB/s on 2.5 GbE</strong>, and <strong>450–850 MB/s on 10 GbE</strong>) powered by its 32 MB <code>System.Threading.Channels</code> pipeline and parallel disk ingestion. To achieve full 10 GbE line-rate saturation (1,150+ MB/s) and session recovery:
                     </p>
                     <ul>
                         <li><strong>Multi-Socket Connection Pooling (4–8 Sockets)</strong>: Distribute payload packet processing across multiple CPU cores to eliminate single-core interrupt bottlenecks on standard 1500 MTU links.</li>

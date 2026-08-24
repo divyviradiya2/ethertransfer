@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -290,11 +290,11 @@ public class TransferSender
                             try
                             {
                                 fs = new FileStream(
-                                    item.AbsolutePath, 
-                                    FileMode.Open, 
-                                    FileAccess.Read, 
-                                    FileShare.ReadWrite, 
-                                    1, 
+                                    item.AbsolutePath,
+                                    FileMode.Open,
+                                    FileAccess.Read,
+                                    FileShare.ReadWrite,
+                                    1,
                                     FileOptions.Asynchronous | FileOptions.SequentialScan);
                             }
                             catch (FileNotFoundException)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
@@ -6,11 +6,6 @@ using Avalonia.Styling;
 
 namespace EtherTransfer.UI;
 
-/// <summary>
-/// Configures DWM (Desktop Window Manager) immersive dark mode on Windows 10 and Windows 11
-/// so that the native OS title bar matches the active application/system dark theme,
-/// and prevents inactive title bars from changing color when dialogs or other windows gain focus.
-/// </summary>
 public static class WindowsTitleBarTheme
 {
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
@@ -106,30 +101,27 @@ public static class WindowsTitleBarTheme
                 }
                 catch { }
 
-                // Force DWM Caption and Text color (Windows 11 / Windows 10 modern DWM)
-                int blackColor = 0x00000000; // RGB(0, 0, 0)
-                int textColor = 0x00F5F4F4;  // RGB(244, 244, 245)
-                int borderColor = 0x00241E1E; // RGB(30, 30, 36)
+                int blackColor = 0x00000000;
+                int textColor = 0x00F5F4F4;
+                int borderColor = 0x00241E1E;
 
                 DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref blackColor, sizeof(int));
                 DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ref textColor, sizeof(int));
                 DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref borderColor, sizeof(int));
             }
 
-            // Try Windows 11 & Windows 10 20H1+ (Build 19041+)
             int hr = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDarkMode, sizeof(int));
             if (hr != 0)
             {
-                // Fallback to Windows 10 1809 - 1909 (Build 17763 - 18363)
+
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useDarkMode, sizeof(int));
             }
 
-            // Force non-client title bar frame redraw on Windows 10
             SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
         catch
         {
-            // Gracefully ignore on unsupported systems
+
         }
     }
 
@@ -150,7 +142,7 @@ public static class WindowsTitleBarTheme
                 {
                     if (msg == WM_NCACTIVATE)
                     {
-                        // Prevent title bar from turning gray when another dialog/window gains focus
+
                         if (wParam == IntPtr.Zero)
                         {
                             return CallWindowProc(info.OldWndProc, hWnd, msg, (IntPtr)1, lParam);
@@ -215,3 +207,4 @@ public static class WindowsTitleBarTheme
         return false;
     }
 }
+

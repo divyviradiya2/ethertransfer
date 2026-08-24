@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -44,8 +44,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         {
             if (!string.IsNullOrWhiteSpace(_peerDeviceName))
             {
-                return _isSenderMode 
-                    ? $"Sending to {_peerDeviceName}" 
+                return _isSenderMode
+                    ? $"Sending to {_peerDeviceName}"
                     : $"Receiving from {_peerDeviceName}";
             }
             return "Transferring";
@@ -92,11 +92,11 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public bool IsSenderMode
     {
         get => _isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
-        set 
-        { 
-            _isSenderMode = value; 
-            OnPropertyChanged(); 
-            OnPropertyChanged(nameof(IsReceiverMode)); 
+        set
+        {
+            _isSenderMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsReceiverMode));
             OnPropertyChanged(nameof(WindowTitle));
             this.Title = WindowTitle;
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
@@ -8,10 +8,6 @@ using Avalonia.Styling;
 
 namespace EtherTransfer.UI;
 
-/// <summary>
-/// Converts an OS string ("Windows", "macOS", "Linux", etc.) into the appropriate
-/// PNG icon bitmap asset, dynamically choosing light or dark versions for maximum contrast.
-/// </summary>
 public class OsToIconConverter : IValueConverter
 {
     public static readonly OsToIconConverter Instance = new();
@@ -60,3 +56,4 @@ public class OsToIconConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+

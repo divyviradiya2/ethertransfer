@@ -14,7 +14,6 @@ Fast, zero-configuration local data movement without routers, cloud servers, or 
 
 [![Website](https://img.shields.io/badge/website-visit-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/)
 [![Documentation](https://img.shields.io/badge/docs-guide-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/docs.html)
-[![Roadmap](https://img.shields.io/badge/roadmap-milestones-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/#roadmap)
 [![Downloads](https://img.shields.io/badge/downloads-releases-blue?style=flat-square)](#downloads)
 
 <br>

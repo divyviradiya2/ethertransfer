@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 
@@ -38,7 +38,7 @@ public static class SettingsManager
             }
             catch
             {
-                // Fallback to ApplicationData on permission or path error
+
             }
 
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EtherTransfer");

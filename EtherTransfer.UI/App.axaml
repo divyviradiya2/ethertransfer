@@ -1,4 +1,4 @@
-<Application xmlns="https://github.com/avaloniaui"
+﻿<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="EtherTransfer.UI.App"
              RequestedThemeVariant="Default">
@@ -27,7 +27,6 @@
                     <SolidColorBrush x:Key="WarningColor" Color="#B45309"/>
                     <SolidColorBrush x:Key="WarningBackground" Color="#FEF3C7"/>
 
-                    <!-- High-contrast dynamic log brushes for Light Mode -->
                     <SolidColorBrush x:Key="LogDefaultColor" Color="#1F2937"/>
                     <SolidColorBrush x:Key="LogErrorColor" Color="#DC2626"/>
                     <SolidColorBrush x:Key="LogWarningColor" Color="#B45309"/>
@@ -61,7 +60,6 @@
                     <SolidColorBrush x:Key="WarningColor" Color="#F59E0B"/>
                     <SolidColorBrush x:Key="WarningBackground" Color="#261E10"/>
 
-                    <!-- Vibrant high-contrast dynamic log brushes for Dark Mode -->
                     <SolidColorBrush x:Key="LogDefaultColor" Color="#E4E4E7"/>
                     <SolidColorBrush x:Key="LogErrorColor" Color="#F87171"/>
                     <SolidColorBrush x:Key="LogWarningColor" Color="#FBBF24"/>

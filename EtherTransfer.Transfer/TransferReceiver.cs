@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -318,11 +318,11 @@ public class TransferReceiver
                                         else
                                         {
                                             FileStream? fs = new FileStream(
-                                                safePath, 
-                                                FileMode.Create, 
-                                                FileAccess.Write, 
-                                                FileShare.None, 
-                                                1, 
+                                                safePath,
+                                                FileMode.Create,
+                                                FileAccess.Write,
+                                                FileShare.None,
+                                                1,
                                                 FileOptions.Asynchronous | FileOptions.SequentialScan);
 
                                             try
@@ -449,11 +449,11 @@ public class TransferReceiver
                                 filesByRootElement[rootKey].Add(safePath);
 
                                 fs = new FileStream(
-                                    safePath, 
-                                    FileMode.Create, 
-                                    FileAccess.Write, 
-                                    FileShare.None, 
-                                    1, 
+                                    safePath,
+                                    FileMode.Create,
+                                    FileAccess.Write,
+                                    FileShare.None,
+                                    1,
                                     FileOptions.Asynchronous | FileOptions.SequentialScan);
 
                                 await PipelinedTransferEngine.StreamNetworkToFileAsync(
