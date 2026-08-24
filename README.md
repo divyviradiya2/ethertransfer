@@ -30,6 +30,7 @@ Fast, zero-configuration local data movement without routers, cloud servers, or 
 - **Instant Discovery**: Automatic peer detection across local links via UDP broadcast on Port `50000`.
 - **Pipelined Transfer Engine**: 32 MB double-buffered channel pipeline (`System.Threading.Channels`) with unbuffered direct kernel I/O for sustained 115 MB/s Gigabit wire saturation.
 - **Ultra-Fast Folder Streaming**: Zero-allocation binary framing with receiver-side multi-worker disk ingestion (4–16 threads) to overcome NTFS small-file latency.
+- **Metadata Preservation**: Retains original file and directory creation (`CreationTimeUtc`) and modification (`LastWriteTimeUtc`) timestamps across transfers.
 - **Interface Isolation**: Saturates the physical Ethernet cable while your active Wi-Fi remains free for uninterrupted internet browsing.
 - **Cross-Platform**: Windows 10/11 & Linux supported.
 

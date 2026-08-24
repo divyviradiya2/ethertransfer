@@ -524,17 +524,17 @@
    3. TRANSFER_RESPONSE [Accepted: true/false, Reason] 
                                                                         
       === Single Large Files ===                                        
-   4. FILE_BEGIN [FileItemMetadata: RelativePath, RootName, Size]
-   5. Pipelined 32 MB Channel Stream (2 MB Chunks) ──> [Pre-allocated Extents &amp; Direct I/O]
+   4. FILE_BEGIN [FileItemMetadata: RelativePath, RootName, Size, Timestamps]
+   5. Pipelined 32 MB Channel Stream (2 MB Chunks) ──> [Pre-allocated Extents, Direct I/O &amp; Metadata Persistence]
                                                                         
       === Folder &amp; Multi-File Containers ===                            
-   6. FOLDER_BEGIN [FolderStreamMetadata: RootName, TotalFiles, TotalSize]
+   6. FOLDER_BEGIN [FolderTarMetadata: RootName, TotalFiles, TotalSize, Timestamps]
    7. Raw Binary Framed Stream:
-      [4B PathLen][UTF-8 Path][8B FileSize][Payload] ──> [Parallel Disk Worker Pool (4-16 Threads)]
+      [4B PathLen][UTF-8 Path][8B FileSize][8B CreatedMs][8B ModifiedMs][Payload] ──> [Parallel Disk Worker Pool (4-16 Threads)]
    8. Folder End Marker [4-Byte 0 EOF]
                                                                         
       === End of transmission ===                                       
-   9. TRANSFER_END  [Finalize Result &amp; Verify Rollback State]
+   9. TRANSFER_END  [Finalize Result, Apply Directory Timestamps &amp; Verify Rollback State]
                                                                         </code></pre>
                         <button class="copy-btn" type="button">Copy</button>
                     </div>
@@ -547,12 +547,13 @@
                         Instead of heavy archive formats like TAR or ZIP which introduce 512-byte block padding and lockstep stalls, <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/TransferSender.cs" target="_blank" class="source-route-link">TransferSender.cs</a> and <a href="https://github.com/divyviradiya2/ethertransfer/blob/master/EtherTransfer.Transfer/TransferReceiver.cs" target="_blank" class="source-route-link">TransferReceiver.cs</a> use compact, zero-allocation length-prefixed binary framing:
                     </p>
                     <div class="code-box">
-                        <pre><code>[ 4-Byte Path Length (LE Int32) ] [ N-Byte UTF-8 Relative Path ] [ 8-Byte File Size (LE Int64) ] [ L-Byte Raw File Payload ] ... [ 4-Byte 0 EOF Marker ]</code></pre>
+                        <pre><code>[ 4-Byte Path Length (LE Int32) ] [ N-Byte UTF-8 Relative Path ] [ 8-Byte File Size (LE Int64) ] [ 8-Byte CreationTime (LE Int64) ] [ 8-Byte LastWriteTime (LE Int64) ] [ L-Byte Raw File Payload ] ... [ 4-Byte 0 EOF Marker ]</code></pre>
                         <button class="copy-btn" type="button">Copy</button>
                     </div>
                     <ul>
-                        <li><strong>Header Overhead</strong>: Reduced from 1,024 bytes per file down to only <strong>12–24 bytes</strong>.</li>
+                        <li><strong>Header Overhead</strong>: Reduced from 1,024 bytes per file down to only <strong>28–40 bytes</strong> (including full 64-bit UTC timestamp metadata).</li>
                         <li><strong>Padding Waste</strong>: <strong>0 bytes</strong> (exact byte sizes, zero 512-byte sector rounding).</li>
+                        <li><strong>Metadata Preservation</strong>: Preserves original <code>CreationTimeUtc</code> and <code>LastWriteTimeUtc</code> across both files and directories, ensuring photos, build files, and documents retain their exact historical dates without resetting to the transfer timestamp.</li>
                         <li><strong>Small-File Coalescing</strong>: Files &le; 64 KB are packed with their headers and written to the socket in a single <code>WriteAsync</code> call.</li>
                     </ul>
                 </section>
@@ -788,6 +789,11 @@
                                     <td>Auto-Renaming</td>
                                     <td>Appends incrementing counters (e.g. <code>data (1).bin</code>, <code>Folder (1)</code>) to prevent file or directory overwrites.</td>
                                 </tr>
+                                <tr>
+                                    <td><strong>Metadata Preservation</strong></td>
+                                    <td>UTC Timestamps</td>
+                                    <td>Preserves exact creation and last write timestamps across files and directories.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -804,6 +810,7 @@
                         <li><strong>Windows Reserved Names</strong>: Reserved device identifiers (<code>CON</code>, <code>PRN</code>, <code>AUX</code>, <code>NUL</code>, <code>COM1-9</code>, <code>LPT1-9</code>) are automatically prefixed with an underscore (e.g., <code>_CON.txt</code>).</li>
                         <li><strong>Control Characters</strong>: Null bytes (<code>\0</code>) and illegal filesystem characters are stripped.</li>
                         <li><strong>Collision Auto-Renaming</strong>: If a file or folder already exists at the destination, EtherTransfer automatically appends an incrementing counter (e.g., <code>document (1).pdf</code>, <code>Photos (1)</code>), guaranteeing that pre-existing user data is never overwritten or merged.</li>
+                        <li><strong>Metadata &amp; Timestamp Preservation</strong>: Original creation and modification timestamps are applied asynchronously after file streams close, retaining exact file timeline integrity across Windows and Linux.</li>
                     </ul>
                 </section>
 
