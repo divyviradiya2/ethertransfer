@@ -171,19 +171,29 @@ public class TransferReceiver
                             if (folderMeta == null)
                                 throw new IOException("Connection lost while reading folder metadata.");
 
-                            if (folderMeta.RootName != currentRootName)
+                            var targetRootDirectory = Path.Combine(savePath, folderMeta.RootName);
+                            var resolvedRootDirectory = PathSanitizer.ResolveDirectoryCollision(targetRootDirectory);
+                            var resolvedRootName = Path.GetFileName(resolvedRootDirectory);
+
+                            if (!createdDirectoriesThisSession.Contains(resolvedRootDirectory))
+                            {
+                                Directory.CreateDirectory(resolvedRootDirectory);
+                                createdDirectoriesThisSession.Add(resolvedRootDirectory);
+                            }
+
+                            if (resolvedRootName != currentRootName)
                             {
                                 if (currentRootName != null && !result.CompletedElementNames.Contains(currentRootName))
                                 {
                                     result.CompletedElementNames.Add(currentRootName);
                                 }
-                                currentRootName = folderMeta.RootName;
+                                currentRootName = resolvedRootName;
                                 currentElementIndex++;
                             }
 
-                            if (!filesByRootElement.ContainsKey(folderMeta.RootName))
+                            if (!filesByRootElement.ContainsKey(resolvedRootName))
                             {
-                                filesByRootElement[folderMeta.RootName] = new List<string>();
+                                filesByRootElement[resolvedRootName] = new List<string>();
                             }
 
                             ReportProgress(force: true);
@@ -210,6 +220,12 @@ public class TransferReceiver
                                         {
                                             try
                                             {
+                                                var dir = Path.GetDirectoryName(task.SafePath);
+                                                if (dir != null && !Directory.Exists(dir))
+                                                {
+                                                    Directory.CreateDirectory(dir);
+                                                }
+
                                                 if (task.Buffer != null && task.Length > 0)
                                                 {
                                                     await using var fs = new FileStream(
@@ -231,6 +247,7 @@ public class TransferReceiver
                                             catch (Exception ex)
                                             {
                                                 Log($"Worker write error: {task.SafePath} - {ex.Message}");
+                                                throw;
                                             }
                                             finally
                                             {
@@ -298,7 +315,28 @@ public class TransferReceiver
                                             throw new InvalidDataException($"Invalid file size in folder stream: {fileSize}");
                                         }
 
-                                        var safePath = PathSanitizer.SanitizeRelativePath(savePath, relativePath);
+                                        string adjustedRelativePath = relativePath;
+                                        if (resolvedRootName != folderMeta.RootName)
+                                        {
+                                            if (relativePath.StartsWith(folderMeta.RootName + "/", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                adjustedRelativePath = resolvedRootName + relativePath.Substring(folderMeta.RootName.Length);
+                                            }
+                                            else if (relativePath.StartsWith(folderMeta.RootName + "\\", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                adjustedRelativePath = resolvedRootName + relativePath.Substring(folderMeta.RootName.Length);
+                                            }
+                                            else if (relativePath.Equals(folderMeta.RootName, StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                adjustedRelativePath = resolvedRootName;
+                                            }
+                                            else
+                                            {
+                                                adjustedRelativePath = Path.Combine(resolvedRootName, relativePath);
+                                            }
+                                        }
+
+                                        var safePath = PathSanitizer.SanitizeRelativePath(savePath, adjustedRelativePath);
                                         if (safePath == null)
                                         {
                                             Log($"SECURITY: Blocked malicious path in folder stream: {relativePath}");
@@ -315,7 +353,7 @@ public class TransferReceiver
                                         }
 
                                         inFlightFiles.Add(safePath);
-                                        filesByRootElement[folderMeta.RootName].Add(safePath);
+                                        filesByRootElement[resolvedRootName].Add(safePath);
 
                                         if (fileSize <= 64 * 1024)
                                         {
@@ -327,11 +365,11 @@ public class TransferReceiver
                                                     System.Buffers.ArrayPool<byte>.Shared.Return(fileBuf);
                                                     throw new IOException("Connection lost while reading folder file payload.");
                                                 }
-                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, fileBuf, (int)fileSize, folderMeta.RootName), transferCt).ConfigureAwait(false);
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, fileBuf, (int)fileSize, resolvedRootName), transferCt).ConfigureAwait(false);
                                             }
                                             else
                                             {
-                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, null, 0, folderMeta.RootName), transferCt).ConfigureAwait(false);
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, null, 0, resolvedRootName), transferCt).ConfigureAwait(false);
                                             }
                                         }
                                         else
@@ -390,8 +428,9 @@ public class TransferReceiver
                                 fileChannel.Writer.Complete();
                                 await Task.WhenAll(workerTasks).ConfigureAwait(false);
                             }
-                            catch
+                            catch (Exception folderEx)
                             {
+                                Log($"Folder receive error: {folderEx.Message}", LogLevel.Warning);
                                 workerCts.Cancel();
                                 while (fileChannel.Reader.TryRead(out var task))
                                 {
@@ -411,9 +450,9 @@ public class TransferReceiver
                                 throw;
                             }
 
-                            if (!result.CompletedElementNames.Contains(folderMeta.RootName))
+                            if (!result.CompletedElementNames.Contains(resolvedRootName))
                             {
-                                result.CompletedElementNames.Add(folderMeta.RootName);
+                                result.CompletedElementNames.Add(resolvedRootName);
                             }
                             continue;
                         }

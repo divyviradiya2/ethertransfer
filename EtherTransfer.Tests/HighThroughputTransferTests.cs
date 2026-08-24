@@ -455,5 +455,61 @@ public class HighThroughputTransferTests
             Assert.That(new FileInfo(destPath).Length, Is.EqualTo(item.Size));
         }
     }
+
+    [Test]
+    public async Task FolderTransfer_WhenFolderAlreadyExists_AutoRenamesWithIncrementingSuffix()
+    {
+        var existingFolderPath = Path.Combine(_tempDestDir, "Photos");
+        Directory.CreateDirectory(existingFolderPath);
+        var existingFilePath = Path.Combine(existingFolderPath, "old_pic.jpg");
+        await File.WriteAllTextAsync(existingFilePath, "original content");
+
+        var sourceFolder = Path.Combine(_tempSourceDir, "Photos");
+        Directory.CreateDirectory(sourceFolder);
+        var srcFile1 = Path.Combine(sourceFolder, "pic1.jpg");
+        var srcFile2 = Path.Combine(sourceFolder, "pic2.jpg");
+        await File.WriteAllTextAsync(srcFile1, "new pic 1");
+        await File.WriteAllTextAsync(srcFile2, "new pic 2");
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) => Task.FromResult((true, _tempDestDir, CancellationToken.None));
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        var session = new TransferSession
+        {
+            ContainsFolders = true,
+            PayloadFolderCount = 1,
+            PayloadFileCount = 2
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = srcFile1, RelativePath = "Photos/pic1.jpg", RootName = "Photos", Size = new FileInfo(srcFile1).Length },
+            new() { AbsolutePath = srcFile2, RelativePath = "Photos/pic2.jpg", RootName = "Photos", Size = new FileInfo(srcFile2).Length }
+        });
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "Sender", session, CancellationToken.None);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        Assert.That(senderResult.Success, Is.True, $"Sender failed: {senderResult.ErrorMessage}");
+        Assert.That(receiverResult.Success, Is.True, $"Receiver failed: {receiverResult.ErrorMessage}");
+
+        Assert.That(File.Exists(existingFilePath), Is.True, "Original existing file must be untouched.");
+        Assert.That(await File.ReadAllTextAsync(existingFilePath), Is.EqualTo("original content"));
+
+        var newFolder = Path.Combine(_tempDestDir, "Photos (1)");
+        Assert.That(Directory.Exists(newFolder), Is.True, "New folder must be created as Photos (1).");
+        Assert.That(File.Exists(Path.Combine(newFolder, "pic1.jpg")), Is.True);
+        Assert.That(File.Exists(Path.Combine(newFolder, "pic2.jpg")), Is.True);
+        Assert.That(await File.ReadAllTextAsync(Path.Combine(newFolder, "pic1.jpg")), Is.EqualTo("new pic 1"));
+    }
 }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using EtherTransfer.Transfer;
 using NUnit.Framework;
@@ -167,6 +167,38 @@ public class PathSanitizerTests
         File.WriteAllText(resolved, "first copy");
         var resolved2 = PathSanitizer.ResolveCollision(targetFile);
         Assert.That(resolved2, Is.EqualTo(Path.Combine(_sandboxDir, "photo (2).jpg")));
+    }
+
+    [Test]
+    public void ResolveDirectoryCollision_WhenNoDirectoryExists_ReturnsOriginalPath()
+    {
+        var targetDir = Path.Combine(_sandboxDir, "UniqueFolder");
+        var resolved = PathSanitizer.ResolveDirectoryCollision(targetDir);
+        Assert.That(resolved, Is.EqualTo(targetDir));
+    }
+
+    [Test]
+    public void ResolveDirectoryCollision_WhenDirectoryExists_AppendsIncrementingNumber()
+    {
+        var targetDir = Path.Combine(_sandboxDir, "MyProject");
+        Directory.CreateDirectory(targetDir);
+
+        var resolved = PathSanitizer.ResolveDirectoryCollision(targetDir);
+        Assert.That(resolved, Is.EqualTo(Path.Combine(_sandboxDir, "MyProject (1)")));
+
+        Directory.CreateDirectory(resolved);
+        var resolved2 = PathSanitizer.ResolveDirectoryCollision(targetDir);
+        Assert.That(resolved2, Is.EqualTo(Path.Combine(_sandboxDir, "MyProject (2)")));
+    }
+
+    [Test]
+    public void ResolveDirectoryCollision_WhenFileWithSameNameExists_AppendsIncrementingNumber()
+    {
+        var targetDir = Path.Combine(_sandboxDir, "ConflictName");
+        File.WriteAllText(targetDir, "i am a file");
+
+        var resolved = PathSanitizer.ResolveDirectoryCollision(targetDir);
+        Assert.That(resolved, Is.EqualTo(Path.Combine(_sandboxDir, "ConflictName (1)")));
     }
 }
 
