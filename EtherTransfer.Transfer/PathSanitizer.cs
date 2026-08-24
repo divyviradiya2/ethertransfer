@@ -82,7 +82,7 @@ public static class PathSanitizer
 
     public static string ResolveCollision(string fullPath)
     {
-        if (!File.Exists(fullPath))
+        if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
             return fullPath;
 
         var dir = Path.GetDirectoryName(fullPath) ?? ".";
@@ -95,7 +95,26 @@ public static class PathSanitizer
         {
             candidate = Path.Combine(dir, $"{nameWithoutExt} ({counter}){ext}");
             counter++;
-        } while (File.Exists(candidate));
+        } while (File.Exists(candidate) || Directory.Exists(candidate));
+
+        return candidate;
+    }
+
+    public static string ResolveDirectoryCollision(string fullDirectoryPath)
+    {
+        if (!Directory.Exists(fullDirectoryPath) && !File.Exists(fullDirectoryPath))
+            return fullDirectoryPath;
+
+        var parentDir = Path.GetDirectoryName(fullDirectoryPath) ?? ".";
+        var folderName = Path.GetFileName(fullDirectoryPath);
+
+        int counter = 1;
+        string candidate;
+        do
+        {
+            candidate = Path.Combine(parentDir, $"{folderName} ({counter})");
+            counter++;
+        } while (Directory.Exists(candidate) || File.Exists(candidate));
 
         return candidate;
     }
@@ -107,3 +126,4 @@ public static class PathSanitizer
         return StringComparison.OrdinalIgnoreCase;
     }
 }
+

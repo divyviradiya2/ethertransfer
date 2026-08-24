@@ -8,13 +8,12 @@
 
 Fast, zero-configuration local data movement without routers, cloud servers, or setup.
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue?style=flat-square)](https://github.com/divyviradiya2/ethertransfer/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey?style=flat-square)](#downloads)
 
 [![Website](https://img.shields.io/badge/website-visit-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/)
 [![Documentation](https://img.shields.io/badge/docs-guide-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/docs.html)
-[![Roadmap](https://img.shields.io/badge/roadmap-milestones-blue?style=flat-square)](https://divyviradiya2.github.io/ethertransfer/#roadmap)
 [![Downloads](https://img.shields.io/badge/downloads-releases-blue?style=flat-square)](#downloads)
 
 <br>
@@ -29,9 +28,10 @@ Fast, zero-configuration local data movement without routers, cloud servers, or 
 
 - **Zero Configuration**: Connect two PCs directly with an Ethernet cable. IPv4 Link-Local addresses negotiate automatically ([RFC 3927](https://datatracker.ietf.org/doc/html/rfc3927)).
 - **Instant Discovery**: Automatic peer detection across local links via UDP broadcast on Port `50000`.
-- **Wire-Speed Streaming**: Framed TCP binary streaming on Port `55000` with 1 MB reusable buffer pools ([`ArrayPool<byte>`](https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1)).
+- **Pipelined Transfer Engine**: 32 MB double-buffered channel pipeline (`System.Threading.Channels`) with unbuffered direct kernel I/O for sustained 115 MB/s Gigabit wire saturation.
+- **Ultra-Fast Folder Streaming**: Zero-allocation binary framing with receiver-side multi-worker disk ingestion (4–16 threads) to overcome NTFS small-file latency.
+- **Metadata Preservation**: Retains original file and directory creation (`CreationTimeUtc`) and modification (`LastWriteTimeUtc`) timestamps across transfers.
 - **Interface Isolation**: Saturates the physical Ethernet cable while your active Wi-Fi remains free for uninterrupted internet browsing.
-- **Deep Folder Streaming**: Transmits nested directory trees on-the-fly without intermediate zip compression.
 - **Cross-Platform**: Windows 10/11 & Linux supported.
 
 ---
@@ -51,13 +51,28 @@ Full architectural specifications, protocol framing schemas, hardware benchmarks
 
 ## Downloads
 
-| Platform | Package | Download |
+### Windows
+
+| Package | Architecture | Download |
 | :--- | :--- | :--- |
-| **Windows 64-bit** | Installer (.exe) | [EtherTransfer_Setup_x64.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe) |
-| **Windows 32-bit** | Installer (.exe) | [EtherTransfer_Setup_x86.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x86.exe) |
-| **Windows 64-bit Portable** | Single-File Executable | [EtherTransfer_Portable_x64.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Portable_x64.exe) |
-| **Windows 32-bit Portable** | Single-File Executable | [EtherTransfer_Portable_x86.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Portable_x86.exe) |
-| **Linux** | Shell Script | `curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash` |
+| **Installer (.exe)** | 64-bit | [EtherTransfer_Setup_x64.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x64.exe) |
+| **Installer (.exe)** | 32-bit | [EtherTransfer_Setup_x86.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Setup_x86.exe) |
+| **Portable (.exe)** | 64-bit | [EtherTransfer_Portable_x64.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Portable_x64.exe) |
+| **Portable (.exe)** | 32-bit | [EtherTransfer_Portable_x86.exe](https://github.com/divyviradiya2/ethertransfer/releases/latest/download/EtherTransfer_Portable_x86.exe) |
+
+### Linux
+
+Install EtherTransfer directly using the automated setup script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/install_linux.sh | sudo bash
+```
+
+To uninstall:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/divyviradiya2/ethertransfer/master/uninstall_linux.sh | sudo bash
+```
 
 ---
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -128,3 +128,4 @@ public class EthernetLinkMonitorTests
         Assert.That(_monitor.CurrentState, Is.EqualTo(EthernetLinkState.Ready));
     }
 }
+

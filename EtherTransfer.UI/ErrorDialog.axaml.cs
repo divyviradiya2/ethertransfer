@@ -8,6 +8,7 @@ public partial class ErrorDialog : Window
     public ErrorDialog()
     {
         InitializeComponent();
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     public ErrorDialog(string message) : this()
@@ -22,3 +23,4 @@ public partial class ErrorDialog : Window
         Close();
     }
 }
+

@@ -1,7 +1,7 @@
 [Setup]
 ; App Information
 AppName=EtherTransfer
-AppVersion=1.0.0
+AppVersion=0.3.0
 AppVerName=EtherTransfer
 AppPublisher=DS Labs
 UninstallDisplayIcon={app}\EtherTransfer.exe

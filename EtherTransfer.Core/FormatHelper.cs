@@ -1,4 +1,4 @@
-namespace EtherTransfer.Core;
+﻿namespace EtherTransfer.Core;
 
 public static class FormatHelper
 {
@@ -21,3 +21,4 @@ public static class FormatHelper
         }
     }
 }
+

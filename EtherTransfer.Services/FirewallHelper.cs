@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Principal;
@@ -129,3 +129,4 @@ public static class FirewallHelper
         }
     }
 }
+

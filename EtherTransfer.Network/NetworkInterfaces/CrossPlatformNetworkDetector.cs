@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -74,3 +74,4 @@ public static class CrossPlatformNetworkDetector
         }
     }
 }
+

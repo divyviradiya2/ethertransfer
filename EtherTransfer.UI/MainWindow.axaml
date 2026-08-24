@@ -8,16 +8,31 @@
         x:Class="EtherTransfer.UI.MainWindow"
         x:DataType="ui:MainWindow"
         Title="EtherTransfer"
-        Icon="avares://EtherTransfer/Assets/logo.png"
+        Icon="avares://EtherTransfer/Assets/logo.ico"
         Background="{DynamicResource AppBackground}"
         Foreground="{DynamicResource AppForeground}"
         WindowStartupLocation="CenterScreen">
 
-    <Window.Resources>
-        <ui:OsToIconConverter x:Key="OsToIconConverter"/>
-    </Window.Resources>
-
     <Window.Styles>
+        <Style Selector="PathIcon.os-icon">
+            <Setter Property="Data" Value="{StaticResource DeviceGenericIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Windows]">
+            <Setter Property="Data" Value="{StaticResource WindowsIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Linux]">
+            <Setter Property="Data" Value="{StaticResource LinuxIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=macOS]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Apple]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=OSX]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+
         <Style Selector="Border.Skeleton">
             <Style.Animations>
                 <Animation Duration="0:0:1.2" IterationCount="Infinite" PlaybackDirection="Alternate">
@@ -65,7 +80,7 @@
                                 <DataTemplate>
                                     <Border Background="Transparent" CornerRadius="4" Padding="10">
                                         <Grid ColumnDefinitions="Auto,*">
-                                            <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
+                                            <PathIcon Grid.Column="0" Classes="os-icon" Tag="{Binding OS}" Width="24" Height="24" Margin="0,0,15,0" VerticalAlignment="Center" Foreground="{DynamicResource AppForeground}" />
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
                                                 <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
@@ -85,7 +100,7 @@
                             </StackPanel>
 
                             <StackPanel IsVisible="{Binding !HasActiveVpn}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
-                                <Border Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
+                                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
                                     <Grid ColumnDefinitions="Auto,*">
                                         <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
@@ -96,7 +111,7 @@
                                 </Border>
 
                                 <StackPanel Spacing="10" Margin="10,0">
-                                    <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Scanning..." FontSize="16" Foreground="{DynamicResource AppForeground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                     <TextBlock Text="Looking for devices connected with ethernet cable." FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </StackPanel>
@@ -104,14 +119,14 @@
                     </StackPanel>
 
                     <StackPanel IsVisible="{Binding IsNoCable}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
-                        <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
-                        <TextBlock Text="No Ethernet cable connected." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <PathIcon Data="{StaticResource AlertIcon}" Width="48" Height="48" Foreground="{DynamicResource AppForegroundSecondary}" Opacity="0.5"/>
+                        <TextBlock Text="No Ethernet cable connected." FontSize="16" Foreground="{DynamicResource AppForeground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         <TextBlock Text="Please connect both devices directly to each other using an Ethernet cable." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <StackPanel IsVisible="{Binding IsConfiguring}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
-                        <PathIcon Data="{StaticResource SyncIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
-                        <TextBlock Text="Configuring network..." FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <PathIcon Data="{StaticResource SyncIcon}" Width="48" Height="48" Foreground="{DynamicResource AccentColor}"/>
+                        <TextBlock Text="Configuring network..." FontSize="16" Foreground="{DynamicResource AppForeground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         <TextBlock Text="Assigning link-local address..." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
 
@@ -165,7 +180,7 @@
                     </StackPanel>
                 </Grid>
 
-                <Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}" BorderBrush="{DynamicResource AppBorder}" BorderThickness="1" CornerRadius="6">
+                <Border Grid.Row="1" Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="6">
                     <Grid>
                         <ListBox x:Name="SelectedItemsList" ItemsSource="{Binding SelectedPayloads}" Background="Transparent" Margin="5">
                             <ListBox.ItemTemplate>
@@ -190,8 +205,8 @@
                         </ListBox>
 
                         <StackPanel IsVisible="{Binding !HasSelectedFiles}" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="15" Margin="20">
-                            <PathIcon Data="{StaticResource FileIcon}" Width="48" Height="48" Foreground="{DynamicResource AppBorder}"/>
-                            <TextBlock Text="No files selected" FontSize="16" Foreground="{DynamicResource AppForegroundSecondary}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            <PathIcon Data="{StaticResource FileIcon}" Width="48" Height="48" Foreground="{DynamicResource AppForegroundSecondary}" Opacity="0.4"/>
+                            <TextBlock Text="No files selected" FontSize="16" Foreground="{DynamicResource AppForeground}" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                             <TextBlock Text="Click 'Add Files' or 'Add Folder' to select items to send." FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Grid>
@@ -214,3 +229,4 @@
         </Grid>
     </Grid>
 </Window>
+

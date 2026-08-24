@@ -11,6 +11,7 @@ public partial class DebugWindow : Window
     public DebugWindow()
     {
         InitializeComponent();
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     private async void CopyLog_Click(object? sender, RoutedEventArgs e)
@@ -26,3 +27,4 @@ public partial class DebugWindow : Window
         }
     }
 }
+

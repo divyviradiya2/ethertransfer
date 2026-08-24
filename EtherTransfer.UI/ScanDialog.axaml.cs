@@ -15,6 +15,7 @@ public partial class ScanDialog : Window
         ScanTasks = new ObservableCollection<ScanProgressViewModel>();
         ScanCts = new System.Threading.CancellationTokenSource();
         DataContext = this;
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     public ScanDialog(ObservableCollection<ScanProgressViewModel> tasks, System.Threading.CancellationTokenSource cts) : this()
@@ -39,3 +40,4 @@ public partial class ScanDialog : Window
         base.OnClosing(e);
     }
 }
+

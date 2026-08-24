@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Formats.Tar;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +25,8 @@ public class TransferSender
     public event EventHandler<TransferProgressEventArgs>? ProgressUpdated;
     public event EventHandler<StructuredLogMessage>? DebugLog;
 
-    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "sender.log") => DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
+    private void Log(string msg, LogLevel level = LogLevel.Info, string eventId = "sender.log") =>
+        DebugLog?.Invoke(this, new StructuredLogMessage(eventId, msg, level));
 
     private static TcpClient CreateBoundClient(System.Net.IPAddress targetAddress)
     {
@@ -37,7 +40,6 @@ public class TransferSender
                 var localBytes = iface.LocalAddress.GetAddressBytes();
                 if (targetBytes.Length == 4 && localBytes.Length == 4)
                 {
-
                     if (targetBytes[0] == 169 && targetBytes[1] == 254 &&
                         localBytes[0] == 169 && localBytes[1] == 254)
                     {
@@ -72,7 +74,13 @@ public class TransferSender
                     var fi = new FileInfo(path);
                     payload.Name = fi.Name;
                     payload.Type = PayloadItemType.File;
-                    payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = path, RelativePath = fi.Name, RootName = fi.Name, Size = fi.Length });
+                    payload.DeepScannedFiles.Add(new FileSelectionItem
+                    {
+                        AbsolutePath = path,
+                        RelativePath = fi.Name,
+                        RootName = fi.Name,
+                        Size = fi.Length
+                    });
                 }
                 else if (Directory.Exists(path))
                 {
@@ -93,7 +101,13 @@ public class TransferSender
                     {
                         ct.ThrowIfCancellationRequested();
                         var fi = new FileInfo(file);
-                        payload.DeepScannedFiles.Add(new FileSelectionItem { AbsolutePath = file, RelativePath = Path.GetRelativePath(parentDir, file).Replace('\\', '/'), RootName = baseDir.Name, Size = fi.Length });
+                        payload.DeepScannedFiles.Add(new FileSelectionItem
+                        {
+                            AbsolutePath = file,
+                            RelativePath = Path.GetRelativePath(parentDir, file).Replace('\\', '/'),
+                            RootName = baseDir.Name,
+                            Size = fi.Length
+                        });
                         count++;
                         if (count % 100 == 0) progress?.Report(count);
                     }
@@ -112,10 +126,15 @@ public class TransferSender
 
             Log($"Scanned {payload.Name} -> {payload.DeepScannedFiles.Count} files, {payload.TotalSize / 1024 / 1024} MB");
             return payload;
-        });
+        }, ct);
     }
 
-    public async Task<TransferResult> TransmitSessionAsync(string targetIp, int targetPort, string senderName, TransferSession session, CancellationToken ct)
+    public async Task<TransferResult> TransmitSessionAsync(
+        string targetIp,
+        int targetPort,
+        string senderName,
+        TransferSession session,
+        CancellationToken ct)
     {
         var rootElements = session.Files.Select(f => f.RootName).Distinct().ToList();
         var result = new TransferResult
@@ -123,6 +142,7 @@ public class TransferSender
             TotalElements = session.PayloadFolderCount + session.PayloadFileCount,
             AllElementNames = rootElements
         };
+
         if (session.Files.Count == 0)
         {
             result.Success = true;
@@ -138,7 +158,7 @@ public class TransferSender
 
         try
         {
-            await client.ConnectAsync(parsedTargetIp, targetPort, connectCts.Token);
+            await client.ConnectAsync(parsedTargetIp, targetPort, connectCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -150,10 +170,10 @@ public class TransferSender
             throw;
         }
 
-        var stream = client.GetStream();
+        var networkStream = client.GetStream();
         client.NoDelay = true;
-        client.SendBufferSize = 1024 * 1024;
-        client.ReceiveBufferSize = 1024 * 1024;
+        client.SendBufferSize = 2 * 1024 * 1024;
+        client.ReceiveBufferSize = 2 * 1024 * 1024;
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
         var request = new TransferRequestMessage
@@ -167,163 +187,315 @@ public class TransferSender
             RootElementNames = rootElements
         };
 
-        await ProtocolHelper.SendMessageAsync(stream, request, ct, 2000);
+        await ProtocolHelper.SendMessageAsync(networkStream, request, ct, 3000).ConfigureAwait(false);
 
         Log("Waiting for receiver to accept...");
-        var response = await ProtocolHelper.ReceiveMessageAsync<TransferResponseMessage>(stream, ct);
+        var response = await ProtocolHelper.ReceiveMessageAsync<TransferResponseMessage>(networkStream, ct).ConfigureAwait(false);
 
         if (response == null)
             throw new Exception("Connection closed by receiver before response.");
 
         if (!response.Accepted)
         {
-            Log($"Transfer declined: {response.Reason}");
-            throw new Exception($"Receiver declined the transfer: {response.Reason}");
+            Log("Transfer declined by receiver.");
+            throw new Exception("Receiver declined the transfer.");
         }
 
-        Log($"Transfer accepted! Streaming {session.TotalFiles} files...");
+        Log($"Transfer accepted! Streaming {session.TotalFiles} files ({session.TotalSize / 1024 / 1024} MB)...");
 
-        long totalSent = 0;
+        long totalBytesSent = 0;
         int filesSent = 0;
         int filesSkipped = 0;
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024 * 1024);
-
         int totalElements = session.PayloadFolderCount + session.PayloadFileCount;
         int currentElementIndex = 0;
         string? currentRootName = null;
 
-        var totalFilesInRoot = new Dictionary<string, int>();
-        foreach (var file in session.Files)
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var speedTracker = new SpeedTracker();
+        speedTracker.Start();
+
+        var lastProgressReport = watch.ElapsedMilliseconds;
+
+        void ReportProgress(bool force = false)
         {
-            var r = file.RootName;
-            totalFilesInRoot[r] = totalFilesInRoot.GetValueOrDefault(r, 0) + 1;
-        }
-        var sentFilesInRoot = new Dictionary<string, int>();
-
-        try
-        {
-            foreach (var item in session.Files)
+            var now = watch.ElapsedMilliseconds;
+            if (force || now - lastProgressReport >= 50 || totalBytesSent >= session.TotalSize)
             {
-                if (item.RootName != currentRootName)
-                {
-                    currentRootName = item.RootName;
-                    currentElementIndex++;
-                }
-
-                ct.ThrowIfCancellationRequested();
-
-            FileStream? fs;
-            try
-            {
-                fs = new FileStream(item.AbsolutePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 65536, useAsync: true);
-            }
-            catch (FileNotFoundException)
-            {
-                Log($"SKIP (deleted): {item.RelativePath}");
-                await SendFileSkip(stream, item.RelativePath, "File was deleted after scan.", ct);
-                filesSkipped++;
-                continue;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Log($"SKIP (access denied): {item.RelativePath}");
-                await SendFileSkip(stream, item.RelativePath, "Permission denied.", ct);
-                filesSkipped++;
-                continue;
-            }
-            catch (IOException ex)
-            {
-                Log($"SKIP (locked): {item.RelativePath}");
-                await SendFileSkip(stream, item.RelativePath, $"File locked: {ex.Message}", ct);
-                filesSkipped++;
-                continue;
-            }
-
-            using (fs)
-            {
-                var actualSize = fs.Length;
-
-                var fileBegin = new BaseProtocolMessage { Type = "FILE_BEGIN" };
-                await ProtocolHelper.SendMessageAsync(stream, fileBegin, ct, 2000);
-
-                var meta = new FileItemMetadata
-                {
-                    RelativePath = item.RelativePath,
-                    RootName = item.RootName,
-                    Size = actualSize
-                };
-                await ProtocolHelper.SendMessageAsync(stream, meta, ct, 2000);
-
-                int read;
-                long fileSent = 0;
-
-                var elapsedSecInitial = watch.Elapsed.TotalSeconds;
-                var initialSpeed = elapsedSecInitial > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSecInitial : 0;
+                lastProgressReport = now;
+                var currentSpeed = speedTracker.CalculateSpeed(totalBytesSent);
 
                 ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
                 {
-                    CurrentFile = item.RootName,
-                    BytesSent = totalSent,
+                    CurrentFile = currentRootName ?? string.Empty,
+                    BytesSent = totalBytesSent,
                     TotalBytes = session.TotalSize,
-                    SpeedMbPerSec = initialSpeed,
+                    SpeedMbPerSec = currentSpeed,
                     CurrentElementIndex = currentElementIndex,
                     TotalElements = totalElements
                 });
-
-                var lastUpdate = watch.ElapsedMilliseconds;
-
-                using var watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-
-                while ((read = await fs.ReadAsync(buffer, ct)) > 0)
-                {
-                    watchdogCts.CancelAfter(5000);
-                    try
-                    {
-                        await stream.WriteAsync(buffer, 0, read, watchdogCts.Token);
-                    }
-                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                    {
-                        throw new IOException("Connection timed out (Ethernet cable disconnected or network dropped).");
-                    }
-
-                    fileSent += read;
-                    totalSent += read;
-
-                    var currentElapsed = watch.ElapsedMilliseconds;
-                    if (currentElapsed - lastUpdate >= 50 || totalSent == session.TotalSize)
-                    {
-                        lastUpdate = currentElapsed;
-                        var elapsedSec = watch.Elapsed.TotalSeconds;
-                        var speed = elapsedSec > 0 ? (totalSent / 1024.0 / 1024.0) / elapsedSec : 0;
-
-                        ProgressUpdated?.Invoke(this, new TransferProgressEventArgs
-                        {
-                            CurrentFile = item.RootName,
-                            BytesSent = totalSent,
-                            TotalBytes = session.TotalSize,
-                            SpeedMbPerSec = speed,
-                            CurrentElementIndex = currentElementIndex,
-                            TotalElements = totalElements
-                        });
-                    }
-                }
-                await stream.FlushAsync(ct);
-                filesSent++;
-
-                sentFilesInRoot[item.RootName] = sentFilesInRoot.GetValueOrDefault(item.RootName, 0) + 1;
-                if (sentFilesInRoot[item.RootName] == totalFilesInRoot[item.RootName])
-                {
-                    if (!result.CompletedElementNames.Contains(item.RootName))
-                    {
-                        result.CompletedElementNames.Add(item.RootName);
-                    }
-                }
             }
         }
 
-            var endMsg = new BaseProtocolMessage { Type = "TRANSFER_END" };
-            await ProtocolHelper.SendMessageAsync(stream, endMsg, ct, 2000);
+        using var countingStream = new CountingStream(networkStream, onBytesWritten: written =>
+        {
+            totalBytesSent = written;
+            ReportProgress(force: false);
+        });
+
+        var itemsByRoot = new List<(string RootName, List<FileSelectionItem> Files)>();
+        var seenRoots = new HashSet<string>();
+        foreach (var file in session.Files)
+        {
+            if (seenRoots.Add(file.RootName))
+            {
+                itemsByRoot.Add((file.RootName, session.Files.Where(f => f.RootName == file.RootName).ToList()));
+            }
+        }
+
+        try
+        {
+            foreach (var (rootName, rootFiles) in itemsByRoot)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                currentRootName = rootName;
+                currentElementIndex++;
+                ReportProgress(force: true);
+
+                bool isFolder = rootFiles.Count > 1 ||
+                                (rootFiles.Count == 1 && rootFiles[0].RelativePath != rootFiles[0].RootName) ||
+                                (rootFiles.Count == 1 && Directory.Exists(rootFiles[0].AbsolutePath));
+
+                if (isFolder)
+                {
+                    var folderBegin = new BaseProtocolMessage { Type = ProtocolMessageTypes.FolderBegin };
+                    await ProtocolHelper.SendMessageAsync(countingStream, folderBegin, ct, 3000).ConfigureAwait(false);
+
+                    long? rootCreatedMs = null;
+                    long? rootModifiedMs = null;
+                    try
+                    {
+                        var firstFile = rootFiles[0].AbsolutePath;
+                        var rootDirPath = Path.GetDirectoryName(firstFile);
+                        while (rootDirPath != null && !Path.GetFileName(rootDirPath).Equals(rootName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var parent = Path.GetDirectoryName(rootDirPath);
+                            if (parent == null) break;
+                            rootDirPath = parent;
+                        }
+                        if (rootDirPath != null && Directory.Exists(rootDirPath))
+                        {
+                            var di = new DirectoryInfo(rootDirPath);
+                            rootCreatedMs = new DateTimeOffset(di.CreationTimeUtc).ToUnixTimeMilliseconds();
+                            rootModifiedMs = new DateTimeOffset(di.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                        }
+                    }
+                    catch { }
+
+                    var folderMeta = new FolderTarMetadata
+                    {
+                        RootName = rootName,
+                        TotalFiles = rootFiles.Count,
+                        TotalSize = rootFiles.Sum(f => f.Size),
+                        CreationTimeUnixMs = rootCreatedMs,
+                        LastWriteTimeUnixMs = rootModifiedMs
+                    };
+                    await ProtocolHelper.SendMessageAsync(countingStream, folderMeta, ct, 3000).ConfigureAwait(false);
+
+                    var copyBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+                    try
+                    {
+                        foreach (var item in rootFiles)
+                        {
+                            ct.ThrowIfCancellationRequested();
+
+                            FileStream? fs = null;
+                            try
+                            {
+                                fs = new FileStream(
+                                    item.AbsolutePath,
+                                    FileMode.Open,
+                                    FileAccess.Read,
+                                    FileShare.ReadWrite,
+                                    1,
+                                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                            }
+                            catch (FileNotFoundException)
+                            {
+                                Log($"SKIP (missing): {item.RelativePath}");
+                                filesSkipped++;
+                                continue;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log($"SKIP (read error): {item.RelativePath} - {ex.Message}");
+                                filesSkipped++;
+                                continue;
+                            }
+
+                            long fileCreatedMs = 0;
+                            long fileModifiedMs = 0;
+                            try
+                            {
+                                var fi = new FileInfo(item.AbsolutePath);
+                                fileCreatedMs = new DateTimeOffset(fi.CreationTimeUtc).ToUnixTimeMilliseconds();
+                                fileModifiedMs = new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                            }
+                            catch { }
+
+                            using (fs)
+                            {
+                                var actualSize = fs.Length;
+                                var pathBytes = System.Text.Encoding.UTF8.GetBytes(item.RelativePath);
+                                int headerLen = 4 + pathBytes.Length + 8 + 8 + 8;
+
+                                if (headerLen + actualSize <= copyBuffer.Length)
+                                {
+                                    BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
+                                    pathBytes.CopyTo(copyBuffer, 4);
+                                    BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+                                    BitConverter.GetBytes(fileCreatedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 8);
+                                    BitConverter.GetBytes(fileModifiedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 16);
+
+                                    if (actualSize > 0)
+                                    {
+                                        int totalRead = 0;
+                                        while (totalRead < actualSize)
+                                        {
+                                            int read = await fs.ReadAsync(copyBuffer.AsMemory(headerLen + totalRead, (int)actualSize - totalRead), ct).ConfigureAwait(false);
+                                            if (read == 0) break;
+                                            totalRead += read;
+                                        }
+                                    }
+
+                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, headerLen + (int)actualSize), ct).ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
+                                    pathBytes.CopyTo(copyBuffer, 4);
+                                    BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+                                    BitConverter.GetBytes(fileCreatedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 8);
+                                    BitConverter.GetBytes(fileModifiedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 16);
+
+                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, headerLen), ct).ConfigureAwait(false);
+
+                                    long remaining = actualSize;
+                                    while (remaining > 0)
+                                    {
+                                        ct.ThrowIfCancellationRequested();
+                                        int toRead = (int)Math.Min(copyBuffer.Length, remaining);
+                                        int read = await fs.ReadAsync(copyBuffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                                        if (read == 0) break;
+                                        await countingStream.WriteAsync(copyBuffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                                        remaining -= read;
+                                    }
+                                }
+
+                                filesSent++;
+                            }
+                        }
+
+                        await countingStream.WriteAsync(BitConverter.GetBytes(0), ct).ConfigureAwait(false);
+                        await countingStream.FlushAsync(ct).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        System.Buffers.ArrayPool<byte>.Shared.Return(copyBuffer);
+                    }
+
+                    if (!result.CompletedElementNames.Contains(rootName))
+                    {
+                        result.CompletedElementNames.Add(rootName);
+                    }
+                }
+                else
+                {
+
+                    var item = rootFiles[0];
+
+                    FileStream? fs = null;
+                    try
+                    {
+                        fs = new FileStream(
+                            item.AbsolutePath,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.ReadWrite,
+                            1,
+                            FileOptions.Asynchronous | FileOptions.SequentialScan);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        Log($"SKIP (deleted): {item.RelativePath}");
+                        await SendFileSkip(countingStream, item.RelativePath, "File was deleted after scan.", ct).ConfigureAwait(false);
+                        filesSkipped++;
+                        continue;
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        Log($"SKIP (access denied): {item.RelativePath}");
+                        await SendFileSkip(countingStream, item.RelativePath, "Permission denied.", ct).ConfigureAwait(false);
+                        filesSkipped++;
+                        continue;
+                    }
+                    catch (IOException ex)
+                    {
+                        Log($"SKIP (locked): {item.RelativePath}");
+                        await SendFileSkip(countingStream, item.RelativePath, $"File locked: {ex.Message}", ct).ConfigureAwait(false);
+                        filesSkipped++;
+                        continue;
+                    }
+
+                    using (fs)
+                    {
+                        var actualSize = fs.Length;
+
+                        var fileBegin = new BaseProtocolMessage { Type = ProtocolMessageTypes.FileBegin };
+                        await ProtocolHelper.SendMessageAsync(countingStream, fileBegin, ct, 3000).ConfigureAwait(false);
+
+                        long? fileCreatedMs = null;
+                        long? fileModifiedMs = null;
+                        try
+                        {
+                            var fi = new FileInfo(item.AbsolutePath);
+                            fileCreatedMs = new DateTimeOffset(fi.CreationTimeUtc).ToUnixTimeMilliseconds();
+                            fileModifiedMs = new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                        }
+                        catch { }
+
+                        var meta = new FileItemMetadata
+                        {
+                            RelativePath = item.RelativePath,
+                            RootName = item.RootName,
+                            Size = actualSize,
+                            CreationTimeUnixMs = fileCreatedMs,
+                            LastWriteTimeUnixMs = fileModifiedMs
+                        };
+                        await ProtocolHelper.SendMessageAsync(countingStream, meta, ct, 3000).ConfigureAwait(false);
+
+                        await PipelinedTransferEngine.StreamFileToNetworkAsync(
+                            fs,
+                            countingStream,
+                            actualSize,
+                            onBytesSent: _ => ReportProgress(force: false),
+                            ct).ConfigureAwait(false);
+
+                        await countingStream.FlushAsync(ct).ConfigureAwait(false);
+
+                        filesSent++;
+
+                        if (!result.CompletedElementNames.Contains(item.RootName))
+                        {
+                            result.CompletedElementNames.Add(item.RootName);
+                        }
+                    }
+                }
+            }
+
+            var endMsg = new BaseProtocolMessage { Type = ProtocolMessageTypes.TransferEnd };
+            await ProtocolHelper.SendMessageAsync(countingStream, endMsg, ct, 3000).ConfigureAwait(false);
+            await countingStream.FlushAsync(ct).ConfigureAwait(false);
 
             result.Success = true;
         }
@@ -335,30 +507,33 @@ public class TransferSender
             {
                 client.LingerState = new LingerOption(true, 0);
                 client.Close();
-            } catch { }
-        }
-        finally
-        {
-            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+            }
+            catch { }
         }
 
         watch.Stop();
-        var summary = $"Transfer complete! Sent {totalSent / 1024 / 1024} MB ({filesSent} files) in {watch.Elapsed.TotalSeconds:F1}s.";
+        ReportProgress(force: true);
+
+        var summary = $"Transfer complete! Sent {totalBytesSent / 1024 / 1024} MB ({filesSent} files) in {watch.Elapsed.TotalSeconds:F1}s.";
         if (filesSkipped > 0)
             summary += $" ({filesSkipped} skipped)";
         Log(summary);
 
-        result.FailedElementNames = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(result.AllElementNames, name => !result.CompletedElementNames.Contains(name)));
+        result.FailedElementNames = result.AllElementNames
+            .Where(name => !result.CompletedElementNames.Contains(name))
+            .ToList();
+
         return result;
     }
 
-    private static async Task SendFileSkip(NetworkStream stream, string relativePath, string reason, CancellationToken ct)
+    private static async Task SendFileSkip(Stream stream, string relativePath, string reason, CancellationToken ct)
     {
         var skipMsg = new FileSkipMessage
         {
             RelativePath = relativePath,
             Reason = reason
         };
-        await ProtocolHelper.SendMessageAsync(stream, skipMsg, ct, 2000);
+        await ProtocolHelper.SendMessageAsync(stream, skipMsg, ct, 3000).ConfigureAwait(false);
     }
 }
+

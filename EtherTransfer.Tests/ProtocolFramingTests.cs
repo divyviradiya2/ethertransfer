@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -143,3 +143,4 @@ public class ProtocolFramingTests
         Assert.That(deserialized.SequenceNumber, Is.EqualTo(123));
     }
 }
+

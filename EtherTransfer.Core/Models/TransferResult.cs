@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace EtherTransfer.Core.Models;
 
@@ -12,3 +12,4 @@ public class TransferResult
     public List<string> AllElementNames { get; set; } = new();
     public List<string> FailedElementNames { get; set; } = new();
 }
+

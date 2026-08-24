@@ -1,4 +1,4 @@
-namespace EtherTransfer.Core.Models;
+﻿namespace EtherTransfer.Core.Models;
 
 public class DiscoveryMessage
 {
@@ -10,3 +10,4 @@ public class DiscoveryMessage
     public string OS { get; set; } = string.Empty;
     public long SequenceNumber { get; set; }
 }
+

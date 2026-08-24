@@ -63,5 +63,5 @@ The universal Linux installation script requires `sudo` (root) privileges and pe
 
 ## 4. Storage & Artifacts (All Platforms)
 
-- **Temporary Buffers**: During active transfers, EtherTransfer streams directly from disk to network and network to disk. It uses strict 1MB memory buffers per chunk via `ArrayPool<byte>` to prevent RAM bloat, meaning system RAM usage remains stable regardless of file size.
+- **Temporary Buffers**: During active transfers, EtherTransfer streams directly from disk to network and network to disk. It uses a bounded 32 MB `System.Threading.Channels` double-buffered pipeline and 128 KB memory buffers rented from `ArrayPool<byte>.Shared` to prevent RAM bloat, keeping system RAM usage strictly bounded regardless of dataset size.
 - **No Telemetry**: EtherTransfer does not install any background tracking services, telemetry agents, or startup analytics hooks. It only runs when explicitly launched by the user.

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -500,3 +500,4 @@ public class TransferCancellationTests
         Assert.That(File.Exists(receivedFile2), Is.False, "Cancelled file2.dat must be deleted from receiver disk!");
     }
 }
+

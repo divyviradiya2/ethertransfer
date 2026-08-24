@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
 
@@ -16,3 +16,4 @@ public record NetworkInterfaceInfo(
     bool IsVirtual,
     byte[] MacAddress,
     IReadOnlyList<IPAddress> Ipv4Addresses);
+

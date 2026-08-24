@@ -21,11 +21,85 @@ public class CompletedItemViewModel
 
 public partial class TransferDialog : Window, INotifyPropertyChanged
 {
+    public event Action? TransferStarted;
+    private bool _hasTriggeredTransferStarted = false;
+
+    private string _peerDeviceName = "";
+    public string PeerDeviceName
+    {
+        get => _peerDeviceName;
+        set
+        {
+            _peerDeviceName = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ProgressTitle));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
+        }
+    }
+
+    public string ProgressTitle
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_peerDeviceName))
+            {
+                return _isSenderMode
+                    ? $"Sending to {_peerDeviceName}"
+                    : $"Receiving from {_peerDeviceName}";
+            }
+            return "Transferring";
+        }
+    }
+
+    public string WindowTitle
+    {
+        get
+        {
+            if (IsProgressMode)
+            {
+                string actionPrefix = !string.IsNullOrWhiteSpace(_peerDeviceName)
+                    ? (_isSenderMode ? $"Sending to {_peerDeviceName}" : $"Receiving from {_peerDeviceName}")
+                    : "Transferring";
+
+                if (_transferTotalBytes > 0)
+                {
+                    double percent = Math.Clamp((double)_transferSentBytes / _transferTotalBytes * 100, 0, 100);
+                    return $"EtherTransfer - {actionPrefix} ({percent:F0}%)";
+                }
+                return $"EtherTransfer - {actionPrefix}...";
+            }
+            if (IsSuccessMode) return "EtherTransfer - Transfer Complete";
+            if (IsFailureMode) return $"EtherTransfer - {FailureTitle}";
+            if (IsSenderMode) return !string.IsNullOrWhiteSpace(_peerDeviceName) ? $"EtherTransfer - Waiting for {_peerDeviceName}" : "EtherTransfer - Waiting for Peer";
+            return "EtherTransfer - Incoming Transfer Request";
+        }
+    }
+
+    private IntPtr GetWindowHandle()
+    {
+        try
+        {
+            return this.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        }
+        catch
+        {
+            return IntPtr.Zero;
+        }
+    }
+
     private bool _isSenderMode;
     public bool IsSenderMode
     {
         get => _isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
-        set { _isSenderMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsReceiverMode)); }
+        set
+        {
+            _isSenderMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsReceiverMode));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
+        }
     }
 
     public bool IsReceiverMode => !_isSenderMode && !IsProgressMode && !IsSuccessMode && !IsFailureMode;
@@ -40,6 +114,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsSenderMode));
             OnPropertyChanged(nameof(IsReceiverMode));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -56,6 +132,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsProgressMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
             OnPropertyChanged(nameof(IsFailureMode));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -63,7 +141,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     public bool IsPartialSuccessMode
     {
         get => _isPartialSuccessMode;
-        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); }
+        set { _isPartialSuccessMode = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsFullSuccessMode)); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; }
     }
 
     public bool IsFullSuccessMode => IsSuccessMode && !IsPartialSuccessMode;
@@ -81,16 +159,29 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(IsProgressMode));
             OnPropertyChanged(nameof(IsSuccessMode));
             OnPropertyChanged(nameof(IsFullSuccessMode));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
+    public bool IsSender => _isSenderMode;
+
+    private string _partialFailureTitle = "Transfer Cancelled";
+    public string PartialFailureTitle { get => _partialFailureTitle; set { _partialFailureTitle = value; OnPropertyChanged(); } }
+
+    private string _partialFailureReason = "The transfer was cancelled.";
+    public string PartialFailureReason { get => _partialFailureReason; set { _partialFailureReason = value; OnPropertyChanged(); } }
+
+    private string _partialFailureDetail = "Partial/incomplete files were removed. Completed items are saved:";
+    public string PartialFailureDetail { get => _partialFailureDetail; set { _partialFailureDetail = value; OnPropertyChanged(); } }
+
     private string _failureTitle = "Transfer Cancelled";
-    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); } }
+    public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; } }
 
     private string _failureMessage = "The transfer was cancelled.";
     public string FailureMessage { get => _failureMessage; set { _failureMessage = value; OnPropertyChanged(); } }
 
-    private string _failureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
+    private string _failureSubDetail = "No files were transferred.";
     public string FailureSubDetail { get => _failureSubDetail; set { _failureSubDetail = value; OnPropertyChanged(); } }
 
     private string _transferFileName = "";
@@ -110,6 +201,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged(nameof(TransferProgressText));
             OnPropertyChanged(nameof(TransferPercentageText));
             OnPropertyChanged(nameof(TransferFinalSizeText));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -175,6 +268,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(TransferProgressText));
             OnPropertyChanged(nameof(TransferPercentageText));
+            OnPropertyChanged(nameof(WindowTitle));
+            this.Title = WindowTitle;
         }
     }
 
@@ -212,6 +307,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     {
         InitializeComponent();
         DataContext = this;
+        WindowsTitleBarTheme.EnableDarkMode(this);
     }
 
     public static TransferDialog CreateSender(string targetName, CancellationTokenSource cts)
@@ -219,17 +315,19 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         var dialog = new TransferDialog
         {
             IsSenderMode = true,
+            PeerDeviceName = targetName,
             WaitingText = $"Waiting for {targetName} to accept...",
             _senderCts = cts
         };
         return dialog;
     }
 
-    public static TransferDialog CreateReceiver(string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
+    public static TransferDialog CreateReceiver(string senderName, string requestText, long totalBytes, TaskCompletionSource<(bool, string, CancellationToken)> tcs, CancellationTokenSource cancelCts)
     {
         var dialog = new TransferDialog
         {
             IsSenderMode = false,
+            PeerDeviceName = senderName,
             IncomingRequestText = requestText,
             TransferTotalBytes = totalBytes,
             _receiverTcs = tcs,
@@ -242,21 +340,25 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isCancelled = false;
     public bool IsCancelled => _isCancelled;
 
+    private bool _isCancelledByUser = false;
+    public bool IsCancelledByUser => _isCancelledByUser;
+
     private async void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         if (!IsProgressMode)
         {
             _isCancelled = true;
+            _isCancelledByUser = true;
             ForceClose();
             return;
         }
 
-        bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync("Are you sure you want to cancel the transfer?", "Cancel Transfer");
+        bool confirm = await ConfirmDialog.ShowAsync(this, "Are you sure you want to cancel the transfer?", "Cancel Transfer");
         if (confirm)
         {
             _isCancelled = true;
+            _isCancelledByUser = true;
             CancelTransfer();
-
         }
     }
 
@@ -294,6 +396,20 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         Close();
     }
 
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        IntPtr hwnd = GetWindowHandle();
+        if (IsSenderMode)
+        {
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Indeterminate);
+        }
+        else if (IsProgressMode)
+        {
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Normal);
+        }
+    }
+
     private async void Accept_Click(object? sender, RoutedEventArgs e)
     {
         try
@@ -321,6 +437,18 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             System.Diagnostics.Debug.WriteLine($"Drive check failed: {ex.Message}");
         }
 
+        IsProgressMode = true;
+        this.Title = WindowTitle;
+
+        if (!_hasTriggeredTransferStarted)
+        {
+            _hasTriggeredTransferStarted = true;
+            TransferStarted?.Invoke();
+        }
+
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Indeterminate);
+
         _receiverTcs?.TrySetResult((true, SavePath, _receiverCancelCts!.Token));
     }
 
@@ -343,6 +471,12 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             if (!IsProgressMode) IsProgressMode = true;
 
+            if (!_hasTriggeredTransferStarted)
+            {
+                _hasTriggeredTransferStarted = true;
+                TransferStarted?.Invoke();
+            }
+
             TransferFileName = e.CurrentFile;
             TransferItemCountText = $"({e.CurrentElementIndex}/{e.TotalElements})";
             TransferTotalBytes = e.TotalBytes;
@@ -350,6 +484,15 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
             TransferProgressText = $"{EtherTransfer.Core.FormatHelper.FormatSize(e.BytesSent)} / {EtherTransfer.Core.FormatHelper.FormatSize(e.TotalBytes)}";
             TransferSpeedText = $"{e.SpeedMbPerSec:F1} MB/s";
+
+            this.Title = WindowTitle;
+
+            IntPtr hwnd = GetWindowHandle();
+            WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.Normal);
+            if (e.TotalBytes > 0)
+            {
+                WindowsTaskbarProgress.SetProgressValue(hwnd, (ulong)Math.Min(e.BytesSent, e.TotalBytes), (ulong)e.TotalBytes);
+            }
         });
     }
 
@@ -392,6 +535,10 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _isCancelled = true;
         _senderCts?.Cancel();
         _receiverCancelCts?.Cancel();
+        _receiverTcs?.TrySetResult((false, "", default));
+
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.NoProgress);
     }
 
     private bool _isForceClosing = false;
@@ -408,20 +555,22 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         {
             e.Cancel = true;
 
-            bool confirm = await NativeDialogHelper.ShowConfirmCancelDialogAsync(
+            bool confirm = await ConfirmDialog.ShowAsync(
+                this,
                 "Are you sure you want to cancel the transfer?",
                 "Cancel Transfer");
 
             if (confirm)
             {
                 _isCancelled = true;
+                _isCancelledByUser = true;
                 CancelTransfer();
-
             }
             return;
         }
 
         _isCancelled = true;
+        _isCancelledByUser = true;
         _isForceClosing = true;
         CancelTransfer();
         _receiverTcs?.TrySetResult((false, "", default));
@@ -433,6 +582,9 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _isCancelled = true;
         _receiverCancelCts?.Cancel();
 
+        IntPtr hwnd = GetWindowHandle();
+        WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.NoProgress);
+
         _receiverTcs?.TrySetResult((false, "", default));
         base.OnClosed(e);
     }
@@ -443,3 +595,4 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
+
