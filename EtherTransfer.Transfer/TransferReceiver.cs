@@ -228,20 +228,23 @@ public class TransferReceiver
 
                                                 if (task.Buffer != null && task.Length > 0)
                                                 {
-                                                    await using var fs = new FileStream(
+                                                    await using (var fs = new FileStream(
                                                         task.SafePath,
                                                         FileMode.Create,
                                                         FileAccess.Write,
                                                         FileShare.None,
                                                         1,
-                                                        FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-                                                    await fs.WriteAsync(task.Buffer.AsMemory(0, task.Length), workerCts.Token).ConfigureAwait(false);
+                                                        FileOptions.Asynchronous | FileOptions.SequentialScan))
+                                                    {
+                                                        await fs.WriteAsync(task.Buffer.AsMemory(0, task.Length), workerCts.Token).ConfigureAwait(false);
+                                                    }
                                                 }
                                                 else
                                                 {
                                                     using (new FileStream(task.SafePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
                                                 }
+
+                                                ApplyFileTimestamps(task.SafePath, task.CreationTimeUnixMs, task.LastWriteTimeUnixMs);
                                             }
                                             catch (OperationCanceledException) { }
                                             catch (Exception ex)
@@ -266,6 +269,7 @@ public class TransferReceiver
                             {
                                 var lenBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
                                 var sizeBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(8);
+                                var timeBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(16);
                                 var copyBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
                                 try
                                 {
@@ -314,6 +318,14 @@ public class TransferReceiver
                                         {
                                             throw new InvalidDataException($"Invalid file size in folder stream: {fileSize}");
                                         }
+
+                                        if (!await ProtocolHelper.ReadExactAsync(countingStream, timeBuffer, 16, transferCt, 5000).ConfigureAwait(false))
+                                        {
+                                            throw new IOException("Connection lost while reading folder file timestamps.");
+                                        }
+
+                                        long fileCreatedMs = BitConverter.ToInt64(timeBuffer, 0);
+                                        long fileModifiedMs = BitConverter.ToInt64(timeBuffer, 8);
 
                                         string adjustedRelativePath = relativePath;
                                         if (resolvedRootName != folderMeta.RootName)
@@ -365,11 +377,11 @@ public class TransferReceiver
                                                     System.Buffers.ArrayPool<byte>.Shared.Return(fileBuf);
                                                     throw new IOException("Connection lost while reading folder file payload.");
                                                 }
-                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, fileBuf, (int)fileSize, resolvedRootName), transferCt).ConfigureAwait(false);
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, fileBuf, (int)fileSize, resolvedRootName, fileCreatedMs, fileModifiedMs), transferCt).ConfigureAwait(false);
                                             }
                                             else
                                             {
-                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, null, 0, resolvedRootName), transferCt).ConfigureAwait(false);
+                                                await fileChannel.Writer.WriteAsync(new FolderFileTask(safePath, null, 0, resolvedRootName, fileCreatedMs, fileModifiedMs), transferCt).ConfigureAwait(false);
                                             }
                                         }
                                         else
@@ -405,6 +417,7 @@ public class TransferReceiver
 
                                                 await fs.DisposeAsync().ConfigureAwait(false);
                                                 fs = null;
+                                                ApplyFileTimestamps(safePath, fileCreatedMs, fileModifiedMs);
                                             }
                                             finally
                                             {
@@ -422,11 +435,13 @@ public class TransferReceiver
                                 {
                                     System.Buffers.ArrayPool<byte>.Shared.Return(lenBuffer);
                                     System.Buffers.ArrayPool<byte>.Shared.Return(sizeBuffer);
+                                    System.Buffers.ArrayPool<byte>.Shared.Return(timeBuffer);
                                     System.Buffers.ArrayPool<byte>.Shared.Return(copyBuffer);
                                 }
 
                                 fileChannel.Writer.Complete();
                                 await Task.WhenAll(workerTasks).ConfigureAwait(false);
+                                ApplyDirectoryTimestamps(resolvedRootDirectory, folderMeta.CreationTimeUnixMs, folderMeta.LastWriteTimeUnixMs);
                             }
                             catch (Exception folderEx)
                             {
@@ -523,6 +538,7 @@ public class TransferReceiver
 
                                 await fs.DisposeAsync().ConfigureAwait(false);
                                 fs = null;
+                                ApplyFileTimestamps(safePath, fileMeta.CreationTimeUnixMs, fileMeta.LastWriteTimeUnixMs);
 
                                 filesReceived++;
 
@@ -691,6 +707,38 @@ public class TransferReceiver
             System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
         }
     }
+
+    private static void ApplyFileTimestamps(string path, long? creationTimeUnixMs, long? lastWriteTimeUnixMs)
+    {
+        try
+        {
+            if (lastWriteTimeUnixMs.HasValue && lastWriteTimeUnixMs.Value > 0)
+            {
+                File.SetLastWriteTimeUtc(path, DateTimeOffset.FromUnixTimeMilliseconds(lastWriteTimeUnixMs.Value).UtcDateTime);
+            }
+            if (creationTimeUnixMs.HasValue && creationTimeUnixMs.Value > 0)
+            {
+                File.SetCreationTimeUtc(path, DateTimeOffset.FromUnixTimeMilliseconds(creationTimeUnixMs.Value).UtcDateTime);
+            }
+        }
+        catch { }
+    }
+
+    private static void ApplyDirectoryTimestamps(string path, long? creationTimeUnixMs, long? lastWriteTimeUnixMs)
+    {
+        try
+        {
+            if (lastWriteTimeUnixMs.HasValue && lastWriteTimeUnixMs.Value > 0 && Directory.Exists(path))
+            {
+                Directory.SetLastWriteTimeUtc(path, DateTimeOffset.FromUnixTimeMilliseconds(lastWriteTimeUnixMs.Value).UtcDateTime);
+            }
+            if (creationTimeUnixMs.HasValue && creationTimeUnixMs.Value > 0 && Directory.Exists(path))
+            {
+                Directory.SetCreationTimeUtc(path, DateTimeOffset.FromUnixTimeMilliseconds(creationTimeUnixMs.Value).UtcDateTime);
+            }
+        }
+        catch { }
+    }
 }
 
 internal readonly struct FolderFileTask
@@ -699,13 +747,17 @@ internal readonly struct FolderFileTask
     public readonly byte[]? Buffer;
     public readonly int Length;
     public readonly string RootName;
+    public readonly long? CreationTimeUnixMs;
+    public readonly long? LastWriteTimeUnixMs;
 
-    public FolderFileTask(string safePath, byte[]? buffer, int length, string rootName)
+    public FolderFileTask(string safePath, byte[]? buffer, int length, string rootName, long? creationTimeUnixMs, long? lastWriteTimeUnixMs)
     {
         SafePath = safePath;
         Buffer = buffer;
         Length = length;
         RootName = rootName;
+        CreationTimeUnixMs = creationTimeUnixMs;
+        LastWriteTimeUnixMs = lastWriteTimeUnixMs;
     }
 }
 

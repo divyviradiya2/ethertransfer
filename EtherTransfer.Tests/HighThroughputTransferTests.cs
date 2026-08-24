@@ -511,5 +511,136 @@ public class HighThroughputTransferTests
         Assert.That(File.Exists(Path.Combine(newFolder, "pic2.jpg")), Is.True);
         Assert.That(await File.ReadAllTextAsync(Path.Combine(newFolder, "pic1.jpg")), Is.EqualTo("new pic 1"));
     }
+
+    [Test]
+    public async Task Transfer_SingleFile_PreservesMetadataTimestamps()
+    {
+        var srcFile = Path.Combine(_tempSourceDir, "legacy_doc.pdf");
+        await File.WriteAllTextAsync(srcFile, "document content");
+
+        var expectedCreated = new DateTime(2021, 5, 12, 10, 30, 0, DateTimeKind.Utc);
+        var expectedModified = new DateTime(2022, 8, 20, 15, 45, 0, DateTimeKind.Utc);
+        File.SetCreationTimeUtc(srcFile, expectedCreated);
+        File.SetLastWriteTimeUtc(srcFile, expectedModified);
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) => Task.FromResult((true, _tempDestDir, CancellationToken.None));
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        var session = new TransferSession
+        {
+            ContainsFolders = false,
+            PayloadFolderCount = 0,
+            PayloadFileCount = 1
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = srcFile, RelativePath = "legacy_doc.pdf", RootName = "legacy_doc.pdf", Size = new FileInfo(srcFile).Length }
+        });
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "Sender", session, CancellationToken.None);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        Assert.That(senderResult.Success, Is.True, $"Sender failed: {senderResult.ErrorMessage}");
+        Assert.That(receiverResult.Success, Is.True, $"Receiver failed: {receiverResult.ErrorMessage}");
+
+        var destFile = Path.Combine(_tempDestDir, "legacy_doc.pdf");
+        Assert.That(File.Exists(destFile), Is.True);
+
+        var actualCreated = File.GetCreationTimeUtc(destFile);
+        var actualModified = File.GetLastWriteTimeUtc(destFile);
+
+        Assert.That((actualCreated - expectedCreated).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+        Assert.That((actualModified - expectedModified).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+    }
+
+    [Test]
+    public async Task Transfer_Folder_PreservesMetadataTimestamps()
+    {
+        var srcFolder = Path.Combine(_tempSourceDir, "ArchiveFolder");
+        Directory.CreateDirectory(srcFolder);
+
+        var srcFile1 = Path.Combine(srcFolder, "data1.bin");
+        var srcFile2 = Path.Combine(srcFolder, "data2.bin");
+        await File.WriteAllTextAsync(srcFile1, "binary 1");
+        await File.WriteAllTextAsync(srcFile2, "binary 2");
+
+        var expectedFile1Created = new DateTime(2019, 3, 10, 8, 15, 0, DateTimeKind.Utc);
+        var expectedFile1Modified = new DateTime(2020, 4, 11, 9, 20, 0, DateTimeKind.Utc);
+        File.SetCreationTimeUtc(srcFile1, expectedFile1Created);
+        File.SetLastWriteTimeUtc(srcFile1, expectedFile1Modified);
+
+        var expectedFile2Created = new DateTime(2021, 6, 14, 12, 0, 0, DateTimeKind.Utc);
+        var expectedFile2Modified = new DateTime(2022, 7, 18, 16, 30, 0, DateTimeKind.Utc);
+        File.SetCreationTimeUtc(srcFile2, expectedFile2Created);
+        File.SetLastWriteTimeUtc(srcFile2, expectedFile2Modified);
+
+        var expectedFolderCreated = new DateTime(2019, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var expectedFolderModified = new DateTime(2022, 7, 18, 17, 0, 0, DateTimeKind.Utc);
+        Directory.SetCreationTimeUtc(srcFolder, expectedFolderCreated);
+        Directory.SetLastWriteTimeUtc(srcFolder, expectedFolderModified);
+
+        var (listener, port) = StartTestListener();
+
+        var receiver = new TransferReceiver();
+        receiver.OnIncomingTransfer = (req, ct) => Task.FromResult((true, _tempDestDir, CancellationToken.None));
+
+        var receiverTask = Task.Run(async () =>
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            return await receiver.HandleClientAsync(client, CancellationToken.None);
+        });
+
+        var sender = new TransferSender();
+        var session = new TransferSession
+        {
+            ContainsFolders = true,
+            PayloadFolderCount = 1,
+            PayloadFileCount = 2
+        };
+        session.AddFiles(new List<FileSelectionItem>
+        {
+            new() { AbsolutePath = srcFile1, RelativePath = "ArchiveFolder/data1.bin", RootName = "ArchiveFolder", Size = new FileInfo(srcFile1).Length },
+            new() { AbsolutePath = srcFile2, RelativePath = "ArchiveFolder/data2.bin", RootName = "ArchiveFolder", Size = new FileInfo(srcFile2).Length }
+        });
+
+        var senderResult = await sender.TransmitSessionAsync("127.0.0.1", port, "Sender", session, CancellationToken.None);
+        var receiverResult = await receiverTask;
+        listener.Stop();
+
+        Assert.That(senderResult.Success, Is.True, $"Sender failed: {senderResult.ErrorMessage}");
+        Assert.That(receiverResult.Success, Is.True, $"Receiver failed: {receiverResult.ErrorMessage}");
+
+        var destFolder = Path.Combine(_tempDestDir, "ArchiveFolder");
+        Assert.That(Directory.Exists(destFolder), Is.True);
+
+        var destFile1 = Path.Combine(destFolder, "data1.bin");
+        var destFile2 = Path.Combine(destFolder, "data2.bin");
+
+        Assert.That(File.Exists(destFile1), Is.True);
+        Assert.That(File.Exists(destFile2), Is.True);
+
+        var actualFile1Created = File.GetCreationTimeUtc(destFile1);
+        var actualFile1Modified = File.GetLastWriteTimeUtc(destFile1);
+        Assert.That((actualFile1Created - expectedFile1Created).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+        Assert.That((actualFile1Modified - expectedFile1Modified).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+
+        var actualFile2Created = File.GetCreationTimeUtc(destFile2);
+        var actualFile2Modified = File.GetLastWriteTimeUtc(destFile2);
+        Assert.That((actualFile2Created - expectedFile2Created).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+        Assert.That((actualFile2Modified - expectedFile2Modified).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+
+        var actualFolderModified = Directory.GetLastWriteTimeUtc(destFolder);
+        Assert.That((actualFolderModified - expectedFolderModified).Duration(), Is.LessThanOrEqualTo(TimeSpan.FromSeconds(2)));
+    }
 }
 

@@ -271,11 +271,34 @@ public class TransferSender
                     var folderBegin = new BaseProtocolMessage { Type = ProtocolMessageTypes.FolderBegin };
                     await ProtocolHelper.SendMessageAsync(countingStream, folderBegin, ct, 3000).ConfigureAwait(false);
 
+                    long? rootCreatedMs = null;
+                    long? rootModifiedMs = null;
+                    try
+                    {
+                        var firstFile = rootFiles[0].AbsolutePath;
+                        var rootDirPath = Path.GetDirectoryName(firstFile);
+                        while (rootDirPath != null && !Path.GetFileName(rootDirPath).Equals(rootName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var parent = Path.GetDirectoryName(rootDirPath);
+                            if (parent == null) break;
+                            rootDirPath = parent;
+                        }
+                        if (rootDirPath != null && Directory.Exists(rootDirPath))
+                        {
+                            var di = new DirectoryInfo(rootDirPath);
+                            rootCreatedMs = new DateTimeOffset(di.CreationTimeUtc).ToUnixTimeMilliseconds();
+                            rootModifiedMs = new DateTimeOffset(di.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                        }
+                    }
+                    catch { }
+
                     var folderMeta = new FolderTarMetadata
                     {
                         RootName = rootName,
                         TotalFiles = rootFiles.Count,
-                        TotalSize = rootFiles.Sum(f => f.Size)
+                        TotalSize = rootFiles.Sum(f => f.Size),
+                        CreationTimeUnixMs = rootCreatedMs,
+                        LastWriteTimeUnixMs = rootModifiedMs
                     };
                     await ProtocolHelper.SendMessageAsync(countingStream, folderMeta, ct, 3000).ConfigureAwait(false);
 
@@ -310,17 +333,29 @@ public class TransferSender
                                 continue;
                             }
 
+                            long fileCreatedMs = 0;
+                            long fileModifiedMs = 0;
+                            try
+                            {
+                                var fi = new FileInfo(item.AbsolutePath);
+                                fileCreatedMs = new DateTimeOffset(fi.CreationTimeUtc).ToUnixTimeMilliseconds();
+                                fileModifiedMs = new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                            }
+                            catch { }
+
                             using (fs)
                             {
                                 var actualSize = fs.Length;
                                 var pathBytes = System.Text.Encoding.UTF8.GetBytes(item.RelativePath);
-                                int headerLen = 4 + pathBytes.Length + 8;
+                                int headerLen = 4 + pathBytes.Length + 8 + 8 + 8;
 
                                 if (headerLen + actualSize <= copyBuffer.Length)
                                 {
                                     BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
                                     pathBytes.CopyTo(copyBuffer, 4);
                                     BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+                                    BitConverter.GetBytes(fileCreatedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 8);
+                                    BitConverter.GetBytes(fileModifiedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 16);
 
                                     if (actualSize > 0)
                                     {
@@ -340,6 +375,8 @@ public class TransferSender
                                     BitConverter.GetBytes(pathBytes.Length).CopyTo(copyBuffer, 0);
                                     pathBytes.CopyTo(copyBuffer, 4);
                                     BitConverter.GetBytes(actualSize).CopyTo(copyBuffer, 4 + pathBytes.Length);
+                                    BitConverter.GetBytes(fileCreatedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 8);
+                                    BitConverter.GetBytes(fileModifiedMs).CopyTo(copyBuffer, 4 + pathBytes.Length + 16);
 
                                     await countingStream.WriteAsync(copyBuffer.AsMemory(0, headerLen), ct).ConfigureAwait(false);
 
@@ -417,11 +454,23 @@ public class TransferSender
                         var fileBegin = new BaseProtocolMessage { Type = ProtocolMessageTypes.FileBegin };
                         await ProtocolHelper.SendMessageAsync(countingStream, fileBegin, ct, 3000).ConfigureAwait(false);
 
+                        long? fileCreatedMs = null;
+                        long? fileModifiedMs = null;
+                        try
+                        {
+                            var fi = new FileInfo(item.AbsolutePath);
+                            fileCreatedMs = new DateTimeOffset(fi.CreationTimeUtc).ToUnixTimeMilliseconds();
+                            fileModifiedMs = new DateTimeOffset(fi.LastWriteTimeUtc).ToUnixTimeMilliseconds();
+                        }
+                        catch { }
+
                         var meta = new FileItemMetadata
                         {
                             RelativePath = item.RelativePath,
                             RootName = item.RootName,
-                            Size = actualSize
+                            Size = actualSize,
+                            CreationTimeUnixMs = fileCreatedMs,
+                            LastWriteTimeUnixMs = fileModifiedMs
                         };
                         await ProtocolHelper.SendMessageAsync(countingStream, meta, ct, 3000).ConfigureAwait(false);
 

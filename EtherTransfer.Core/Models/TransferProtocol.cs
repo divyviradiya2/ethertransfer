@@ -1,4 +1,4 @@
-﻿namespace EtherTransfer.Core.Models;
+namespace EtherTransfer.Core.Models;
 
 public static class ProtocolMessageTypes
 {
@@ -47,6 +47,8 @@ public class FileItemMetadata
     public string RelativePath { get; set; } = string.Empty;
     public string RootName { get; set; } = string.Empty;
     public long Size { get; set; }
+    public long? CreationTimeUnixMs { get; set; }
+    public long? LastWriteTimeUnixMs { get; set; }
 }
 
 public class FolderTarMetadata
@@ -54,6 +56,8 @@ public class FolderTarMetadata
     public string RootName { get; set; } = string.Empty;
     public int TotalFiles { get; set; }
     public long TotalSize { get; set; }
+    public long? CreationTimeUnixMs { get; set; }
+    public long? LastWriteTimeUnixMs { get; set; }
 }
 
 public class FileChecksumMessage : BaseProtocolMessage
