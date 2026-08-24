@@ -65,7 +65,7 @@
                                 <DataTemplate>
                                     <Border Background="Transparent" CornerRadius="4" Padding="10">
                                         <Grid ColumnDefinitions="Auto,*">
-                                            <PathIcon Grid.Column="0" Data="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="22" Height="22" Foreground="{DynamicResource AppForeground}" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                            <Image Grid.Column="0" Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="24" Height="24" Margin="0,0,15,0" />
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
                                                 <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
