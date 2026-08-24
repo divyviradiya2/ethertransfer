@@ -423,7 +423,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             });
         };
 
-        dialog.Show(this);
+        dialog.Show();
 
         try
         {
@@ -678,7 +678,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 });
             };
 
-            dialog.Show(this);
+            dialog.Show();
         });
 
         return tcs.Task;
