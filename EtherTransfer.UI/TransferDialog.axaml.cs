@@ -331,11 +331,15 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
     private bool _isCancelled = false;
     public bool IsCancelled => _isCancelled;
 
+    private bool _isCancelledByUser = false;
+    public bool IsCancelledByUser => _isCancelledByUser;
+
     private async void Cancel_Click(object? sender, RoutedEventArgs e)
     {
         if (!IsProgressMode)
         {
             _isCancelled = true;
+            _isCancelledByUser = true;
             ForceClose();
             return;
         }
@@ -344,8 +348,8 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         if (confirm)
         {
             _isCancelled = true;
+            _isCancelledByUser = true;
             CancelTransfer();
-
         }
     }
 
@@ -548,13 +552,14 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
             if (confirm)
             {
                 _isCancelled = true;
+                _isCancelledByUser = true;
                 CancelTransfer();
-
             }
             return;
         }
 
         _isCancelled = true;
+        _isCancelledByUser = true;
         _isForceClosing = true;
         CancelTransfer();
         _receiverTcs?.TrySetResult((false, "", default));
