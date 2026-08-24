@@ -13,11 +13,26 @@
         Foreground="{DynamicResource AppForeground}"
         WindowStartupLocation="CenterScreen">
 
-    <Window.Resources>
-        <ui:OsToIconConverter x:Key="OsToIconConverter"/>
-    </Window.Resources>
-
     <Window.Styles>
+        <Style Selector="PathIcon.os-icon">
+            <Setter Property="Data" Value="{StaticResource DeviceGenericIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Windows]">
+            <Setter Property="Data" Value="{StaticResource WindowsIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Linux]">
+            <Setter Property="Data" Value="{StaticResource LinuxIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=macOS]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=Apple]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+        <Style Selector="PathIcon.os-icon[Tag=OSX]">
+            <Setter Property="Data" Value="{StaticResource AppleIcon}"/>
+        </Style>
+
         <Style Selector="Border.Skeleton">
             <Style.Animations>
                 <Animation Duration="0:0:1.2" IterationCount="Infinite" PlaybackDirection="Alternate">
@@ -65,9 +80,7 @@
                                 <DataTemplate>
                                     <Border Background="Transparent" CornerRadius="4" Padding="10">
                                         <Grid ColumnDefinitions="Auto,*">
-                                            <Border Grid.Column="0" Width="36" Height="36" Background="{DynamicResource OsIconBadgeBackground}" BorderBrush="{DynamicResource OsIconBadgeBorder}" BorderThickness="1" CornerRadius="8" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                <Image Source="{Binding OS, Converter={StaticResource OsToIconConverter}}" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
+                                            <PathIcon Grid.Column="0" Classes="os-icon" Tag="{Binding OS}" Width="24" Height="24" Margin="0,0,15,0" VerticalAlignment="Center" Foreground="{DynamicResource AppForeground}" />
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="{DynamicResource AppForeground}" FontSize="14"/>
                                                 <TextBlock Text="{Binding Address}" Foreground="{DynamicResource AppForegroundSecondary}" FontSize="12" Margin="0,2,0,0"/>
@@ -89,7 +102,7 @@
                             <StackPanel IsVisible="{Binding !HasActiveVpn}" VerticalAlignment="Top" Margin="5,5,5,0" Spacing="30">
                                 <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="6" Padding="10" Classes="Skeleton">
                                     <Grid ColumnDefinitions="Auto,*">
-                                        <Border Grid.Column="0" Width="36" Height="36" Margin="0,0,14,0" CornerRadius="8" Background="{DynamicResource AppBorder}" />
+                                        <Border Grid.Column="0" Width="24" Height="24" Margin="0,0,15,0" CornerRadius="12" Background="{DynamicResource AppBorder}" />
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
                                             <Border Height="14" Width="140" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
                                             <Border Height="10" Width="90" CornerRadius="2" Background="{DynamicResource AppBorder}" HorizontalAlignment="Left" />
