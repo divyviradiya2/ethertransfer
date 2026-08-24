@@ -189,6 +189,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (newState != EthernetLinkState.Ready && _activeDialog != null && _activeDialog.IsVisible)
             {
                 OnDebugLog(this, new StructuredLogMessage("network.lost", $"Link state changed to {newState}. Aborting active transfer.", LogLevel.Error));
+                if (_activeDialog.IsReceiverMode)
+                {
+                    _activeDialog.IsFailureMode = true;
+                    _activeDialog.FailureTitle = "Transfer Failed";
+                    _activeDialog.FailureMessage = "Connection lost (Ethernet cable disconnected).";
+                    _activeDialog.FailureSubDetail = "No files were saved to your device.";
+                }
                 _activeDialog.CancelTransfer();
             }
         });
@@ -214,9 +221,49 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 else if (result.TotalElements > 1 && result.CompletedElementsCount > 0)
                 {
+                    bool isCancelledByUser = _activeDialog.IsCancelledByUser;
+                    string peerName = _activeDialog.PeerDeviceName;
+
+                    string cancelTitle = "Transfer Cancelled";
+                    string cancelReason;
+                    string cancelDetail;
+
+                    if (isCancelledByUser)
+                    {
+                        cancelReason = "You cancelled the transfer.";
+                        cancelDetail = _activeDialog.IsSender
+                            ? "Completed items were sent. Transfer was stopped for remaining items:"
+                            : "Partial/incomplete files were removed. Completed items are saved:";
+                    }
+                    else if (LinkState == EthernetLinkState.NoCable)
+                    {
+                        cancelTitle = "Transfer Failed";
+                        cancelReason = "Connection lost (Ethernet cable disconnected).";
+                        cancelDetail = _activeDialog.IsSender
+                            ? "Completed items were sent before connection was lost:"
+                            : "Partial/incomplete files were removed. Completed items are saved:";
+                    }
+                    else if (_activeDialog.IsSender)
+                    {
+                        cancelReason = !string.IsNullOrWhiteSpace(peerName)
+                            ? $"Receiver '{peerName}' cancelled the transfer."
+                            : "Receiver cancelled the transfer.";
+                        cancelDetail = "Completed items were sent. Transfer was stopped for remaining items:";
+                    }
+                    else
+                    {
+                        cancelReason = !string.IsNullOrWhiteSpace(peerName)
+                            ? $"Sender '{peerName}' cancelled the transfer."
+                            : "Sender cancelled the transfer.";
+                        cancelDetail = "Partial/incomplete files were removed. Completed items are saved:";
+                    }
+
                     _activeDialog.IsSuccessMode = true;
                     _activeDialog.IsPartialSuccessMode = true;
                     _activeDialog.IsFailureMode = false;
+                    _activeDialog.PartialFailureTitle = cancelTitle;
+                    _activeDialog.PartialFailureReason = cancelReason;
+                    _activeDialog.PartialFailureDetail = cancelDetail;
                     _activeDialog.TransferFinalSizeText = $"Completed {result.CompletedElementsCount} of {result.TotalElements} items";
                     _activeDialog.SetTransferElements(result.CompletedElementNames, result.FailedElementNames);
                 }
@@ -703,9 +750,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _ = Dispatcher.UIThread.InvokeAsync(() =>
             {
-                var dialogToClose = _activeDialog;
-                _activeDialog = null;
-                dialogToClose?.ForceClose();
+                if (_activeDialog != null && _activeDialog.IsReceiverMode)
+                {
+                    _activeDialog.IsFailureMode = true;
+                    _activeDialog.FailureTitle = "Transfer Failed";
+                    _activeDialog.FailureMessage = "Connection lost (Ethernet cable disconnected).";
+                    _activeDialog.FailureSubDetail = "No files were saved to your device.";
+                }
                 tcs.TrySetResult((false, "", default));
             });
         });

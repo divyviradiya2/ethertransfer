@@ -166,6 +166,15 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
 
     public bool IsSender => _isSenderMode;
 
+    private string _partialFailureTitle = "Transfer Cancelled";
+    public string PartialFailureTitle { get => _partialFailureTitle; set { _partialFailureTitle = value; OnPropertyChanged(); } }
+
+    private string _partialFailureReason = "The transfer was cancelled.";
+    public string PartialFailureReason { get => _partialFailureReason; set { _partialFailureReason = value; OnPropertyChanged(); } }
+
+    private string _partialFailureDetail = "Partial/incomplete files were removed. Completed items are saved:";
+    public string PartialFailureDetail { get => _partialFailureDetail; set { _partialFailureDetail = value; OnPropertyChanged(); } }
+
     private string _failureTitle = "Transfer Cancelled";
     public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; } }
 
@@ -526,6 +535,7 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         _isCancelled = true;
         _senderCts?.Cancel();
         _receiverCancelCts?.Cancel();
+        _receiverTcs?.TrySetResult((false, "", default));
 
         IntPtr hwnd = GetWindowHandle();
         WindowsTaskbarProgress.SetProgressState(hwnd, TaskbarProgressState.NoProgress);

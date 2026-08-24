@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:EtherTransfer.UI"
         x:Class="EtherTransfer.UI.TransferDialog"
@@ -79,9 +79,10 @@
 
                 <StackPanel IsVisible="{Binding IsPartialSuccessMode}" Spacing="6">
                     <PathIcon Data="{StaticResource WarningIcon}" Width="44" Height="44" Foreground="{DynamicResource WarningColor}" HorizontalAlignment="Center" Margin="0,0,0,4"/>
-                    <TextBlock Text="Transfer Cancelled" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding PartialFailureTitle}" FontWeight="SemiBold" FontSize="18" Foreground="{DynamicResource AppForeground}" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding PartialFailureReason}" FontWeight="Medium" FontSize="13" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding TransferFinalSizeText}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource WarningColor}" TextAlignment="Center"/>
-                    <TextBlock Text="Partial/incomplete files were removed. Completed items are saved:" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
+                    <TextBlock Text="{Binding PartialFailureDetail}" FontSize="12" Foreground="{DynamicResource AppForegroundSecondary}" TextAlignment="Center"/>
                 </StackPanel>
 
                 <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,2,0,4" MaxHeight="140">

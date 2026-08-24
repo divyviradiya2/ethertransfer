@@ -46,7 +46,26 @@ public class TransferReceiver
                 if (OnIncomingTransfer == null)
                     throw new Exception("No UI handler attached for incoming transfers.");
 
-                var (accepted, savePath, cancelToken) = await OnIncomingTransfer(request, appCt).ConfigureAwait(false);
+                using var consentCts = CancellationTokenSource.CreateLinkedTokenSource(appCt);
+                var socketMonitorTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var probe = new byte[1];
+                        int r = await networkStream.ReadAsync(probe.AsMemory(0, 1), consentCts.Token).ConfigureAwait(false);
+                        if (r == 0)
+                        {
+                            consentCts.Cancel();
+                        }
+                    }
+                    catch
+                    {
+                        consentCts.Cancel();
+                    }
+                });
+
+                var (accepted, savePath, cancelToken) = await OnIncomingTransfer(request, consentCts.Token).ConfigureAwait(false);
+                consentCts.Cancel();
 
                 using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(appCt, cancelToken);
                 var transferCt = linkedCt.Token;
