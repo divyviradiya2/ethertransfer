@@ -268,7 +268,6 @@ public class TransferSender
 
                 if (isFolder)
                 {
-
                     var folderBegin = new BaseProtocolMessage { Type = ProtocolMessageTypes.FolderBegin };
                     await ProtocolHelper.SendMessageAsync(countingStream, folderBegin, ct, 3000).ConfigureAwait(false);
 
@@ -280,42 +279,68 @@ public class TransferSender
                     };
                     await ProtocolHelper.SendMessageAsync(countingStream, folderMeta, ct, 3000).ConfigureAwait(false);
 
-                    var tarWriter = new TarWriter(countingStream, TarEntryFormat.Pax, leaveOpen: true);
-                    await using (tarWriter.ConfigureAwait(false))
+                    var copyBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+                    try
                     {
                         foreach (var item in rootFiles)
                         {
                             ct.ThrowIfCancellationRequested();
 
+                            FileStream? fs = null;
                             try
                             {
-                                var entry = new PaxTarEntry(TarEntryType.RegularFile, item.RelativePath);
-                                using var fs = new FileStream(
+                                fs = new FileStream(
                                     item.AbsolutePath, 
                                     FileMode.Open, 
                                     FileAccess.Read, 
                                     FileShare.ReadWrite, 
-                                    128 * 1024, 
+                                    1, 
                                     FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-                                entry.DataStream = fs;
-                                await tarWriter.WriteEntryAsync(entry, ct).ConfigureAwait(false);
-                                filesSent++;
                             }
                             catch (FileNotFoundException)
                             {
                                 Log($"SKIP (missing): {item.RelativePath}");
                                 filesSkipped++;
+                                continue;
                             }
                             catch (Exception ex)
                             {
                                 Log($"SKIP (read error): {item.RelativePath} - {ex.Message}");
                                 filesSkipped++;
+                                continue;
+                            }
+
+                            using (fs)
+                            {
+                                var actualSize = fs.Length;
+                                var pathBytes = System.Text.Encoding.UTF8.GetBytes(item.RelativePath);
+
+                                await countingStream.WriteAsync(BitConverter.GetBytes(pathBytes.Length), ct).ConfigureAwait(false);
+                                await countingStream.WriteAsync(pathBytes, ct).ConfigureAwait(false);
+                                await countingStream.WriteAsync(BitConverter.GetBytes(actualSize), ct).ConfigureAwait(false);
+
+                                long remaining = actualSize;
+                                while (remaining > 0)
+                                {
+                                    ct.ThrowIfCancellationRequested();
+                                    int toRead = (int)Math.Min(copyBuffer.Length, remaining);
+                                    int read = await fs.ReadAsync(copyBuffer.AsMemory(0, toRead), ct).ConfigureAwait(false);
+                                    if (read == 0) break;
+                                    await countingStream.WriteAsync(copyBuffer.AsMemory(0, read), ct).ConfigureAwait(false);
+                                    remaining -= read;
+                                }
+
+                                filesSent++;
                             }
                         }
-                    }
 
-                    await countingStream.FlushAsync(ct).ConfigureAwait(false);
+                        await countingStream.WriteAsync(BitConverter.GetBytes(0), ct).ConfigureAwait(false);
+                        await countingStream.FlushAsync(ct).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        System.Buffers.ArrayPool<byte>.Shared.Return(copyBuffer);
+                    }
 
                     if (!result.CompletedElementNames.Contains(rootName))
                     {

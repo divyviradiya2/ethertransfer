@@ -169,106 +169,146 @@ public class TransferReceiver
 
                             ReportProgress(force: true);
 
-                            string? inFlightTarFile = null;
+                            string? inFlightFolderFile = null;
                             try
                             {
-                                var tarReader = new TarReader(countingStream, leaveOpen: true);
-                                await using (tarReader.ConfigureAwait(false))
+                                var lenBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
+                                var sizeBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(8);
+                                var copyBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+                                try
                                 {
-                                    while (await tarReader.GetNextEntryAsync(cancellationToken: transferCt).ConfigureAwait(false) is { } entry)
+                                    while (true)
                                     {
                                         transferCt.ThrowIfCancellationRequested();
 
-                                        if (entry.EntryType == TarEntryType.RegularFile || entry.EntryType == TarEntryType.V7RegularFile)
+                                        if (!await ProtocolHelper.ReadExactAsync(countingStream, lenBuffer, 4, transferCt, 5000).ConfigureAwait(false))
                                         {
-                                            var safePath = PathSanitizer.SanitizeRelativePath(savePath, entry.Name);
-                                            if (safePath == null)
-                                            {
-                                                Log($"SECURITY: Blocked malicious path in TAR: {entry.Name}");
-                                                filesSkipped++;
-                                                continue;
-                                            }
-
-                                            var dirPath = Path.GetDirectoryName(safePath);
-                                            if (dirPath != null && !createdDirectoriesThisSession.Contains(dirPath))
-                                            {
-                                                Directory.CreateDirectory(dirPath);
-                                                createdDirectoriesThisSession.Add(dirPath);
-                                            }
-
-                                            if (entry.DataStream != null)
-                                            {
-                                                inFlightTarFile = safePath;
-                                                filesByRootElement[folderMeta.RootName].Add(safePath);
-
-                                                FileStream? fs = new FileStream(
-                                                    safePath, 
-                                                    FileMode.Create, 
-                                                    FileAccess.Write, 
-                                                    FileShare.None, 
-                                                    128 * 1024, 
-                                                    FileOptions.Asynchronous | FileOptions.SequentialScan);
-
-                                                try
-                                                {
-                                                    if (entry.Length >= 1024 * 1024)
-                                                    {
-                                                        try { fs.SetLength(entry.Length); } catch { }
-                                                    }
-                                                    await entry.DataStream.CopyToAsync(fs, 128 * 1024, transferCt).ConfigureAwait(false);
-                                                    await fs.DisposeAsync().ConfigureAwait(false);
-                                                    fs = null;
-                                                }
-                                                finally
-                                                {
-                                                    if (fs != null)
-                                                    {
-                                                        try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
-                                                    }
-                                                }
-
-                                                inFlightTarFile = null;
-                                            }
-                                            else
-                                            {
-                                                filesByRootElement[folderMeta.RootName].Add(safePath);
-                                                using (new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
-                                            }
-
-                                            filesReceived++;
-                                            ReportProgress(force: false);
+                                            throw new IOException("Connection lost while reading folder file path length.");
                                         }
-                                        else if (entry.EntryType == TarEntryType.Directory)
+
+                                        int pathLen = BitConverter.ToInt32(lenBuffer, 0);
+                                        if (pathLen == 0)
                                         {
-                                            var safeDir = PathSanitizer.SanitizeRelativePath(savePath, entry.Name);
-                                            if (safeDir != null && !createdDirectoriesThisSession.Contains(safeDir))
+                                            break;
+                                        }
+
+                                        if (pathLen < 0 || pathLen > 4096)
+                                        {
+                                            throw new InvalidDataException($"Invalid path length in folder stream: {pathLen}");
+                                        }
+
+                                        var pathBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(pathLen);
+                                        string relativePath;
+                                        try
+                                        {
+                                            if (!await ProtocolHelper.ReadExactAsync(countingStream, pathBuffer, pathLen, transferCt, 5000).ConfigureAwait(false))
                                             {
-                                                Directory.CreateDirectory(safeDir);
-                                                createdDirectoriesThisSession.Add(safeDir);
+                                                throw new IOException("Connection lost while reading folder file path.");
+                                            }
+                                            relativePath = System.Text.Encoding.UTF8.GetString(pathBuffer, 0, pathLen);
+                                        }
+                                        finally
+                                        {
+                                            System.Buffers.ArrayPool<byte>.Shared.Return(pathBuffer);
+                                        }
+
+                                        if (!await ProtocolHelper.ReadExactAsync(countingStream, sizeBuffer, 8, transferCt, 5000).ConfigureAwait(false))
+                                        {
+                                            throw new IOException("Connection lost while reading folder file size.");
+                                        }
+
+                                        long fileSize = BitConverter.ToInt64(sizeBuffer, 0);
+                                        if (fileSize < 0)
+                                        {
+                                            throw new InvalidDataException($"Invalid file size in folder stream: {fileSize}");
+                                        }
+
+                                        var safePath = PathSanitizer.SanitizeRelativePath(savePath, relativePath);
+                                        if (safePath == null)
+                                        {
+                                            Log($"SECURITY: Blocked malicious path in folder stream: {relativePath}");
+                                            await DrainBytesAsync(countingStream, fileSize, transferCt).ConfigureAwait(false);
+                                            filesSkipped++;
+                                            continue;
+                                        }
+
+                                        var dirPath = Path.GetDirectoryName(safePath);
+                                        if (dirPath != null && !createdDirectoriesThisSession.Contains(dirPath))
+                                        {
+                                            Directory.CreateDirectory(dirPath);
+                                            createdDirectoriesThisSession.Add(dirPath);
+                                        }
+
+                                        inFlightFolderFile = safePath;
+                                        filesByRootElement[folderMeta.RootName].Add(safePath);
+
+                                        if (fileSize > 0)
+                                        {
+                                            FileStream? fs = new FileStream(
+                                                safePath, 
+                                                FileMode.Create, 
+                                                FileAccess.Write, 
+                                                FileShare.None, 
+                                                1, 
+                                                FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+                                            try
+                                            {
+                                                if (fileSize >= 1024 * 1024)
+                                                {
+                                                    try { fs.SetLength(fileSize); } catch { }
+                                                }
+
+                                                long remaining = fileSize;
+                                                while (remaining > 0)
+                                                {
+                                                    transferCt.ThrowIfCancellationRequested();
+                                                    int toRead = (int)Math.Min(copyBuffer.Length, remaining);
+                                                    int read = await countingStream.ReadAsync(copyBuffer.AsMemory(0, toRead), transferCt).ConfigureAwait(false);
+                                                    if (read == 0)
+                                                    {
+                                                        throw new IOException("Connection lost unexpectedly while reading folder file data.");
+                                                    }
+                                                    await fs.WriteAsync(copyBuffer.AsMemory(0, read), transferCt).ConfigureAwait(false);
+                                                    remaining -= read;
+                                                }
+
+                                                await fs.DisposeAsync().ConfigureAwait(false);
+                                                fs = null;
+                                            }
+                                            finally
+                                            {
+                                                if (fs != null)
+                                                {
+                                                    try { await fs.DisposeAsync().ConfigureAwait(false); } catch { }
+                                                }
                                             }
                                         }
+                                        else
+                                        {
+                                            using (new FileStream(safePath, FileMode.Create, FileAccess.Write, FileShare.None)) { }
+                                        }
+
+                                        inFlightFolderFile = null;
+                                        filesReceived++;
                                     }
-                                }
-
-                                var trailingTarEofBlock = System.Buffers.ArrayPool<byte>.Shared.Rent(512);
-                                try
-                                {
-                                    await ProtocolHelper.ReadExactAsync(countingStream, trailingTarEofBlock, 512, transferCt, 3000).ConfigureAwait(false);
                                 }
                                 finally
                                 {
-                                    System.Buffers.ArrayPool<byte>.Shared.Return(trailingTarEofBlock);
+                                    System.Buffers.ArrayPool<byte>.Shared.Return(lenBuffer);
+                                    System.Buffers.ArrayPool<byte>.Shared.Return(sizeBuffer);
+                                    System.Buffers.ArrayPool<byte>.Shared.Return(copyBuffer);
                                 }
                             }
                             catch
                             {
-                                if (inFlightTarFile != null)
+                                if (inFlightFolderFile != null)
                                 {
                                     try
                                     {
-                                        if (File.Exists(inFlightTarFile))
+                                        if (File.Exists(inFlightFolderFile))
                                         {
-                                            File.Delete(inFlightTarFile);
+                                            File.Delete(inFlightFolderFile);
                                         }
                                     }
                                     catch { }
