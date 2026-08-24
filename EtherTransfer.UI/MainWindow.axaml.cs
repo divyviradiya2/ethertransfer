@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -233,11 +233,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                          result.ErrorMessage.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
                          result.ErrorMessage.Contains("network", StringComparison.OrdinalIgnoreCase));
 
+                    bool isDeclined = !string.IsNullOrEmpty(result.ErrorMessage) &&
+                        result.ErrorMessage.Contains("declined", StringComparison.OrdinalIgnoreCase);
+
                     _activeDialog.IsSuccessMode = false;
                     _activeDialog.IsFailureMode = true;
-                    _activeDialog.FailureTitle = isConnectionLoss ? "Transfer Failed" : "Transfer Cancelled";
-                    _activeDialog.FailureMessage = string.IsNullOrWhiteSpace(result.ErrorMessage) ? "The transfer was cancelled." : result.ErrorMessage;
-                    _activeDialog.FailureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
+
+                    if (isDeclined)
+                    {
+                        _activeDialog.FailureTitle = "Transfer Declined";
+                        _activeDialog.FailureMessage = "Receiver declined the transfer.";
+                        _activeDialog.FailureSubDetail = _activeDialog.IsSender
+                            ? "No files were sent from your device."
+                            : "No files were saved to your device.";
+                    }
+                    else
+                    {
+                        _activeDialog.FailureTitle = isConnectionLoss ? "Transfer Failed" : "Transfer Cancelled";
+                        _activeDialog.FailureMessage = string.IsNullOrWhiteSpace(result.ErrorMessage) ? "The transfer was cancelled." : result.ErrorMessage;
+                        _activeDialog.FailureSubDetail = _activeDialog.IsSender
+                            ? "No files were sent. Your original files were not modified."
+                            : "No files were saved to your device. Any temporary data was safely cleaned up.";
+                    }
                 }
             }
         });

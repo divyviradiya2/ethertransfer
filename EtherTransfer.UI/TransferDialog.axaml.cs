@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -164,13 +164,15 @@ public partial class TransferDialog : Window, INotifyPropertyChanged
         }
     }
 
+    public bool IsSender => _isSenderMode;
+
     private string _failureTitle = "Transfer Cancelled";
     public string FailureTitle { get => _failureTitle; set { _failureTitle = value; OnPropertyChanged(); OnPropertyChanged(nameof(WindowTitle)); this.Title = WindowTitle; } }
 
     private string _failureMessage = "The transfer was cancelled.";
     public string FailureMessage { get => _failureMessage; set { _failureMessage = value; OnPropertyChanged(); } }
 
-    private string _failureSubDetail = "No files were saved to your device. Any temporary data was safely cleaned up.";
+    private string _failureSubDetail = "No files were transferred.";
     public string FailureSubDetail { get => _failureSubDetail; set { _failureSubDetail = value; OnPropertyChanged(); } }
 
     private string _transferFileName = "";

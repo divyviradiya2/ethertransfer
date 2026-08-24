@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -197,8 +197,8 @@ public class TransferSender
 
         if (!response.Accepted)
         {
-            Log($"Transfer declined: {response.Reason}");
-            throw new Exception($"Receiver declined the transfer: {response.Reason}");
+            Log("Transfer declined by receiver.");
+            throw new Exception("Receiver declined the transfer.");
         }
 
         Log($"Transfer accepted! Streaming {session.TotalFiles} files ({session.TotalSize / 1024 / 1024} MB)...");

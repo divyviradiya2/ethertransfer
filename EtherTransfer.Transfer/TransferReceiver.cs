@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO;
@@ -54,14 +54,14 @@ public class TransferReceiver
                 var response = new TransferResponseMessage
                 {
                     Accepted = accepted,
-                    Reason = accepted ? "" : "User declined."
+                    Reason = accepted ? "" : "Declined by user."
                 };
                 await ProtocolHelper.SendMessageAsync(networkStream, response, transferCt, 3000).ConfigureAwait(false);
 
                 if (!accepted)
                 {
                     Log("Transfer declined by user.");
-                    result.ErrorMessage = "User declined.";
+                    result.ErrorMessage = "Transfer declined.";
                     return result;
                 }
 
