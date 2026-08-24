@@ -7,7 +7,7 @@
     <ApplicationManifest Condition="'$(PortableBuild)' == 'true'">app.portable.manifest</ApplicationManifest>
     <ApplicationManifest Condition="'$(PortableBuild)' != 'true'">app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Company>DS Labs</Company>
     <Product>EtherTransfer</Product>
     <Description>Lightning-fast, cross-platform file and folder transfer application for direct Ethernet connections.</Description>
